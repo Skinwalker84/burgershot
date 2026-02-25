@@ -335,13 +335,8 @@ async function addToCart(p){
     }
 
     // Auswahl per Prompt (robust, keine extra HTML nötig)
-    const listText = drinks.map((d,i)=>`${i+1}) ${d.name} (${money(d.price)})`).join("
-");
-    const pick = prompt("Getränk auswählen:
-
-" + listText + "
-
-Nummer eingeben:", "1");
+    const listText = drinks.map((d,i)=>`${i+1}) ${d.name} (${money(d.price)})`).join("\n");
+    const pick = prompt("Getränk auswählen:\n\n" + listText + "\n\nNummer eingeben:", "1");
     const idx = Number(String(pick||"").trim());
     if(!Number.isFinite(idx) || idx < 1 || idx > drinks.length) return;
 
