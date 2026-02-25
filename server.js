@@ -134,7 +134,15 @@ const DEFAULT_PRODUCTS = [
   { id:"sprinkle_donut", name:"Sprinke Donut", price:8, cat:"Süßes" },
   { id:"caramel_sundae", name:"Caramel Sundae", price:8, cat:"Süßes" },
   { id:"chocolate_sundae", name:"Chocolate Sundae", price:8, cat:"Süßes" },
-  { id:"strawberry_sundae", name:"Strawberry Sundae", price:8, cat:"Süßes" }
+  { id:"strawberry_sundae", name:"Strawberry Sundae", price:8, cat:"Süßes" },
+
+  // Menüs (Burger + Fries + Drink) – kleiner Rabatt eingerechnet
+  { id:"menu_bleeder", name:"Menü: The Bleeder", price:26, cat:"Menü" },
+  { id:"menu_heartstopper", name:"Menü: The Heartstopper", price:28, cat:"Menü" },
+  { id:"menu_chicken", name:"Menü: The Chicken", price:24, cat:"Menü" },
+  { id:"menu_vegan", name:"Menü: Vegan Burger", price:22, cat:"Menü" },
+  { id:"menu_chozzo", name:"Menü: The Chozzo", price:24, cat:"Menü" },
+  { id:"menu_german", name:"Menü: The German", price:28, cat:"Menü" }
 ];
 
 /* =========================
