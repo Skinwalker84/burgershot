@@ -677,7 +677,7 @@ function openAddUser(){
 
   let roleInput = prompt("Rolle auswählen:\n1 = Chef\n2 = Mitarbeiter", "2");
   let role = "staff";
-  if(roleInput === "1") role = "chef";
+  if(roleInput === "1") role = "boss";
   if(roleInput === "2") role = "staff";
 
   const password = prompt("Passwort (Standard: admin):", "admin") || "admin";
