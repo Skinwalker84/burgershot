@@ -6,6 +6,8 @@ let me = null;
 let serverDay = null;
 
 let cart = [];
+
+let menuBuilderState = null;
 let currentDayReport = null;
 let currentWeekReport = null;
 
@@ -65,7 +67,7 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
-  await initProducts();
+  initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -85,7 +87,7 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
-  await initProducts();
+  initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -168,140 +170,73 @@ function resetProductsToDefault(){
   renderProductsEditor();
 }
 
-async function hydrateProducts(){
-  // 1) try server (auth required)
-  try{
-    const res = await fetch("/products");
-    if(res.ok){
-      const data = await res.json().catch(()=>({}));
-      const list = Array.isArray(data.products) ? data.products : null;
-      if(data.success && list && list.length){
-        PRODUCTS = list.map(p=>({
-          id: p.id,
-          name: p.name,
-          cat: p.cat ?? p.category,
-          price: Number(p.price)||0
-        }));
-        saveProductsToStorage(PRODUCTS); // keep local fallback updated
-        return;
-      }
-    }
-  }catch(e){}
-
-  // 2) local storage fallback
+function hydrateProducts(){
   const stored = loadProductsFromStorage();
-  if(stored && Array.isArray(stored) && stored.length){
-    PRODUCTS = stored.map(p=>({
-      id: p.id || slugify(p.name),
-      name: p.name,
-      cat: p.cat ?? p.category,
-      price: Number(p.price)||0
-    }));
-    return;
+  if(stored){
+    // merge by name+cat
+    const map = new Map(stored.map(p=>[`${p.cat}||${p.name}`, p]));
+    PRODUCTS = PRODUCTS_DEFAULT.map(p=>{
+      const k = `${p.cat}||${p.name}`;
+      const hit = map.get(k);
+      return hit ? { ...p, price: hit.price } : { ...p };
+    });
+  }else{
+    PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
   }
-
-  // 3) defaults fallback
-  PRODUCTS = PRODUCTS_DEFAULT.map(p=>({
-    id: p.id || slugify(p.name),
-    name: p.name,
-    cat: p.cat ?? p.category,
-    price: Number(p.price)||0
-  }));
 }
-
 
 function renderProductsEditor(){
   const body = document.getElementById("mgmtProductsBody");
   const msg = document.getElementById("mgmtProductsMsg");
   if(!body) return; // panel might not exist
   const list = (PRODUCTS||[]).slice().sort((a,b)=>(a.cat||"").localeCompare(b.cat||"") || (a.name||"").localeCompare(b.name||""));
-  body.innerHTML = list.map((p)=>`
+  body.innerHTML = list.map((p, idx)=>`
     <tr>
       <td>${esc(p.name)}</td>
       <td>${esc(p.cat)}</td>
       <td style="text-align:right;">
-        <input class="input" style="width:110px; text-align:right; padding:8px 10px;"
-               data-price-key="${escAttr(prodKey(p))}"
-               value="${escAttr(p.price)}" />
+        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-idx="${idx}" value="${escAttr(p.price)}" />
       </td>
     </tr>
   `).join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
   if(msg) msg.innerText = "—";
 }
 
-
-async function mgmtReloadProducts(){
-  const msg = document.getElementById("mgmtProductsMsg");
-  if(msg) msg.innerText = "Lade…";
-  await hydrateProducts();
+function mgmtReloadProducts(){
+  hydrateProducts();
   renderProducts();
   renderProductsEditor();
-  if(msg) msg.innerText = "—";
+  const msg = document.getElementById("mgmtProductsMsg");
+  if(msg) msg.innerText = "Neu geladen ✅";
 }
 
-
-async function mgmtSaveProducts(){
+function mgmtSaveProducts(){
   const msg = document.getElementById("mgmtProductsMsg");
   const list = (PRODUCTS||[]).map(p=>({ ...p }));
-
-  // read prices using stable key (table is sorted)
-  for(const p of list){
-    const key = prodKey(p);
-    const el = document.querySelector(`[data-price-key="${CSS.escape(key)}"]`);
+  for(let i=0;i<list.length;i++){
+    const el = document.querySelector(`[data-price-idx="${i}"]`);
     if(!el) continue;
     const n = parseMoney(el.value);
-    if(!Number.isFinite(n) || n < 0){
-      if(msg) msg.innerText = `Ungültiger Preis bei "${p.name}".`;
+    if(!Number.isFinite(n) || n<0){
+      if(msg) msg.innerText = `Ungültiger Preis bei "${list[i].name}".`;
       return;
     }
-    p.price = Math.round(n);
+    list[i].price = Math.round(n);
   }
-
-  // server save first (keeps Menüs too because we send full list)
-  try{
-    const payload = list.map(p=>({
-      id: p.id || slugify(p.name),
-      name: p.name,
-      cat: p.cat,
-      price: p.price
-    }));
-    const res = await fetch("/products",{
-      method:"PUT",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ products: payload })
-    });
-    const data = await res.json().catch(()=>({}));
-    if(res.ok && data.success){
-      if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0 }));
-      }else{
-        PRODUCTS = list;
-      }
-      saveProductsToStorage(PRODUCTS);
-      renderProducts();
-      renderProductsEditor();
-      if(msg) msg.innerText = "Gespeichert ✅";
-      return;
-    }
-    throw new Error(data.message || "Fehler beim Speichern.");
-  }catch(e){
-    // local fallback only
-    PRODUCTS = list;
-    saveProductsToStorage(PRODUCTS);
+  PRODUCTS = list;
+  if(saveProductsToStorage(PRODUCTS)){
     renderProducts();
-    renderProductsEditor();
-    if(msg) msg.innerText = "Gespeichert (Local) ⚠️";
+    if(msg) msg.innerText = "Gespeichert ✅";
   }
 }
 
-
-async function mgmtResetProducts(){
-  const ok = confirm("Nur lokale Fallback-Preise zurücksetzen und neu vom Server laden?");
+function mgmtResetProducts(){
+  const ok = confirm("VK-Preise auf Standard zurücksetzen?");
   if(!ok) return;
-  try{ localStorage.removeItem(PRODUCTS_STORAGE_KEY); }catch(e){}
-  await mgmtReloadProducts();
+  resetProductsToDefault();
+  const msg = document.getElementById("mgmtProductsMsg");
+  if(msg) msg.innerText = "Zurückgesetzt ✅";
 }
-
 
 
 function setCategory(cat, btn){
@@ -326,53 +261,90 @@ function renderProducts(){
 
 /* Cart */
 async function addToCart(p){
-  // Special handling for Menüs: Drink auswählen + optional Cheesy Fries (+$2)
-  if(String(p?.cat||"") === "Menü" || String(p?.category||"") === "Menü"){
-    const drinks = (PRODUCTS||[]).filter(x => String(x.cat||x.category||"") === "Getränke");
-    if(!drinks.length){
-      alert("Keine Getränke vorhanden. Bitte Produkte neu laden.");
-      return;
-    }
-
-    // Auswahl per Prompt (robust, keine extra HTML nötig)
-    const listText = drinks.map((d,i)=>`${i+1}) ${d.name} (${money(d.price)})`).join("\n");
-    const pick = prompt("Getränk auswählen:\n\n" + listText + "\n\nNummer eingeben:", "1");
-    const idx = Number(String(pick||"").trim());
-    if(!Number.isFinite(idx) || idx < 1 || idx > drinks.length) return;
-
-    const drink = drinks[idx-1];
-
-    const cheesy = confirm("Cheesy Fries statt Fries? (+$2)");
-    const friesLabel = cheesy ? "Cheesy Fries (+$2)" : "Fries";
-
-    const extra = cheesy ? 2 : 0;
-    const finalPrice = Number(p.price||0) + extra;
-
-    const displayName = `${p.name} • Drink: ${drink.name} • ${friesLabel}`;
-
-    cart.push({
-      id: (p.id ? `${p.id}__${slugify(drink.name)}__${cheesy?"cheesy":"fries"}` : undefined),
-      name: displayName,
-      baseName: p.name,
-      price: finalPrice,
-      qty: 1,
-      meta: { menu:true, drink: drink.name, fries: friesLabel }
-    });
-    renderCart();
+  if(String(p?.cat||p?.category||"") === "Menü"){
+    openMenuBuilder(p);
     return;
   }
-
-  // Normal products
   cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
   renderCart();
 }
-
 function removeItem(idx){ cart.splice(idx,1); renderCart(); }
 
 /* Register */
 function setRegister(n){ currentRegister=n; const d=document.getElementById("registerDisplay"); if(d) d.innerText=`Kasse ${n}`; }
 
 /* Pay overlay */
+
+function openMenuBuilder(menuProduct){
+  const drinks = (PRODUCTS||[]).filter(x => String(x.cat||x.category||"") === "Getränke");
+  if(!drinks.length){
+    alert("Keine Getränke vorhanden. Bitte Produkte neu laden.");
+    return;
+  }
+
+  menuBuilderState = {
+    base: { ...menuProduct },
+    drinks: drinks.map(d => ({ name: d.name, price: Number(d.price)||0, id: d.id })),
+    cheesy: false
+  };
+
+  const nameEl = document.getElementById("menuBaseName");
+  const priceEl = document.getElementById("menuBasePrice");
+  const sel = document.getElementById("menuDrinkSelect");
+  const chk = document.getElementById("menuCheesy");
+
+  if(nameEl) nameEl.innerText = menuBuilderState.base.name;
+  if(priceEl) priceEl.innerText = money(menuBuilderState.base.price);
+
+  if(sel){
+    sel.innerHTML = "";
+    for(const d of menuBuilderState.drinks){
+      const opt = document.createElement("option");
+      opt.value = d.name;
+      opt.textContent = `${d.name} (${money(d.price)})`;
+      sel.appendChild(opt);
+    }
+  }
+  if(chk) chk.checked = false;
+
+  document.getElementById("menuOverlay")?.classList.remove("hidden");
+}
+
+function closeMenuBuilder(){
+  document.getElementById("menuOverlay")?.classList.add("hidden");
+  menuBuilderState = null;
+}
+
+function confirmMenuBuilder(){
+  if(!menuBuilderState) return;
+
+  const sel = document.getElementById("menuDrinkSelect");
+  const chk = document.getElementById("menuCheesy");
+
+  const drinkName = sel?.value || menuBuilderState.drinks[0]?.name;
+  const cheesy = !!chk?.checked;
+
+  const extra = cheesy ? 2 : 0;
+  const friesLabel = cheesy ? "Cheesy Fries (+$2)" : "Fries";
+
+  const base = menuBuilderState.base;
+  const finalPrice = Number(base.price||0) + extra;
+
+  const displayName = `${base.name} • Drink: ${drinkName} • ${friesLabel}`;
+
+  cart.push({
+    id: (base.id ? `${base.id}__${slugify(drinkName)}__${cheesy?"cheesy":"fries"}` : undefined),
+    name: displayName,
+    baseName: base.name,
+    price: Math.round(finalPrice),
+    qty: 1,
+    meta: { menu:true, drink: drinkName, fries: friesLabel }
+  });
+
+  closeMenuBuilder();
+  renderCart();
+}
+
 function openPay(){
   if(cart.length===0) return alert("Warenkorb ist leer.");
   document.getElementById("payTotal").innerText=money(cartTotal());
@@ -400,22 +372,6 @@ async function submitPay(){
   alert(`Order #${data.orderId} gespeichert. Trinkgeld: ${money(data.tip||0)}`);
   cart=[]; renderCart();
 }
-
-
-function slugify(s){
-  return String(s||"")
-    .toLowerCase()
-    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
-    .replace(/[^a-z0-9]+/g,"_")
-    .replace(/^_+|_+$/g,"")
-    .slice(0,60) || "item";
-}
-
-function prodKey(p){
-  // stable mapping for management editor inputs
-  return String(p?.id || "") || (slugify(p?.cat) + "__" + slugify(p?.name));
-}
-
 
 /* Kitchen */
 async function loadKitchen(){
@@ -712,6 +668,15 @@ function currentISOWeekString(d){
   const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
   const y = date.getUTCFullYear();
   return `${y}-W${String(weekNo).padStart(2,"0")}`;
+}
+
+function slugify(s){
+  return String(s||"")
+    .toLowerCase()
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+    .replace(/[^a-z0-9]+/g,"_")
+    .replace(/^_+|_+$/g,"")
+    .slice(0,60) || "item";
 }
 
 /* Boot */
