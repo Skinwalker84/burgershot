@@ -156,141 +156,9 @@
         </div>
 
         <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Umsatz</div>
-            <div style="font-weight:900; font-size:22px;" id="weekRevenue">—</div>
-          </div>
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Trinkgeld</div>
-            <div style="font-weight:900; font-size:22px;" id="weekTips">—</div>
-          </div>
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Orders</div>
-            <div style="font-weight:900; font-size:22px;" id="weekOrders">—</div>
-          </div>
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Ø Bon</div>
-            <div style="font-weight:900; font-size:22px;" id="weekAvg">—</div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:14px;">
-          <div class="panel" style="width:100%;">
-            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Mitarbeiter</th>
-                  <th style="text-align:right;">Umsatz</th>
-                  <th style="text-align:right;">Trinkgeld</th>
-                  <th style="text-align:right;">Orders</th>
-                  <th style="text-align:right;">Ø Bon</th>
-                </tr>
-              </thead>
-              <tbody id="weekByEmployee"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ===== TAB: MGMT ===== -->
-    <div id="tab_mgmt" class="tabPage hidden">
-      <div class="panel">
-        <div class="row" style="justify-content:space-between; align-items:flex-start;">
-          <div>
-            <div style="font-weight:900; font-size:18px;">Management</div>
-            <div class="muted small">Chef only</div>
-            <div id="dayCloseStatus" class="muted small" style="margin-top:4px;">—</div>
-          </div>
-          <button class="danger" onclick="resetAll()">Reset (heute)</button>
-        </div>
-
-        <div class="row" style="gap:14px; margin-top:12px; flex-wrap:wrap;">
-          <div class="panel" style="min-width:220px;">
-            <div class="muted small">Eingeloggt als</div>
-            <div style="font-weight:900; font-size:18px;" id="statMe">—</div>
-          </div>
-
-          <div class="panel" style="min-width:220px;">
-            <div class="muted small">Umsatz</div>
-            <div style="font-weight:900; font-size:18px;" id="statRevenue">$0</div>
-          </div>
-
-          <div class="panel" style="min-width:220px;">
-            <div class="muted small">Trinkgeld</div>
-            <div style="font-weight:900; font-size:18px;" id="statTips">$0</div>
-          </div>
-
-          <div class="panel" style="min-width:220px;">
-            <div class="muted small">Orders</div>
-            <div style="font-weight:900; font-size:18px;" id="statOrders">0</div>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;">
-          <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter-Statistik</div>
-          <div id="employeeTable"></div>
-        </div>
-
-        <!-- Chef Panel -->
-        <div id="bossPanel" class="panel" style="margin-top:16px;">
-          <div style="font-weight:900; font-size:18px;">Chef Panel – Mitarbeiter</div>
-          <div class="muted small" style="margin-top:4px;">Mitarbeiter verwalten</div>
-
-          <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:12px;">
-            <input id="newUserDisplayName" class="input" placeholder="Name ausgeschrieben" />
-            <input id="newUserUsername" class="input" placeholder="Username" />
-            <input id="newUserPassword" class="input" placeholder="Passwort" />
-            <button class="primary" onclick="addUser()">Hinzufügen</button>
-          </div>
-
-          <div id="usersList" style="margin-top:12px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== TAB: DAY REPORT ===== -->
-    <div id="tab_day" class="tabPage hidden">
-      <div class="panel">
-        <div class="printOnly" style="margin-bottom:12px;">
-          <div style="font-weight:900; font-size:20px;">BurgerShot — Tagesabrechnung</div>
-          <div class="muted small">Datum: <span id="dayPrintDate">—</span></div>
-          <div class="muted small" id="dayPrintClosed">—</div>
-        </div>
-        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
-          <div>
-            <div style="font-weight:900; font-size:18px;">Tagesabrechnung</div>
-            <div class="muted small">Chef only</div>
-            <div id="dayCloseStatus" class="muted small" style="margin-top:4px;">—</div>
-          </div>
-
-          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-            <input id="dayDate" class="input" type="date" style="width:180px;" />
-            <button class="ghost" onclick="setDayToToday()">Heute</button>
-            <button class="primary noPrint" onclick="loadDayReport()">Laden</button>
-            <button class="ghost noPrint" onclick="printDayReport()">PDF</button>
-            <button id="dayCloseBtn" class="primary noPrint" onclick="openCloseDay()">Tagesabschluss</button>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Umsatz</div>
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Gesamtbetrag</div>
             <div style="font-weight:900; font-size:22px;" id="dayRevenue">—</div>
-          </div>
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Trinkgeld</div>
-            <div style="font-weight:900; font-size:22px;" id="dayTips">—</div>
-          </div>
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Orders</div>
-            <div style="font-weight:900; font-size:22px;" id="dayOrders">—</div>
-          </div>
-          <div class="panel" style="flex:1 1 200px;">
-            <div class="muted small">Ø Bon</div>
-            <div style="font-weight:900; font-size:22px;" id="dayAvg">—</div>
           </div>
         </div>
 
@@ -298,16 +166,8 @@
           <div style="font-weight:800;">Mitarbeiter</div>
           <div id="dayEmployees" style="margin-top:8px;"></div>
         </div>
-
-        <div style="margin-top:14px;">
-          <div style="font-weight:800;">Kassen</div>
-          <div id="dayRegisters" style="margin-top:8px;"></div>
-        </div>
-
-        <div style="margin-top:14px;">
-          <div style="font-weight:800;">Bons</div>
-          <div id="daySales" style="margin-top:8px;"></div>
-        </div>
+</div>
+</div>
       </div>
     </div>
 

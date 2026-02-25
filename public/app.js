@@ -1170,19 +1170,14 @@ async function loadDayReport() {
   }
 
   document.getElementById("dayRevenue").innerText = money(data.totals?.revenue);
-  document.getElementById("dayTips").innerText = money(data.totals?.tips);
-  document.getElementById("dayOrders").innerText = String(data.totals?.orders ?? 0);
-  document.getElementById("dayAvg").innerText = money(Math.round(Number(data.totals?.avg || 0)));
 
-  // Employees table
+  // Employees table (nur Umsatz)
   const emp = data.byEmployee || {};
   const empRows = Object.entries(emp)
     .sort((a, b) => (Number(b[1]?.revenue || 0) - Number(a[1]?.revenue || 0)))
     .map(([name, info]) => {
       const revenue = money(info.revenue);
-      const tips = money(info.tips);
-      const orders = String(info.orders || 0);
-      return `<tr><td>${escapeHtml(name)}</td><td>${revenue}</td><td>${tips}</td><td>${orders}</td></tr>`;
+      return `<tr><td>${escapeHtml(name)}</td><td>${revenue}</td></tr>`;
     })
     .join("");
 
@@ -1190,56 +1185,8 @@ async function loadDayReport() {
   if (empEl) {
     empEl.innerHTML = `
       <table class="table">
-        <thead><tr><th>Name</th><th>Umsatz</th><th>Trinkgeld</th><th>Orders</th></tr></thead>
-        <tbody>${empRows || `<tr><td colspan="4" class="muted">Keine Daten</td></tr>`}</tbody>
-      </table>
-    `;
-  }
-
-  // Registers table
-  const regs = data.byRegister || {};
-  const regRows = Object.entries(regs)
-    .sort((a, b) => (Number(a[0]) - Number(b[0])))
-    .map(([reg, info]) => {
-      return `<tr><td>Kasse ${escapeHtml(String(reg))}</td><td>${money(info.revenue)}</td><td>${money(info.tips)}</td><td>${String(info.orders || 0)}</td></tr>`;
-    })
-    .join("");
-
-  const regEl = document.getElementById("dayRegisters");
-  if (regEl) {
-    regEl.innerHTML = `
-      <table class="table">
-        <thead><tr><th>Kasse</th><th>Umsatz</th><th>Trinkgeld</th><th>Orders</th></tr></thead>
-        <tbody>${regRows || `<tr><td colspan="4" class="muted">Keine Daten</td></tr>`}</tbody>
-      </table>
-    `;
-  }
-
-  // Sales list
-  const sales = Array.isArray(data.sales) ? data.sales : [];
-  const saleRows = sales
-    .slice()
-    .sort((a, b) => (Number(a.id || 0) - Number(b.id || 0)))
-    .map(s => {
-      const items = Array.isArray(s.items) ? s.items.map(i => `${i.qty}× ${i.name}`).join(", ") : "";
-      return `<tr>
-        <td>#${escapeHtml(String(s.id))}</td>
-        <td>${escapeHtml(String(s.timeHM || ""))}</td>
-        <td>${escapeHtml(String(s.employee || s.employeeUsername || ""))}</td>
-        <td>K${escapeHtml(String(s.register || ""))}</td>
-        <td>${money(s.total)}</td>
-        <td>${money(s.tip)}</td>
-        <td class="muted">${escapeHtml(items)}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const salesEl = document.getElementById("daySales");
-  if (salesEl) {
-    salesEl.innerHTML = `
-      <table class="table">
-        <thead><tr><th>ID</th><th>Zeit</th><th>Mitarbeiter</th><th>Kasse</th><th>Summe</th><th>Tip</th><th>Items</th></tr></thead>
-        <tbody>${saleRows || `<tr><td colspan="7" class="muted">Keine Bons</td></tr>`}</tbody>
+        <thead><tr><th>Name</th><th>Umsatz</th></tr></thead>
+        <tbody>${empRows || `<tr><td colspan="2" class="muted">Keine Daten</td></tr>`}</tbody>
       </table>
     `;
   }
