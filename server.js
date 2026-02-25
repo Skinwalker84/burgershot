@@ -32,7 +32,7 @@ function berlinTimeHM(d = new Date()) {
 }
 
 /* ========= Persistenz ========= */
-const DATA_FILE = path.join(__dirname, "data.json");
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 
 function defaultUsers() {
   return {
@@ -345,4 +345,5 @@ app.post("/reset", authRequired, bossOnly, (req, res) => {
 
 /* ========= Start ========= */
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+
 app.listen(PORT, () => console.log("Server läuft auf Port " + PORT));
