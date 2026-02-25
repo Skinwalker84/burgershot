@@ -669,6 +669,53 @@ app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
   return res.status(400).json({ success: false, message: "period muss day|week|month|year sein." });
 });
 
+// GET /reports/day-details?date=YYYY-MM-DD
+// Returns: all sales for that day + totals + breakdown by employee/register
+app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
+  rotateDayIfNeeded();
+
+  const dateStr = String(req.query?.date || db.meta.currentDay);
+  const date = parseDateYYYYMMDD(dateStr);
+  if (!date) return res.status(400).json({ success: false, message: "Ungültiges Datum. Format: YYYY-MM-DD" });
+
+  const dayKey = getDayKeyLocal(date);
+  const sales = Array.isArray(db.salesByDay[dayKey]) ? db.salesByDay[dayKey] : [];
+
+  const totals = {
+    revenue: sales.reduce((s, x) => s + Number(x.total || 0), 0),
+    tips: sales.reduce((s, x) => s + Number(x.tip || 0), 0),
+    orders: sales.length
+  };
+  totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+
+  const byEmployee = {}; // displayName -> {revenue,tips,orders}
+  const byRegister = {}; // register -> {revenue,tips,orders}
+
+  for (const s of sales) {
+    const emp = String(s.employee || s.employeeUsername || "Unbekannt");
+    const reg = String(s.register || "?");
+
+    if (!byEmployee[emp]) byEmployee[emp] = { revenue: 0, tips: 0, orders: 0 };
+    byEmployee[emp].revenue += Number(s.total || 0);
+    byEmployee[emp].tips += Number(s.tip || 0);
+    byEmployee[emp].orders += 1;
+
+    if (!byRegister[reg]) byRegister[reg] = { revenue: 0, tips: 0, orders: 0 };
+    byRegister[reg].revenue += Number(s.total || 0);
+    byRegister[reg].tips += Number(s.tip || 0);
+    byRegister[reg].orders += 1;
+  }
+
+  return res.json({
+    success: true,
+    day: dayKey,
+    totals,
+    byEmployee,
+    byRegister,
+    sales
+  });
+});
+
 // Fallback to SPA index (optional)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));

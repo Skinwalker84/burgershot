@@ -68,12 +68,23 @@ function applyRoleVisibility() {
   const mgmtBtn = document.getElementById("tabBtnMgmt");
   const mgmtTab = document.getElementById("tab_mgmt");
 
+  const dayBtn = document.getElementById("tabBtnDay");
+  const dayTab = document.getElementById("tab_day");
+
   if (!mgmtBtn || !mgmtTab) return;
 
   if (isBoss()) {
     mgmtBtn.style.display = "";
+    if (dayBtn) dayBtn.style.display = "";
   } else {
     mgmtBtn.style.display = "none";
+    if (dayBtn) dayBtn.style.display = "none";
+
+    if (dayTab && !dayTab.classList.contains("hidden")) {
+      const kassBtn = document.querySelector(".tabsTop .tabTop");
+      openTab("tab_pos", kassBtn);
+      alert("Tagesabrechnung ist nur für den Chef verfügbar.");
+    }
     if (!mgmtTab.classList.contains("hidden")) {
       const kassBtn = document.querySelector(".tabsTop .tabTop");
       openTab("tab_pos", kassBtn);
@@ -99,6 +110,12 @@ function openTab(tabId, btn) {
     btn = document.querySelector(".tabsTop .tabTop") || btn;
   }
 
+  if (tabId === "tab_day" && !isBoss()) {
+    alert("Tagesabrechnung ist nur für den Chef verfügbar.");
+    tabId = "tab_pos";
+    btn = document.querySelector(".tabsTop .tabTop") || btn;
+  }
+
   document.querySelectorAll(".tabPage").forEach(p => p.classList.add("hidden"));
   document.getElementById(tabId)?.classList.remove("hidden");
 
@@ -106,6 +123,10 @@ function openTab(tabId, btn) {
   btn?.classList.add("active");
 
   if (tabId === "tab_mgmt") refreshStats();
+  if (tabId === "tab_day") {
+    initDayTab();
+    loadDayReport();
+  }
 
   if (tabId === "tab_kitchen") {
     loadKitchen();
@@ -897,6 +918,125 @@ async function refreshStats() {
   if (data.currentDay) {
     serverDay = data.currentDay;
     updateDayTimeUI();
+  }
+}
+
+/* ========= Tagesabrechnung ========= */
+let dayTabInited = false;
+
+function initDayTab() {
+  if (dayTabInited) return;
+  dayTabInited = true;
+
+  // Default date = server day (falls bekannt)
+  const inp = document.getElementById("dayDate");
+  if (inp) {
+    inp.value = serverDay || "";
+    inp.max = ""; // allow future (RP), no restriction
+  }
+}
+
+function setDayToToday() {
+  const inp = document.getElementById("dayDate");
+  if (!inp) return;
+  inp.value = serverDay || inp.value;
+}
+
+function money(n) {
+  const x = Number(n || 0);
+  // no decimals needed for GTA money, keep clean
+  return "$" + (Number.isFinite(x) ? x : 0);
+}
+
+async function loadDayReport() {
+  if (!isBoss()) return;
+
+  const date = document.getElementById("dayDate")?.value || serverDay;
+  if (!date) return;
+
+  const res = await fetch(`/reports/day-details?date=${encodeURIComponent(date)}`);
+  if (res.status === 401) {
+    me = null;
+    applyRoleVisibility();
+    return showLoginPage("Bitte einloggen.");
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Tagesabrechnung.");
+
+  document.getElementById("dayRevenue").innerText = money(data.totals?.revenue);
+  document.getElementById("dayTips").innerText = money(data.totals?.tips);
+  document.getElementById("dayOrders").innerText = String(data.totals?.orders ?? 0);
+  document.getElementById("dayAvg").innerText = money(Math.round(Number(data.totals?.avg || 0)));
+
+  // Employees table
+  const emp = data.byEmployee || {};
+  const empRows = Object.entries(emp)
+    .sort((a, b) => (Number(b[1]?.revenue || 0) - Number(a[1]?.revenue || 0)))
+    .map(([name, info]) => {
+      const revenue = money(info.revenue);
+      const tips = money(info.tips);
+      const orders = String(info.orders || 0);
+      return `<tr><td>${escapeHtml(name)}</td><td>${revenue}</td><td>${tips}</td><td>${orders}</td></tr>`;
+    })
+    .join("");
+
+  const empEl = document.getElementById("dayEmployees");
+  if (empEl) {
+    empEl.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Name</th><th>Umsatz</th><th>Trinkgeld</th><th>Orders</th></tr></thead>
+        <tbody>${empRows || `<tr><td colspan="4" class="muted">Keine Daten</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+
+  // Registers table
+  const regs = data.byRegister || {};
+  const regRows = Object.entries(regs)
+    .sort((a, b) => (Number(a[0]) - Number(b[0])))
+    .map(([reg, info]) => {
+      return `<tr><td>Kasse ${escapeHtml(String(reg))}</td><td>${money(info.revenue)}</td><td>${money(info.tips)}</td><td>${String(info.orders || 0)}</td></tr>`;
+    })
+    .join("");
+
+  const regEl = document.getElementById("dayRegisters");
+  if (regEl) {
+    regEl.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Kasse</th><th>Umsatz</th><th>Trinkgeld</th><th>Orders</th></tr></thead>
+        <tbody>${regRows || `<tr><td colspan="4" class="muted">Keine Daten</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+
+  // Sales list
+  const sales = Array.isArray(data.sales) ? data.sales : [];
+  const saleRows = sales
+    .slice()
+    .sort((a, b) => (Number(a.id || 0) - Number(b.id || 0)))
+    .map(s => {
+      const items = Array.isArray(s.items) ? s.items.map(i => `${i.qty}× ${i.name}`).join(", ") : "";
+      return `<tr>
+        <td>#${escapeHtml(String(s.id))}</td>
+        <td>${escapeHtml(String(s.timeHM || ""))}</td>
+        <td>${escapeHtml(String(s.employee || s.employeeUsername || ""))}</td>
+        <td>K${escapeHtml(String(s.register || ""))}</td>
+        <td>${money(s.total)}</td>
+        <td>${money(s.tip)}</td>
+        <td class="muted">${escapeHtml(items)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const salesEl = document.getElementById("daySales");
+  if (salesEl) {
+    salesEl.innerHTML = `
+      <table class="table">
+        <thead><tr><th>ID</th><th>Zeit</th><th>Mitarbeiter</th><th>Kasse</th><th>Summe</th><th>Tip</th><th>Items</th></tr></thead>
+        <tbody>${saleRows || `<tr><td colspan="7" class="muted">Keine Bons</td></tr>`}</tbody>
+      </table>
+    `;
   }
 }
 

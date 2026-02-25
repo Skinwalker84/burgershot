@@ -58,6 +58,7 @@
     <div class="tabsTop">
       <button class="tabTop active" onclick="openTab('tab_pos', this)">Kasse</button>
       <button class="tabTop" onclick="openTab('tab_kitchen', this)">Küche</button>
+      <button class="tabTop" id="tabBtnDay" onclick="openTab('tab_day', this)">Tagesabrechnung</button>
       <button class="tabTop" id="tabBtnMgmt" onclick="openTab('tab_mgmt', this)">Management</button>
     </div>
 
@@ -179,6 +180,58 @@
           </div>
 
           <div id="usersList" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: DAY REPORT ===== -->
+    <div id="tab_day" class="tabPage hidden">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Tagesabrechnung</div>
+            <div class="muted small">Chef only</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <input id="dayDate" class="input" type="date" style="width:180px;" />
+            <button class="ghost" onclick="setDayToToday()">Heute</button>
+            <button class="primary" onclick="loadDayReport()">Laden</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Umsatz</div>
+            <div style="font-weight:900; font-size:22px;" id="dayRevenue">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Trinkgeld</div>
+            <div style="font-weight:900; font-size:22px;" id="dayTips">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Orders</div>
+            <div style="font-weight:900; font-size:22px;" id="dayOrders">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Ø Bon</div>
+            <div style="font-weight:900; font-size:22px;" id="dayAvg">—</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="font-weight:800;">Mitarbeiter</div>
+          <div id="dayEmployees" style="margin-top:8px;"></div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="font-weight:800;">Kassen</div>
+          <div id="dayRegisters" style="margin-top:8px;"></div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="font-weight:800;">Bons</div>
+          <div id="daySales" style="margin-top:8px;"></div>
         </div>
       </div>
     </div>
