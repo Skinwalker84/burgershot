@@ -480,7 +480,6 @@ function openPay() {
 
 function closePay() {
   document.getElementById("payOverlay")?.classList.add("hidden");
-  // pendingSale NICHT löschen (wird nach erfolgreichem Checkout gelöscht)
 }
 
 function confirmPay() {
@@ -527,28 +526,37 @@ async function checkout(paidAmount = null) {
   if (kitchenVisible) loadKitchen();
 }
 
-/* ========= Küche: 2 Spalten + Sortierung + Sound + Timer + Farben ========= */
+/* ========= Küche: Ping + Blinken je Zeit + Grid ========= */
 let kitchenInitialized = false;
 let lastMaxOrderId = 0;
 
-function playNewOrderSound() {
+/* "Ping" Sound: 2 kurze Töne */
+function playPingSound() {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "sine";
-    o.frequency.value = 880;
-    g.gain.value = 0.0001;
-    o.connect(g); g.connect(ctx.destination);
-    o.start();
-    const t = ctx.currentTime;
-    g.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
-    o.stop(t + 0.22);
-    o.onended = () => { try { ctx.close(); } catch(e){} };
-  } catch(e) {}
+
+    const beep = (freq, t0, dur) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = freq;
+      g.gain.value = 0.0001;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start(t0);
+      g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.stop(t0 + dur + 0.01);
+    };
+
+    const t = ctx.currentTime + 0.01;
+    beep(880, t, 0.11);
+    beep(1175, t + 0.14, 0.12);
+
+    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 500);
+  } catch (e) {}
 }
 
 function itemLinesForKitchen(item) {
@@ -573,10 +581,11 @@ function fmtAge(ms) {
   return `${m}:${String(r).padStart(2, "0")}`;
 }
 
+/* 0-2 min normal, 2-4 min warn blink, >4 min hot blink */
 function ageClass(ms) {
   const min = ms / 60000;
-  if (min >= 6) return "age-hot";
-  if (min >= 3) return "age-warn";
+  if (min >= 4) return "age-hot-blink";
+  if (min >= 2) return "age-warn-blink";
   return "age-ok";
 }
 
@@ -590,12 +599,11 @@ async function loadKitchen() {
   const info = document.getElementById("kitchenInfo");
   if (info) info.innerText = `Tag: ${data.currentDay} · Auto-Update alle 3s`;
 
-  // älteste zuerst
   const pending = (data.pending || []).slice().sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
-  // Sound bei neuer Order
+  // Ping wenn neue Order reinkommt
   const currentMax = pending.reduce((m, o) => Math.max(m, Number(o.id) || 0), 0);
-  if (kitchenInitialized && currentMax > lastMaxOrderId) playNewOrderSound();
+  if (kitchenInitialized && currentMax > lastMaxOrderId) playPingSound();
   lastMaxOrderId = Math.max(lastMaxOrderId, currentMax);
   kitchenInitialized = true;
 
@@ -618,9 +626,8 @@ async function loadKitchen() {
 
     const ts = Date.parse(o.time || "") || now;
     const ageMs = Math.max(0, now - ts);
-    const cls = ageClass(ageMs);
 
-    box.classList.add(cls);
+    box.classList.add(ageClass(ageMs));
     box.dataset.orderTs = String(ts);
 
     box.innerHTML = `
@@ -647,7 +654,6 @@ async function loadKitchen() {
     pendEl.appendChild(box);
   });
 
-  // Timer direkt nach dem Render updaten lassen
   tickKitchenAges();
 }
 
@@ -667,7 +673,7 @@ async function completeKitchenOrder(id) {
   loadKitchen();
 }
 
-/* Live-Timer: updatet jede Sekunde die Anzeige + Farben */
+/* Live-Timer: jede Sekunde Anzeige + Blinkklassen aktualisieren */
 let kitchenAgeTicker = null;
 
 function startKitchenAgeTicker() {
@@ -696,17 +702,15 @@ function tickKitchenAges() {
     if (!ts) return;
     const ageMs = Math.max(0, now - ts);
 
-    // Klassen aktualisieren
-    card.classList.remove("age-ok", "age-warn", "age-hot");
+    card.classList.remove("age-ok", "age-warn-blink", "age-hot-blink");
     card.classList.add(ageClass(ageMs));
 
-    // Timer aktualisieren
     const ageEl = card.querySelector('[data-role="age"]');
     if (ageEl) ageEl.textContent = fmtAge(ageMs);
   });
 }
 
-/* ========= Management / Stats (inkl Trinkgeld Anzeige) ========= */
+/* ========= Management / Stats ========= */
 let serverDay = null;
 
 async function refreshStats() {
@@ -772,88 +776,6 @@ async function refreshStats() {
     serverDay = data.currentDay;
     updateDayTimeUI();
   }
-}
-
-/* ========= Chef: Users ========= */
-async function loadUsers() {
-  if (!isBoss()) return;
-
-  const res = await fetch("/users");
-  if (!res.ok) return;
-
-  const data = await res.json().catch(() => ({}));
-  if (!data.success) return;
-
-  const el = document.getElementById("usersList");
-  if (!el) return;
-
-  const staff = data.staff || [];
-  el.innerHTML = staff.length
-    ? staff.map(u => `
-        <div class="panel" style="margin-top:8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <div>
-              <b>${escapeHtml(u.displayName)}</b>
-              <div class="muted small">@${escapeHtml(u.username)}</div>
-            </div>
-            <button class="danger" onclick="deleteUser('${escapeAttr(u.username)}')">Löschen</button>
-          </div>
-        </div>
-      `).join("")
-    : `<div class="muted small">Keine Mitarbeiter vorhanden.</div>`;
-}
-
-async function addUser() {
-  if (!isBoss()) return alert("Nur Chef.");
-
-  const displayName = document.getElementById("newUserDisplayName")?.value?.trim() || "";
-  const username = document.getElementById("newUserUsername")?.value?.trim() || "";
-  const password = document.getElementById("newUserPassword")?.value || "";
-  if (!displayName || !username || !password) return alert("Bitte alle Felder ausfüllen.");
-
-  const res = await fetch("/users/add", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ displayName, username, password })
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) return alert(data.message || "Fehler beim Hinzufügen.");
-
-  document.getElementById("newUserDisplayName").value = "";
-  document.getElementById("newUserUsername").value = "";
-  document.getElementById("newUserPassword").value = "";
-
-  loadUsers();
-}
-
-async function deleteUser(username) {
-  if (!isBoss()) return alert("Nur Chef.");
-
-  const res = await fetch("/users/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username })
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) return alert(data.message || "Fehler beim Löschen.");
-  loadUsers();
-}
-
-async function resetAll() {
-  if (!isBoss()) return alert("Nur Chef.");
-  if (!confirm("Wirklich Reset (heute)?")) return;
-
-  const res = await fetch("/reset", { method: "POST" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) return alert(data.message || "Reset fehlgeschlagen.");
-
-  refreshStats();
-  loadKitchen();
-
-  kitchenInitialized = false;
-  lastMaxOrderId = 0;
 }
 
 /* ========= Auth UI ========= */
