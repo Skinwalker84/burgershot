@@ -319,4 +319,82 @@ input{
 
 .kitchenList .panel{
   margin-top: 0 !important; /* falls irgendwo margin-top gesetzt war */
+
+}
+
+/* ===== Küche Upgrade: 2-Spalten Grid + Timer Styles ===== */
+.kitchenList{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.orderCard{
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.orderTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 12px;
+}
+
+.orderTitle{
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.orderRight{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap: 8px;
+}
+
+.orderAge{
+  font-weight: 900;
+  font-size: 16px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.18);
+  min-width: 70px;
+  text-align:center;
+}
+
+.orderBody{
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  padding-top: 10px;
+}
+
+.orderLine{
+  padding: 3px 0;
+}
+
+/* Zeit-Farben */
+.orderCard.age-ok{
+  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.20);
+}
+.orderCard.age-ok .orderAge{
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.20);
+}
+
+.orderCard.age-warn{
+  box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.28);
+}
+.orderCard.age-warn .orderAge{
+  box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.28);
+}
+
+.orderCard.age-hot{
+  box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.28);
+}
+.orderCard.age-hot .orderAge{
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.28);
 }
