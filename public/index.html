@@ -361,7 +361,48 @@
     </div>
   </div>
 
-  <!-- ===== DAY CLOSE OVERLAY ===== -->
+  
+  <!-- ===== ADD USER OVERLAY (Boss only) ===== -->
+  <div id="addUserOverlay" class="overlay hidden">
+    <div class="overlayCard">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Mitarbeiter hinzufügen</div>
+        <button class="ghost" onclick="closeAddUser()">X</button>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Username (Login)</div>
+        <input id="addUserUsername" class="input" placeholder="z.B. max.mustermann" autocomplete="off" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Anzeigename</div>
+        <input id="addUserDisplayName" class="input" placeholder="z.B. Max Mustermann" autocomplete="off" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Rolle</div>
+        <select id="addUserRole" class="input">
+          <option value="staff">Mitarbeiter (staff)</option>
+          <option value="boss">Chef (boss)</option>
+        </select>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Passwort</div>
+        <input id="addUserPassword" class="input" type="password" placeholder="Standard: admin" autocomplete="new-password" />
+      </div>
+
+      <div class="muted small" id="addUserMsg" style="margin-top:10px;">—</div>
+
+      <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
+        <button class="ghost" onclick="closeAddUser()">Abbrechen</button>
+        <button class="primary" onclick="submitAddUser()">Erstellen</button>
+      </div>
+    </div>
+  </div>
+
+<!-- ===== DAY CLOSE OVERLAY ===== -->
   <div id="dayCloseOverlay" class="overlay hidden">
     <div class="overlayCard">
       <div class="row" style="justify-content:space-between;">

@@ -151,3 +151,6 @@ button{ font-family:inherit; }
   background:rgba(17,24,38,.92); box-shadow:var(--shadow); padding:16px;
 }
 .brandRow{ display:flex; gap:12px; align-items:center; }
+
+
+select.input{ appearance:none; -webkit-appearance:none; }

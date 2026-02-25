@@ -670,19 +670,45 @@ async function loadUsers(){
 }
 
 function openAddUser(){
-  const username = prompt("Username (Login, z.B. max.mustermann):");
-  if(!username) return;
+  const uEl=document.getElementById("addUserUsername");
+  const dEl=document.getElementById("addUserDisplayName");
+  const rEl=document.getElementById("addUserRole");
+  const pEl=document.getElementById("addUserPassword");
+  const msg=document.getElementById("addUserMsg");
 
-  const displayName = prompt("Anzeigename:", username) || username;
+  if(uEl) uEl.value="";
+  if(dEl) dEl.value="";
+  if(rEl) rEl.value="staff";
+  if(pEl) pEl.value="admin";
+  if(msg) msg.innerText="—";
 
-  let roleInput = prompt("Rolle auswählen:\n1 = Chef\n2 = Mitarbeiter", "2");
-  let role = "staff";
-  if(roleInput === "1") role = "boss";
-  if(roleInput === "2") role = "staff";
+  document.getElementById("addUserOverlay").classList.remove("hidden");
+  setTimeout(()=>{ try{ uEl && uEl.focus(); }catch(e){} }, 0);
+}
 
-  const password = prompt("Passwort (Standard: admin):", "admin") || "admin";
+function closeAddUser(){ document.getElementById("addUserOverlay").classList.add("hidden"); }
 
-  addUser(username.trim().toLowerCase(), displayName.trim(), role, password);
+async function submitAddUser(){
+  const u=(document.getElementById("addUserUsername").value||"").trim().toLowerCase();
+  const d=(document.getElementById("addUserDisplayName").value||"").trim() || u;
+  const role=String(document.getElementById("addUserRole").value||"staff");
+  const pw=(document.getElementById("addUserPassword").value||"admin");
+  const msg=document.getElementById("addUserMsg");
+
+  if(!u){ if(msg) msg.innerText="Username fehlt."; return; }
+  if(!["boss","staff"].includes(role)){ if(msg) msg.innerText="Ungültige Rolle."; return; }
+
+  // optional: prevent spaces
+  if(/\s/.test(u)){ if(msg) msg.innerText="Username darf keine Leerzeichen enthalten."; return; }
+
+  if(msg) msg.innerText="Speichern…";
+  const res=await fetch("/users",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username:u, displayName:d, role, password:pw || "admin" }) });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){ if(msg) msg.innerText=(data.message || "Fehler."); return; }
+
+  if(msg) msg.innerText="Erstellt ✅";
+  closeAddUser();
+  loadUsers();
 }
 
 async function addUser(username, displayName, role, password){
