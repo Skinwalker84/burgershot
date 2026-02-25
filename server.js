@@ -66,15 +66,6 @@ function addDays(dateObj, days) {
   return d;
 }
 
-function startOfWeekMonday(dateObj) {
-  const d = new Date(dateObj);
-  const day = d.getDay(); // 0=Sun ... 1=Mon
-  const diff = (day === 0 ? -6 : 1 - day);
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 function isoWeekStartDate(weekYear, week) {
   const jan4 = new Date(weekYear, 0, 4);
   jan4.setHours(0, 0, 0, 0);
@@ -93,6 +84,15 @@ function parseWeekYYYY_Www(s) {
   const w = Number(m[2]);
   if (!Number.isFinite(y) || !Number.isFinite(w) || w < 1 || w > 53) return null;
   return { year: y, week: w };
+}
+
+function startOfWeekMonday(dateObj) {
+  const d = new Date(dateObj);
+  const day = d.getDay(); // 0=Sun ... 1=Mon
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 function toHM(iso) {
@@ -199,11 +199,9 @@ function normalizeProducts(list) {
     const name = String(p.name || "").trim();
     const cat = String(p.cat || "").trim();
     const price = Number(p.price);
-
     if (!id || !name || !cat) continue;
     if (!Number.isFinite(price) || price < 0) continue;
     if (seen.has(id)) continue;
-
     seen.add(id);
     out.push({ id, name, cat, price: Math.round(price) });
   }
@@ -214,7 +212,9 @@ function normalizeProducts(list) {
     if (!dp || typeof dp !== "object") continue;
     const id = String(dp.id || "").trim();
     if (!id) continue;
-    if (!map.has(id)) map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0) });
+    if (!map.has(id)) {
+      map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0) });
+    }
   }
   return Array.from(map.values());
 }
