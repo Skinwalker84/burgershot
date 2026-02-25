@@ -1,5 +1,6 @@
 // server.js — Burger Shot (Railway + Volume /data)
 // Full API: auth, users, stats, sales, kitchen, reset, reports
+// IMPORTANT: PBKDF2 iterations set to 100000 for backward compatibility.
 
 const express = require("express");
 const path = require("path");
@@ -8,10 +9,13 @@ const crypto = require("crypto");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
+const HOST = "0.0.0.0";
 
-// --- middleware
 app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ Real health endpoint (NO fallback)
+app.get("/health", (req, res) => res.status(200).send("OK"));
 
 // -------------------- Persistent storage (Railway Volume) --------------------
 const DATA_DIR = "/data";
@@ -40,9 +44,16 @@ function atomicWrite(filePath, content) {
   }
 }
 
+function getDayKeyLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${da}`;
+}
+
 function makeFreshDB() {
   const today = getDayKeyLocal(new Date());
-  const { salt, hash } = hashPassword("admin"); // default boss pw
+  const { salt, hash } = hashPassword("admin"); // default boss pw: admin
   return {
     meta: {
       currentDay: today,
@@ -115,19 +126,27 @@ function loadDB() {
   }
 }
 
+let db = loadDB();
+
 function saveDB() {
   ensureDataDir();
   atomicWrite(DB_FILE, JSON.stringify(db, null, 2));
 }
 
-let db = loadDB();
+function rotateDayIfNeeded() {
+  const today = getDayKeyLocal(new Date());
+  if (db.meta.currentDay !== today) {
+    db.meta.currentDay = today;
+    if (!Array.isArray(db.salesByDay[today])) db.salesByDay[today] = [];
+    if (!db.kitchenByDay[today]) db.kitchenByDay[today] = { pending: [], done: [] };
+    saveDB();
+  }
+}
 
-// -------------------- time helpers --------------------
-function getDayKeyLocal(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const da = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${da}`;
+function toHM(isoString) {
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function parseDateYYYYMMDD(s) {
@@ -141,7 +160,7 @@ function parseDateYYYYMMDD(s) {
 
 function startOfWeekMonday(dateLocal) {
   const d = new Date(dateLocal.getFullYear(), dateLocal.getMonth(), dateLocal.getDate());
-  const day = d.getDay(); // 0 Sun..6 Sat
+  const day = d.getDay();
   const diff = (day === 0 ? -6 : 1 - day);
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
@@ -154,32 +173,19 @@ function addDays(dateLocal, n) {
   return d;
 }
 
-function toHM(isoString) {
-  const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function rotateDayIfNeeded() {
-  const today = getDayKeyLocal(new Date());
-  if (db.meta.currentDay !== today) {
-    db.meta.currentDay = today;
-    if (!Array.isArray(db.salesByDay[today])) db.salesByDay[today] = [];
-    if (!db.kitchenByDay[today]) db.kitchenByDay[today] = { pending: [], done: [] };
-    saveDB();
-  }
-}
-
 // -------------------- password hashing --------------------
+// ✅ COMPAT MODE: 100000 iterations (matches earlier versions)
+const PBKDF2_ITERS = 100000;
+
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 120000, 32, "sha256").toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERS, 32, "sha256").toString("hex");
   return { salt, hash };
 }
 
 function verifyPassword(password, pwObj) {
   if (!pwObj?.salt || !pwObj?.hash) return false;
-  const hash = crypto.pbkdf2Sync(password, pwObj.salt, 120000, 32, "sha256").toString("hex");
+  const hash = crypto.pbkdf2Sync(password, pwObj.salt, PBKDF2_ITERS, 32, "sha256").toString("hex");
   try {
     return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(pwObj.hash, "hex"));
   } catch {
@@ -206,8 +212,11 @@ function setCookie(res, name, value, opts = {}) {
   parts.push("HttpOnly");
   parts.push("SameSite=Lax");
   if (opts.maxAge != null) parts.push(`Max-Age=${opts.maxAge}`);
-  // Railway runs https at the edge; Secure is fine
-  parts.push("Secure");
+
+  // ✅ only set Secure if request is actually https at the edge
+  const proto = String(opts.proto || "");
+  if (proto === "https") parts.push("Secure");
+
   res.setHeader("Set-Cookie", parts.join("; "));
 }
 
@@ -286,13 +295,15 @@ app.post("/auth/login", (req, res) => {
 
   const u = db.users.find(x => x.username === username);
   if (!u) return res.status(401).json({ success: false, message: "Falscher Login." });
-
   if (!verifyPassword(password, u.pw)) {
     return res.status(401).json({ success: false, message: "Falscher Login." });
   }
 
   const token = createSession(u.username);
-  setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 14 });
+
+  const proto = String(req.headers["x-forwarded-proto"] || "").toLowerCase();
+  setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 14, proto });
+
   res.json({ success: true, user: publicUser(u) });
 });
 
@@ -304,7 +315,8 @@ app.post("/auth/logout", (req, res) => {
     delete db.sessions[token];
     saveDB();
   }
-  setCookie(res, "bs_token", "", { maxAge: 0 });
+  const proto = String(req.headers["x-forwarded-proto"] || "").toLowerCase();
+  setCookie(res, "bs_token", "", { maxAge: 0, proto });
   res.json({ success: true });
 });
 
@@ -350,7 +362,6 @@ app.post("/users/delete", requireAuth, requireBoss, (req, res) => {
 
   db.users = db.users.filter(u => u.username !== username);
 
-  // remove sessions
   for (const [token, s] of Object.entries(db.sessions)) {
     if (s?.username === username) delete db.sessions[token];
   }
@@ -472,7 +483,6 @@ app.post("/reset", requireAuth, requireBoss, (req, res) => {
 });
 
 // -------------------- REPORTS / BUCHHALTUNG --------------------
-// GET /reports/summary?period=day|week|month|year&date=YYYY-MM-DD
 app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
   rotateDayIfNeeded();
 
@@ -516,13 +526,7 @@ app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
     };
     totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
 
-    return res.json({
-      success: true,
-      period: "week",
-      range: { start: days[0], end: days[6] },
-      totals,
-      breakdown
-    });
+    return res.json({ success: true, period: "week", range: { start: days[0], end: days[6] }, totals, breakdown });
   }
 
   if (period === "month") {
@@ -543,13 +547,7 @@ app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
     };
     totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
 
-    return res.json({
-      success: true,
-      period: "month",
-      range: { start: breakdown[0]?.day, end: breakdown[breakdown.length - 1]?.day },
-      totals,
-      breakdown
-    });
+    return res.json({ success: true, period: "month", range: { start: breakdown[0]?.day, end: breakdown[breakdown.length - 1]?.day }, totals, breakdown });
   }
 
   if (period === "year") {
@@ -568,13 +566,7 @@ app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
         orders += sum.orders;
       }
       const avg = orders > 0 ? revenue / orders : 0;
-      breakdown.push({
-        month: `${y}-${String(month + 1).padStart(2, "0")}`,
-        revenue,
-        tips,
-        orders,
-        avg
-      });
+      breakdown.push({ month: `${y}-${String(month + 1).padStart(2, "0")}`, revenue, tips, orders, avg });
     }
 
     const totals = {
@@ -584,13 +576,7 @@ app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
     };
     totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
 
-    return res.json({
-      success: true,
-      period: "year",
-      range: { start: `${y}-01-01`, end: `${y}-12-31` },
-      totals,
-      breakdown
-    });
+    return res.json({ success: true, period: "year", range: { start: `${y}-01-01`, end: `${y}-12-31` }, totals, breakdown });
   }
 
   return res.status(400).json({ success: false, message: "period muss day|week|month|year sein." });
@@ -601,13 +587,10 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// -------------------- IMPORTANT: bind 0.0.0.0 for Railway --------------------
-const HOST = "0.0.0.0";
-
 app.listen(PORT, HOST, () => {
   console.log(`Burger Shot running on http://${HOST}:${PORT}`);
 });
 
-// helpful crash logs
+// crash logs
 process.on("uncaughtException", (err) => console.error("❌ uncaughtException:", err));
 process.on("unhandledRejection", (err) => console.error("❌ unhandledRejection:", err));
