@@ -924,6 +924,76 @@ async function refreshStats() {
 /* ========= Tagesabrechnung ========= */
 let dayTabInited = false;
 
+
+let currentDayReport = null;
+
+function fmtDateTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("de-DE");
+  } catch (e) {
+    return String(iso || "");
+  }
+}
+
+function printDayReport() {
+  if (!isBoss()) return;
+  // ensure day tab is visible for print
+  const btn = document.querySelector('.tabsTop .tabTop[data-tab="tab_day"]');
+  if (btn) openTab("tab_day", btn);
+  window.print();
+}
+
+function openCloseDay() {
+  if (!isBoss()) return;
+  const date = document.getElementById("dayDate")?.value || serverDay;
+  if (!date) return;
+
+  if (currentDayReport?.closed) {
+    return alert("Dieser Tag ist bereits abgeschlossen.");
+  }
+
+  window.__dayCloseDate = date;
+
+  const ov = document.getElementById("dayCloseOverlay");
+  if (!ov) return;
+  document.getElementById("dayCloseDateLabel").innerText = date;
+  document.getElementById("dayCashCount").value = "";
+  document.getElementById("dayCloseNote").value = "";
+  document.getElementById("dayCloseMsg").innerText = "—";
+  ov.classList.remove("hidden");
+}
+
+function closeDayClose() {
+  document.getElementById("dayCloseOverlay")?.classList.add("hidden");
+}
+
+async function submitDayClose() {
+  const date = window.__dayCloseDate || (document.getElementById("dayDate")?.value || serverDay);
+  if (!date) return;
+
+  const cashCount = document.getElementById("dayCashCount")?.value;
+  const note = document.getElementById("dayCloseNote")?.value;
+
+  const msg = document.getElementById("dayCloseMsg");
+  if (msg) msg.innerText = "Speichere...";
+
+  const res = await fetch("/reports/close-day", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date, cashCount, note })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    if (msg) msg.innerText = data.message || "Fehler beim Tagesabschluss.";
+    return;
+  }
+
+  closeDayClose();
+  await loadDayReport();
+}
+
 function initDayTab() {
   if (dayTabInited) return;
   dayTabInited = true;
@@ -963,6 +1033,25 @@ async function loadDayReport() {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Tagesabrechnung.");
+
+  currentDayReport = data;
+  const closed = data.closed;
+  const st = document.getElementById("dayCloseStatus");
+  const stPrint = document.getElementById("dayPrintClosed");
+  const dateLbl = document.getElementById("dayPrintDate");
+  if (dateLbl) dateLbl.innerText = date;
+  const closeBtn = document.getElementById("dayCloseBtn");
+  if (closed) {
+    const txt = `Abgeschlossen: ${fmtDateTime(closed.closedAt)} — ${closed.closedByName || closed.closedBy || ""}` + (closed.cashCount != null ? ` (Kasse Ist: ${money(closed.cashCount)})` : "") + (closed.note ? ` — ${closed.note}` : "");
+    if (st) st.innerText = txt;
+    if (stPrint) stPrint.innerText = txt;
+    if (closeBtn) closeBtn.disabled = true;
+  } else {
+    const txt = "Status: Offen";
+    if (st) st.innerText = txt;
+    if (stPrint) stPrint.innerText = txt;
+    if (closeBtn) closeBtn.disabled = false;
+  }
 
   document.getElementById("dayRevenue").innerText = money(data.totals?.revenue);
   document.getElementById("dayTips").innerText = money(data.totals?.tips);

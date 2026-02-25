@@ -136,6 +136,7 @@
           <div>
             <div style="font-weight:900; font-size:18px;">Management</div>
             <div class="muted small">Chef only</div>
+            <div id="dayCloseStatus" class="muted small" style="margin-top:4px;">—</div>
           </div>
           <button class="danger" onclick="resetAll()">Reset (heute)</button>
         </div>
@@ -187,16 +188,24 @@
     <!-- ===== TAB: DAY REPORT ===== -->
     <div id="tab_day" class="tabPage hidden">
       <div class="panel">
+        <div class="printOnly" style="margin-bottom:12px;">
+          <div style="font-weight:900; font-size:20px;">BurgerShot — Tagesabrechnung</div>
+          <div class="muted small">Datum: <span id="dayPrintDate">—</span></div>
+          <div class="muted small" id="dayPrintClosed">—</div>
+        </div>
         <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
           <div>
             <div style="font-weight:900; font-size:18px;">Tagesabrechnung</div>
             <div class="muted small">Chef only</div>
+            <div id="dayCloseStatus" class="muted small" style="margin-top:4px;">—</div>
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
             <input id="dayDate" class="input" type="date" style="width:180px;" />
             <button class="ghost" onclick="setDayToToday()">Heute</button>
-            <button class="primary" onclick="loadDayReport()">Laden</button>
+            <button class="primary noPrint" onclick="loadDayReport()">Laden</button>
+            <button class="ghost noPrint" onclick="printDayReport()">PDF</button>
+            <button id="dayCloseBtn" class="primary noPrint" onclick="openCloseDay()">Tagesabschluss</button>
           </div>
         </div>
 
@@ -255,7 +264,29 @@
     </div>
   </div>
 
-  <!-- ===== CHANGE PASSWORD OVERLAY ===== -->
+  
+<!-- ===== DAY CLOSE OVERLAY ===== -->
+<div id="dayCloseOverlay" class="overlay hidden">
+  <div class="loginCard" style="width:460px;">
+    <h2 style="margin:0 0 10px 0;">Tagesabschluss</h2>
+    <div class="muted small" style="margin-bottom:10px;">Datum: <b id="dayCloseDateLabel">—</b></div>
+
+    <div class="muted small" style="margin-top:6px;">Kassenbestand (Ist) – optional</div>
+    <input id="dayCashCount" class="input" placeholder="z.B. 1234" inputmode="decimal" />
+
+    <div class="muted small" style="margin-top:10px;">Notiz – optional</div>
+    <input id="dayCloseNote" class="input" placeholder="z.B. Schichtwechsel / Besonderheiten" />
+
+    <div class="muted small" id="dayCloseMsg" style="margin-top:10px;">—</div>
+
+    <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
+      <button class="ghost" onclick="closeDayClose()">Abbrechen</button>
+      <button class="primary" onclick="submitDayClose()">Abschließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHANGE PASSWORD OVERLAY ===== -->
   <div id="pwOverlay" class="overlay hidden">
     <div class="loginCard" style="width:420px;">
       <h2 style="margin:0 0 10px 0;">Passwort ändern</h2>

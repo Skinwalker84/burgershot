@@ -1037,3 +1037,18 @@ button.ghost{
   text-align: center;
   opacity: 0.85;
 }
+
+
+/* ===== Print (PDF) ===== */
+.noPrint{ }
+.printOnly{ display:none; }
+@media print{
+  body{ background:#fff; }
+  .noPrint{ display:none !important; }
+  .printOnly{ display:block !important; }
+  .tabsTop, .tabBtns, #loginOverlay, #payOverlay, #pwOverlay, #dayCloseOverlay{ display:none !important; }
+  /* hide everything except day tab */
+  .tabPage{ display:none !important; }
+  #tab_day{ display:block !important; }
+  #tab_day .panel{ border:none !important; box-shadow:none !important; }
+}
