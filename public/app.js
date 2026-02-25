@@ -168,20 +168,36 @@ function resetProductsToDefault(){
   renderProductsEditor();
 }
 
-function hydrateProducts(){
+async 
+async function hydrateProducts(){
+  // 1. Try server
+  try{
+    const res = await fetch("/products");
+    if(res.ok){
+      const data = await res.json();
+      if(data.success && Array.isArray(data.products) && data.products.length){
+        PRODUCTS = data.products.map(p=>({
+          name: p.name,
+          cat: p.cat,
+          price: p.price
+        }));
+        saveProductsToStorage(PRODUCTS); // sync local fallback
+        return;
+      }
+    }
+  }catch(e){}
+
+  // 2. Fallback: LocalStorage
   const stored = loadProductsFromStorage();
   if(stored){
-    // merge by name+cat
-    const map = new Map(stored.map(p=>[`${p.cat}||${p.name}`, p]));
-    PRODUCTS = PRODUCTS_DEFAULT.map(p=>{
-      const k = `${p.cat}||${p.name}`;
-      const hit = map.get(k);
-      return hit ? { ...p, price: hit.price } : { ...p };
-    });
-  }else{
-    PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
+    PRODUCTS = stored.map(p=>({ ...p }));
+    return;
   }
+
+  // 3. Fallback: Defaults
+  PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
 }
+
 
 function renderProductsEditor(){
   const body = document.getElementById("mgmtProductsBody");
@@ -208,9 +224,11 @@ function mgmtReloadProducts(){
   if(msg) msg.innerText = "Neu geladen ✅";
 }
 
-function mgmtSaveProducts(){
+
+async function mgmtSaveProducts(){
   const msg = document.getElementById("mgmtProductsMsg");
   const list = (PRODUCTS||[]).map(p=>({ ...p }));
+
   for(let i=0;i<list.length;i++){
     const el = document.querySelector(`[data-price-idx="${i}"]`);
     if(!el) continue;
@@ -221,12 +239,32 @@ function mgmtSaveProducts(){
     }
     list[i].price = Math.round(n);
   }
+
+  // Try server save first
+  try{
+    const res = await fetch("/products",{
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ products: list })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.success){
+      PRODUCTS = list;
+      saveProductsToStorage(PRODUCTS); // keep local backup
+      renderProducts();
+      if(msg) msg.innerText="Gespeichert (Server) ✅";
+      return;
+    }
+  }catch(e){}
+
+  // Fallback: LocalStorage only
   PRODUCTS = list;
   if(saveProductsToStorage(PRODUCTS)){
     renderProducts();
-    if(msg) msg.innerText = "Gespeichert ✅";
+    if(msg) msg.innerText="Gespeichert (Local) ⚠️";
   }
 }
+
 
 function mgmtResetProducts(){
   const ok = confirm("VK-Preise auf Standard zurücksetzen?");
