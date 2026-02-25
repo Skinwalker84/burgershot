@@ -33,7 +33,7 @@ const products = [
 
 let cart = [];
 
-/* ========= Role Visibility (Management nur Chef) ========= */
+/* ========= Roles ========= */
 function isBoss() {
   return me?.role === "boss";
 }
@@ -57,6 +57,7 @@ function applyRoleVisibility() {
 
 /* ========= Tabs ========= */
 let kitchenPoll = null;
+let kitchenAgeTicker = null;
 
 function openTab(tabId, btn) {
   if (tabId === "tab_mgmt" && !isBoss()) {
@@ -98,6 +99,21 @@ function stopKitchenPolling() {
   kitchenPoll = null;
 }
 
+function startKitchenAgeTicker() {
+  if (kitchenAgeTicker) return;
+  kitchenAgeTicker = setInterval(() => {
+    const visible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
+    if (!visible) return;
+    tickKitchenAges();
+  }, 1000);
+}
+
+function stopKitchenAgeTicker() {
+  if (!kitchenAgeTicker) return;
+  clearInterval(kitchenAgeTicker);
+  kitchenAgeTicker = null;
+}
+
 /* ========= POS ========= */
 function setRegister(n) {
   currentRegister = n;
@@ -128,8 +144,18 @@ function renderProducts() {
 
   if (currentCategory === "Menü") {
     const menuItems = [
-      { name: "Burgermenü", price: 26, desc: "1 Burger + Fries + 1 Getränk auswählen", onClick: () => openMenuBuilder("burgermenu") },
-      { name: "Spar Paket 10/10", price: 200, desc: "10× Burger + 10× Getränk (frei zusammenstellen)", onClick: () => openMenuBuilder("spar1010") }
+      {
+        name: "Burgermenü",
+        price: 26,
+        desc: "1 Burger + Fries + 1 Getränk auswählen",
+        onClick: () => openMenuBuilder("burgermenu")
+      },
+      {
+        name: "Spar Paket 10/10",
+        price: 200,
+        desc: "10× Burger + 10× Getränk (frei zusammenstellen)",
+        onClick: () => openMenuBuilder("spar1010")
+      }
     ];
 
     menuItems.forEach(m => {
@@ -145,20 +171,23 @@ function renderProducts() {
       div.onclick = m.onClick;
       container.appendChild(div);
     });
+
     return;
   }
 
-  products.filter(p => p.category === currentCategory).forEach(p => {
-    const div = document.createElement("div");
-    div.className = "product";
-    div.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="price">$${p.price}</div>`;
-    div.onclick = () => addToCart(p);
-    container.appendChild(div);
-  });
+  products
+    .filter(p => p.category === currentCategory)
+    .forEach(p => {
+      const div = document.createElement("div");
+      div.className = "product";
+      div.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="price">$${p.price}</div>`;
+      div.onclick = () => addToCart(p);
+      container.appendChild(div);
+    });
 }
 
 /* ========= Menü Builder ========= */
-let menuMode = null;
+let menuMode = null; // "burgermenu" | "spar1010"
 let spar = { burgers: {}, drinks: {} };
 
 function ensureMenuOverlay() {
@@ -175,12 +204,16 @@ function ensureMenuOverlay() {
       <div id="simpleMode">
         <div style="margin-top:10px;">
           <div class="muted small" style="margin-bottom:6px;">Burger</div>
-          <select id="menuBurger" style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);"></select>
+          <select id="menuBurger"
+            style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);">
+          </select>
         </div>
 
         <div style="margin-top:10px;">
           <div class="muted small" style="margin-bottom:6px;">Getränk</div>
-          <select id="menuDrink" style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);"></select>
+          <select id="menuDrink"
+            style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);">
+          </select>
         </div>
 
         <div id="cheesyWrap" style="margin-top:12px; display:none; width:100%;">
@@ -230,18 +263,31 @@ function ensureMenuOverlay() {
   document.body.appendChild(overlay);
 }
 
-function resetSparState() { spar = { burgers: {}, drinks: {} }; }
-function sparTotal(obj) { return Object.values(obj).reduce((s, n) => s + (Number(n) || 0), 0); }
+function resetSparState() {
+  spar = { burgers: {}, drinks: {} };
+}
+
+function sparTotal(obj) {
+  return Object.values(obj).reduce((s, n) => s + (Number(n) || 0), 0);
+}
+
 function summarizeCounts(obj) {
   const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
   if (!entries.length) return "—";
   return entries.map(([n, q]) => `${n} x${q}`).join(", ");
 }
+
 function sparAdd(type, name) {
-  if (type === "burger") { if (sparTotal(spar.burgers) >= 10) return; spar.burgers[name] = (spar.burgers[name] || 0) + 1; }
-  else { if (sparTotal(spar.drinks) >= 10) return; spar.drinks[name] = (spar.drinks[name] || 0) + 1; }
+  if (type === "burger") {
+    if (sparTotal(spar.burgers) >= 10) return;
+    spar.burgers[name] = (spar.burgers[name] || 0) + 1;
+  } else {
+    if (sparTotal(spar.drinks) >= 10) return;
+    spar.drinks[name] = (spar.drinks[name] || 0) + 1;
+  }
   renderSparLists();
 }
+
 function sparRemove(type, name) {
   const obj = type === "burger" ? spar.burgers : spar.drinks;
   const v = obj[name] || 0;
@@ -249,6 +295,7 @@ function sparRemove(type, name) {
   else obj[name] = v - 1;
   renderSparLists();
 }
+
 function renderSparLists() {
   const bCount = document.getElementById("sparBurgerCount");
   const dCount = document.getElementById("sparDrinkCount");
@@ -259,8 +306,9 @@ function renderSparLists() {
 
   const bt = sparTotal(spar.burgers);
   const dt = sparTotal(spar.drinks);
-  bCount && (bCount.textContent = `${bt} / 10`);
-  dCount && (dCount.textContent = `${dt} / 10`);
+
+  if (bCount) bCount.textContent = `${bt} / 10`;
+  if (dCount) dCount.textContent = `${dt} / 10`;
 
   bList.innerHTML = "";
   dList.innerHTML = "";
@@ -272,6 +320,7 @@ function renderSparLists() {
     row.style.alignItems = "center";
     row.style.justifyContent = "space-between";
     row.style.gap = "8px";
+
     row.innerHTML = `
       <div style="flex:1; min-width:0;">${escapeHtml(name)}</div>
       <div class="muted small" style="width:46px; text-align:center;">${qty}</div>
@@ -290,6 +339,7 @@ function renderSparLists() {
     row.style.alignItems = "center";
     row.style.justifyContent = "space-between";
     row.style.gap = "8px";
+
     row.innerHTML = `
       <div style="flex:1; min-width:0;">${escapeHtml(name)}</div>
       <div class="muted small" style="width:46px; text-align:center;">${qty}</div>
@@ -309,6 +359,7 @@ function renderSparLists() {
     `;
   }
 }
+
 function openMenuBuilder(mode) {
   ensureMenuOverlay();
   menuMode = mode;
@@ -316,46 +367,59 @@ function openMenuBuilder(mode) {
   const title = document.getElementById("menuTitle");
   const sub = document.getElementById("menuSubtitle");
   const hint = document.getElementById("menuHint");
-
   const simpleMode = document.getElementById("simpleMode");
   const sparMode = document.getElementById("sparMode");
 
   const burgerSel = document.getElementById("menuBurger");
   const drinkSel = document.getElementById("menuDrink");
+  const cheesyWrap = document.getElementById("cheesyWrap");
+  const cheesyCheck = document.getElementById("cheesyCheck");
 
   if (burgerSel && drinkSel) {
     burgerSel.innerHTML = "";
     drinkSel.innerHTML = "";
-    burgerOptions().forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; burgerSel.appendChild(o); });
-    drinkOptions().forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; drinkSel.appendChild(o); });
+    burgerOptions().forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      burgerSel.appendChild(opt);
+    });
+    drinkOptions().forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      drinkSel.appendChild(opt);
+    });
   }
 
-  document.getElementById("cheesyCheck") && (document.getElementById("cheesyCheck").checked = false);
+  if (cheesyCheck) cheesyCheck.checked = false;
 
   if (mode === "burgermenu") {
-    title && (title.textContent = "Burgermenü");
-    sub && (sub.textContent = "Burger + Fries + Getränk auswählen");
-    hint && (hint.textContent = "VK: $26 (Cheesy Fries +$2)");
-    simpleMode && (simpleMode.style.display = "block");
-    sparMode && (sparMode.style.display = "none");
-    document.getElementById("cheesyWrap") && (document.getElementById("cheesyWrap").style.display = "block");
+    if (title) title.textContent = "Burgermenü";
+    if (sub) sub.textContent = "Burger + Fries + Getränk auswählen";
+    if (hint) hint.textContent = "VK: $26 (Cheesy Fries +$2)";
+    if (simpleMode) simpleMode.style.display = "block";
+    if (sparMode) sparMode.style.display = "none";
+    if (cheesyWrap) cheesyWrap.style.display = "block";
   } else {
-    title && (title.textContent = "Spar Paket 10/10");
-    sub && (sub.textContent = "10× Burger + 10× Getränk frei zusammenstellen");
-    hint && (hint.textContent = "VK: $200");
-    simpleMode && (simpleMode.style.display = "none");
-    sparMode && (sparMode.style.display = "block");
-    document.getElementById("cheesyWrap") && (document.getElementById("cheesyWrap").style.display = "none");
+    if (title) title.textContent = "Spar Paket 10/10";
+    if (sub) sub.textContent = "10× Burger + 10× Getränk frei zusammenstellen";
+    if (hint) hint.textContent = "VK: $200";
+    if (simpleMode) simpleMode.style.display = "none";
+    if (sparMode) sparMode.style.display = "block";
+    if (cheesyWrap) cheesyWrap.style.display = "none";
     resetSparState();
     renderSparLists();
   }
 
   document.getElementById("menuOverlay")?.classList.remove("hidden");
 }
+
 function closeMenuBuilder() {
   document.getElementById("menuOverlay")?.classList.add("hidden");
   menuMode = null;
 }
+
 function confirmMenuBuilder() {
   if (menuMode === "burgermenu") {
     const burger = document.getElementById("menuBurger")?.value;
@@ -394,13 +458,22 @@ function confirmMenuBuilder() {
 /* ========= Cart ========= */
 function addToCart(product) {
   const keyA = JSON.stringify(product.bundle || {});
-  const found = cart.find(i => i.name === product.name && i.price === product.price && JSON.stringify(i.bundle || {}) === keyA);
+  const found = cart.find(
+    i => i.name === product.name && i.price === product.price && JSON.stringify(i.bundle || {}) === keyA
+  );
   if (found) found.qty++;
   else cart.push({ ...product, qty: 1 });
   renderCart();
 }
-function clearCart() { cart = []; renderCart(); }
-function getTotal() { return cart.reduce((sum, i) => sum + i.price * i.qty, 0); }
+
+function clearCart() {
+  cart = [];
+  renderCart();
+}
+
+function getTotal() {
+  return cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+}
 
 function renderCart() {
   const list = document.getElementById("cart");
@@ -448,11 +521,30 @@ function findCartItem(name, bundleJson) {
   const key = JSON.stringify(b);
   return cart.find(i => i.name === name && JSON.stringify(i.bundle || {}) === key);
 }
-function incItem(name, bundleJson) { const i = findCartItem(name, bundleJson); if (!i) return; i.qty++; renderCart(); }
-function decItem(name, bundleJson) { const i = findCartItem(name, bundleJson); if (!i) return; i.qty--; if (i.qty <= 0) cart = cart.filter(x => x !== i); renderCart(); }
-function removeItem(name, bundleJson) { const i = findCartItem(name, bundleJson); if (!i) return; cart = cart.filter(x => x !== i); renderCart(); }
 
-/* ========= Payment Overlay + Checkout ========= */
+function incItem(name, bundleJson) {
+  const item = findCartItem(name, bundleJson);
+  if (!item) return;
+  item.qty++;
+  renderCart();
+}
+
+function decItem(name, bundleJson) {
+  const item = findCartItem(name, bundleJson);
+  if (!item) return;
+  item.qty--;
+  if (item.qty <= 0) cart = cart.filter(i => i !== item);
+  renderCart();
+}
+
+function removeItem(name, bundleJson) {
+  const item = findCartItem(name, bundleJson);
+  if (!item) return;
+  cart = cart.filter(i => i !== item);
+  renderCart();
+}
+
+/* ========= Payment Overlay + Checkout + Trinkgeld ========= */
 let pendingSale = null;
 
 function openPay() {
@@ -480,14 +572,18 @@ function openPay() {
 
 function closePay() {
   document.getElementById("payOverlay")?.classList.add("hidden");
+  // pendingSale NICHT löschen (wird nach erfolgreichem Checkout gelöscht)
 }
 
 function confirmPay() {
   if (!pendingSale) return closePay();
+
   const raw = document.getElementById("payAmount")?.value;
   const paid = Number(raw);
+
   if (!Number.isFinite(paid) || paid < 0) return alert("Bitte gültigen Betrag eingeben.");
   if (paid < pendingSale.total) return alert("Der bezahlte Betrag darf nicht kleiner als der VK sein.");
+
   closePay();
   checkout(paid);
 }
@@ -516,21 +612,23 @@ async function checkout(paidAmount = null) {
   const tip = Number(data.tip || 0);
 
   clearCart();
-  pendingSale = null;
+  pendingSale = null; // erst NACH Erfolg löschen
   refreshStats();
 
-  if (tip > 0) alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
-  else alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
+  if (tip > 0) {
+    alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
+  } else {
+    alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
+  }
 
   const kitchenVisible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
   if (kitchenVisible) loadKitchen();
 }
 
-/* ========= Küche: Ping + Blinken je Zeit + Grid ========= */
+/* ========= Küche: Ping + Blink 2-4 Warn, >4 Hot ========= */
 let kitchenInitialized = false;
 let lastMaxOrderId = 0;
 
-/* "Ping" Sound: 2 kurze Töne */
 function playPingSound() {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -555,15 +653,19 @@ function playPingSound() {
     beep(880, t, 0.11);
     beep(1175, t + 0.14, 0.12);
 
-    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 500);
+    setTimeout(() => {
+      try { ctx.close(); } catch (e) {}
+    }, 500);
   } catch (e) {}
 }
 
 function itemLinesForKitchen(item) {
   if (!item.bundle) return [`${item.qty}× ${item.name}`];
+
   if (item.bundle.type === "burgermenu") {
     return [`${item.qty}× Burgermenü: ${item.bundle.burger} + ${item.bundle.fries} + ${item.bundle.drink}`];
   }
+
   if (item.bundle.type === "spar1010") {
     return [
       `${item.qty}× Spar Paket 10/10`,
@@ -571,6 +673,7 @@ function itemLinesForKitchen(item) {
       `— Getränke: ${summarizeCounts(item.bundle.drinks || {})}`
     ];
   }
+
   return [`${item.qty}× ${item.name}`];
 }
 
@@ -581,7 +684,7 @@ function fmtAge(ms) {
   return `${m}:${String(r).padStart(2, "0")}`;
 }
 
-/* 0-2 min normal, 2-4 min warn blink, >4 min hot blink */
+// 0-2 min normal, 2-4 warn blink, >4 hot blink
 function ageClass(ms) {
   const min = ms / 60000;
   if (min >= 4) return "age-hot-blink";
@@ -601,7 +704,7 @@ async function loadKitchen() {
 
   const pending = (data.pending || []).slice().sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
-  // Ping wenn neue Order reinkommt
+  // Ping bei neuer Order
   const currentMax = pending.reduce((m, o) => Math.max(m, Number(o.id) || 0), 0);
   if (kitchenInitialized && currentMax > lastMaxOrderId) playPingSound();
   lastMaxOrderId = Math.max(lastMaxOrderId, currentMax);
@@ -673,24 +776,6 @@ async function completeKitchenOrder(id) {
   loadKitchen();
 }
 
-/* Live-Timer: jede Sekunde Anzeige + Blinkklassen aktualisieren */
-let kitchenAgeTicker = null;
-
-function startKitchenAgeTicker() {
-  if (kitchenAgeTicker) return;
-  kitchenAgeTicker = setInterval(() => {
-    const visible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
-    if (!visible) return;
-    tickKitchenAges();
-  }, 1000);
-}
-
-function stopKitchenAgeTicker() {
-  if (!kitchenAgeTicker) return;
-  clearInterval(kitchenAgeTicker);
-  kitchenAgeTicker = null;
-}
-
 function tickKitchenAges() {
   const pendEl = document.getElementById("kitchenPending");
   if (!pendEl) return;
@@ -710,7 +795,7 @@ function tickKitchenAges() {
   });
 }
 
-/* ========= Management / Stats ========= */
+/* ========= Management / Stats (inkl Trinkgeld) ========= */
 let serverDay = null;
 
 async function refreshStats() {
@@ -766,7 +851,7 @@ async function refreshStats() {
   if (bossPanel) {
     if (isBoss()) {
       bossPanel.classList.remove("hidden");
-      loadUsers();
+      loadUsers(); // ✅ Mitarbeiterliste wieder
     } else {
       bossPanel.classList.add("hidden");
     }
@@ -778,19 +863,109 @@ async function refreshStats() {
   }
 }
 
+/* ========= Chef: Users (wieder drin!) ========= */
+async function loadUsers() {
+  if (!isBoss()) return;
+
+  const res = await fetch("/users");
+  if (!res.ok) return;
+
+  const data = await res.json().catch(() => ({}));
+  if (!data.success) return;
+
+  const el = document.getElementById("usersList");
+  if (!el) return;
+
+  const staff = data.staff || [];
+  el.innerHTML = staff.length
+    ? staff
+        .map(
+          u => `
+        <div class="panel" style="margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div>
+              <b>${escapeHtml(u.displayName)}</b>
+              <div class="muted small">@${escapeHtml(u.username)}</div>
+            </div>
+            <button class="danger" onclick="deleteUser('${escapeAttr(u.username)}')">Löschen</button>
+          </div>
+        </div>
+      `
+        )
+        .join("")
+    : `<div class="muted small">Keine Mitarbeiter vorhanden.</div>`;
+}
+
+async function addUser() {
+  if (!isBoss()) return alert("Nur Chef.");
+
+  const displayName = document.getElementById("newUserDisplayName")?.value?.trim() || "";
+  const username = document.getElementById("newUserUsername")?.value?.trim() || "";
+  const password = document.getElementById("newUserPassword")?.value || "";
+
+  if (!displayName || !username || !password) return alert("Bitte alle Felder ausfüllen.");
+
+  const res = await fetch("/users/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName, username, password })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) return alert(data.message || "Fehler beim Hinzufügen.");
+
+  document.getElementById("newUserDisplayName").value = "";
+  document.getElementById("newUserUsername").value = "";
+  document.getElementById("newUserPassword").value = "";
+
+  loadUsers();
+}
+
+async function deleteUser(username) {
+  if (!isBoss()) return alert("Nur Chef.");
+
+  const res = await fetch("/users/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) return alert(data.message || "Fehler beim Löschen.");
+  loadUsers();
+}
+
+async function resetAll() {
+  if (!isBoss()) return alert("Nur Chef.");
+  if (!confirm("Wirklich Reset (heute)?")) return;
+
+  const res = await fetch("/reset", { method: "POST" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) return alert(data.message || "Reset fehlgeschlagen.");
+
+  refreshStats();
+  loadKitchen();
+
+  kitchenInitialized = false;
+  lastMaxOrderId = 0;
+}
+
 /* ========= Auth UI ========= */
 function showLogin(msg) {
   document.getElementById("loginOverlay")?.classList.remove("hidden");
   document.getElementById("loginMsg").innerText = msg || "—";
 }
+
 function hideLogin() {
   document.getElementById("loginOverlay")?.classList.add("hidden");
   document.getElementById("loginMsg").innerText = "—";
 }
+
 async function login() {
   const username = document.getElementById("loginUser")?.value?.trim() || "";
   const password = document.getElementById("loginPass")?.value || "";
-  if (!username || !password) return (document.getElementById("loginMsg").innerText = "Bitte Username/Passwort eingeben.");
+  if (!username || !password)
+    return (document.getElementById("loginMsg").innerText = "Bitte Username/Passwort eingeben.");
 
   const res = await fetch("/auth/login", {
     method: "POST",
@@ -799,11 +974,13 @@ async function login() {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) return (document.getElementById("loginMsg").innerText = data.message || "Login fehlgeschlagen");
+  if (!res.ok || !data.success)
+    return (document.getElementById("loginMsg").innerText = data.message || "Login fehlgeschlagen");
 
   hideLogin();
   await refreshStats();
 }
+
 async function logout() {
   await fetch("/auth/logout", { method: "POST" });
   me = null;
@@ -811,10 +988,11 @@ async function logout() {
   showLogin("Ausgeloggt.");
 }
 
-/* ========= Uhrzeit/Tag ========= */
+/* ========= Uhrzeit/Tag Anzeige ========= */
 function updateDayTimeUI() {
   const el = document.getElementById("dayInfo");
   if (!el) return;
+
   const now = new Date();
   const time = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   const day = serverDay || "—";
@@ -830,6 +1008,7 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll("\n", " ").replaceAll("\r", " ");
 }
@@ -852,4 +1031,5 @@ async function boot() {
   hideLogin();
   await refreshStats();
 }
+
 boot();
