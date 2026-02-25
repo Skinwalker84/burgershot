@@ -90,22 +90,22 @@
         </div>
 
         <div class="panel posRight">
-          <div class="row">
-            <div>
-              <div style="font-weight:800; font-size:18px;">Warenkorb</div>
-              <div class="muted small">Items: <span id="itemsCount">0</span></div>
-            </div>
-            <div style="text-align:right;">
-              <div class="muted small">Summe</div>
-              <div style="font-weight:900; font-size:20px;" id="total">$0</div>
-            </div>
+          <div class="row" style="justify-content:space-between;">
+            <div style="font-weight:900;">Warenkorb</div>
+            <button class="ghost" onclick="clearCart()">Leeren</button>
           </div>
 
-          <ul id="cart" class="cartList" style="margin-top:12px;"></ul>
+          <div id="cart" class="cart" style="margin-top:12px;"></div>
 
-          <div class="row" style="margin-top:12px; justify-content:space-between;">
-            <button class="ghost" onclick="clearCart()">Reset</button>
-            <button class="primary" onclick="checkout()">Bezahlen</button>
+          <div class="row" style="margin-top:12px;">
+            <div class="muted small">Total</div>
+            <div style="font-weight:900; font-size:22px;" id="cartTotal">$0</div>
+          </div>
+
+          <button class="primary" style="margin-top:12px; width:100%;" onclick="openPay()">Bezahlen</button>
+
+          <div class="muted small" style="margin-top:10px;">
+            Tipp: Trinkgeld = bezahlter Betrag − Total.
           </div>
         </div>
       </div>
@@ -114,42 +114,90 @@
     <!-- ===== TAB: KITCHEN ===== -->
     <div id="tab_kitchen" class="tabPage hidden">
       <div class="panel">
-        <div class="row">
+        <div class="row" style="justify-content:space-between; align-items:center;">
           <div>
             <div style="font-weight:900; font-size:18px;">Küche</div>
-            <div class="muted small" id="kitchenInfo">—</div>
+            <div class="muted small">Offene Bestellungen</div>
           </div>
+          <button class="ghost" onclick="resetKitchen()">Reset (Chef)</button>
         </div>
 
-        <div id="kitchenEmpty" class="muted small" style="margin-top:12px; display:none;">
-          Keine offenen Bestellungen.
-        </div>
-
-        <!-- IMPORTANT: class kitchenList for 2-column grid -->
-        <div id="kitchenPending" class="kitchenList" style="margin-top:12px;"></div>
+        <div id="kitchenOrders" class="kitchenGrid" style="margin-top:14px;"></div>
       </div>
     </div>
 
+    <!-- ===== TAB: DAY REPORT ===== -->
+    <div id="tab_day" class="tabPage hidden">
+      <div class="panel">
+        <div class="printOnly" style="margin-bottom:12px;">
+          <div style="font-weight:900; font-size:20px;">BurgerShot — Tagesabrechnung</div>
+          <div class="muted small">Datum: <span id="dayPrintDate">—</span></div>
+          <div class="muted small" id="dayPrintClosed">—</div>
+        </div>
 
-    <!-- ===== TAB: WEEK ===== -->
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Tagesabrechnung</div>
+            <div class="muted small">Chef only</div>
+            <div id="dayCloseStatus" class="muted small" style="margin-top:4px;">—</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <input id="dayDate" class="input" type="date" style="width:180px;" />
+            <button class="ghost" onclick="setDayToToday()">Heute</button>
+            <button class="primary noPrint" onclick="loadDayReport()">Laden</button>
+            <button class="ghost noPrint" onclick="printDayReport()">PDF</button>
+            <button id="dayCloseBtn" class="primary noPrint" onclick="openCloseDay()">Tagesabschluss</button>
+          </div>
+        </div>
+
+        <!-- Nur Gesamtbetrag -->
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Gesamtbetrag (Umsatz)</div>
+            <div style="font-weight:900; font-size:22px;" id="dayRevenue">—</div>
+          </div>
+        </div>
+
+        <!-- Nur Mitarbeiter -->
+        <div class="row" style="margin-top:14px;">
+          <div class="panel" style="width:100%;">
+            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Orders</th>
+                </tr>
+              </thead>
+              <tbody id="dayByEmployee"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB: WEEK REPORT (KW) ===== -->
     <div id="tab_week" class="tabPage hidden">
       <div class="panel">
         <div class="printOnly" style="margin-bottom:12px;">
           <div style="font-weight:900; font-size:20px;">BurgerShot — Wochenabrechnung</div>
-          <div class="muted small">Woche: <span id="weekPrintLabel">—</span></div>
+          <div class="muted small">KW: <span id="weekPrintKW">—</span></div>
           <div class="muted small">Zeitraum: <span id="weekPrintRange">—</span></div>
         </div>
 
         <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
           <div>
             <div style="font-weight:900; font-size:18px;">Wochenabrechnung</div>
-            <div class="muted small">Chef only · Kalenderwoche (Mo–So)</div>
+            <div class="muted small">Chef only · Kalenderwoche</div>
             <div id="weekRange" class="muted small" style="margin-top:4px;">—</div>
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-            <input id="weekWeek" class="input" type="week" style="width:180px;" />
-            <button class="ghost" onclick="setWeekToCurrent()">Diese KW</button>
+            <input id="weekKW" class="input" type="week" style="width:180px;" />
+            <button class="ghost" onclick="setWeekToThisKW()">Diese KW</button>
             <button class="primary noPrint" onclick="loadWeekReport()">Laden</button>
             <button class="ghost noPrint" onclick="printWeekReport()">PDF</button>
           </div>
@@ -157,72 +205,125 @@
 
         <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
           <div class="panel" style="flex:1 1 240px;">
-            <div class="muted small">Gesamtbetrag</div>
-            <div style="font-weight:900; font-size:22px;" id="dayRevenue">—</div>
+            <div class="muted small">Gesamtbetrag (Umsatz)</div>
+            <div style="font-weight:900; font-size:22px;" id="weekRevenue">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Orders</div>
+            <div style="font-weight:900; font-size:22px;" id="weekOrders">—</div>
           </div>
         </div>
 
-        <div style="margin-top:14px;">
-          <div style="font-weight:800;">Mitarbeiter</div>
-          <div id="dayEmployees" style="margin-top:8px;"></div>
+        <div class="row" style="margin-top:14px;">
+          <div class="panel" style="width:100%;">
+            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Orders</th>
+                </tr>
+              </thead>
+              <tbody id="weekByEmployee"></tbody>
+            </table>
+          </div>
         </div>
-</div>
-</div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB: MANAGEMENT ===== -->
+    <div id="tab_mgmt" class="tabPage hidden">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Management</div>
+            <div class="muted small">Chef only</div>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="ghost" onclick="refreshStats()">Refresh</button>
+            <button class="ghost" onclick="resetToday()">Reset heute</button>
+          </div>
+        </div>
+
+        <div id="bossPanel" class="panel" style="margin-top:14px;">
+          <div style="font-weight:900;">Statistiken (Heute)</div>
+          <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
+            <div class="panel" style="flex:1 1 240px;">
+              <div class="muted small">Umsatz</div>
+              <div style="font-weight:900; font-size:22px;" id="statRevenue">$0</div>
+            </div>
+            <div class="panel" style="flex:1 1 240px;">
+              <div class="muted small">Trinkgeld</div>
+              <div style="font-weight:900; font-size:22px;" id="statTips">$0</div>
+            </div>
+            <div class="panel" style="flex:1 1 240px;">
+              <div class="muted small">Orders</div>
+              <div style="font-weight:900; font-size:22px;" id="statOrders">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div style="font-weight:900;">Mitarbeiter</div>
+            <button class="primary" onclick="openAddUser()">+ Add</button>
+          </div>
+          <div id="usersList" style="margin-top:10px;"></div>
+        </div>
       </div>
     </div>
 
   </div>
 
-  <!-- ===== PAY OVERLAY (still popup, only for payment) ===== -->
+  <!-- ===== PAY OVERLAY ===== -->
   <div id="payOverlay" class="overlay hidden">
-    <div class="loginCard" style="width:420px;">
-      <h2 style="margin:0 0 10px 0;">Zahlung</h2>
-      <div class="muted small" style="margin-bottom:10px;">Zu zahlen: <b id="payDue">$0</b></div>
-
-      <input id="payAmount" class="input" placeholder="Kunde zahlt (z.B. 30)" inputmode="decimal" />
-
-      <div class="muted small" id="payHint" style="margin-top:10px;">—</div>
-
-      <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
-        <button class="ghost" onclick="closePay()">Abbrechen</button>
-        <button class="primary" onclick="confirmPay()">Bestätigen</button>
+    <div class="overlayCard">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Bezahlen</div>
+        <button class="ghost" onclick="closePay()">X</button>
       </div>
+
+      <div class="muted small" style="margin-top:8px;">Total: <b id="payTotal">$0</b></div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Bezahlt</div>
+        <input id="payAmount" class="input" placeholder="z.B. 250" />
+      </div>
+
+      <div class="muted small" style="margin-top:10px;">
+        Trinkgeld = Bezahlt − Total
+      </div>
+
+      <button class="primary" style="margin-top:12px; width:100%;" onclick="submitPay()">OK</button>
     </div>
   </div>
 
-  
-<!-- ===== DAY CLOSE OVERLAY ===== -->
-<div id="dayCloseOverlay" class="overlay hidden">
-  <div class="loginCard" style="width:460px;">
-    <h2 style="margin:0 0 10px 0;">Tagesabschluss</h2>
-    <div class="muted small" style="margin-bottom:10px;">Datum: <b id="dayCloseDateLabel">—</b></div>
-
-    <div class="muted small" style="margin-top:6px;">Kassenbestand (Ist) – optional</div>
-    <input id="dayCashCount" class="input" placeholder="z.B. 1234" inputmode="decimal" />
-
-    <div class="muted small" style="margin-top:10px;">Notiz – optional</div>
-    <input id="dayCloseNote" class="input" placeholder="z.B. Schichtwechsel / Besonderheiten" />
-
-    <div class="muted small" id="dayCloseMsg" style="margin-top:10px;">—</div>
-
-    <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
-      <button class="ghost" onclick="closeDayClose()">Abbrechen</button>
-      <button class="primary" onclick="submitDayClose()">Abschließen</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== CHANGE PASSWORD OVERLAY ===== -->
+  <!-- ===== CHANGE PASSWORD OVERLAY ===== -->
   <div id="pwOverlay" class="overlay hidden">
-    <div class="loginCard" style="width:420px;">
-      <h2 style="margin:0 0 10px 0;">Passwort ändern</h2>
-      <div class="muted small" id="pwMsg" style="margin-bottom:10px;">—</div>
-
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <input id="pwCurrent" class="input" placeholder="Aktuelles Passwort" type="password" autocomplete="current-password" />
-        <input id="pwNew" class="input" placeholder="Neues Passwort" type="password" autocomplete="new-password" />
-        <input id="pwNew2" class="input" placeholder="Neues Passwort (wiederholen)" type="password" autocomplete="new-password" />
+    <div class="overlayCard">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Passwort ändern</div>
+        <button class="ghost" onclick="closePwChange()">X</button>
       </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Aktuelles Passwort</div>
+        <input id="pwOld" class="input" type="password" autocomplete="current-password" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Neues Passwort</div>
+        <input id="pwNew1" class="input" type="password" autocomplete="new-password" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Neues Passwort (wiederholen)</div>
+        <input id="pwNew2" class="input" type="password" autocomplete="new-password" />
+      </div>
+
+      <div class="muted small" id="pwMsg" style="margin-top:10px;">—</div>
 
       <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
         <button class="ghost" onclick="closePwChange()">Abbrechen</button>
@@ -231,7 +332,35 @@
     </div>
   </div>
 
+  <!-- ===== DAY CLOSE OVERLAY ===== -->
+  <div id="dayCloseOverlay" class="overlay hidden">
+    <div class="overlayCard">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Tagesabschluss</div>
+        <button class="ghost" onclick="closeDayClose()">X</button>
+      </div>
+
+      <div class="muted small" style="margin-top:8px;">Datum: <b id="dayCloseDateLabel">—</b></div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Kassenbestand Ist (optional)</div>
+        <input id="dayCashCount" class="input" placeholder="z.B. 5000" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Notiz (optional)</div>
+        <input id="dayCloseNote" class="input" placeholder="z.B. Schicht 1 & 2 zusammen" />
+      </div>
+
+      <div class="muted small" id="dayCloseMsg" style="margin-top:10px;">—</div>
+
+      <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
+        <button class="ghost" onclick="closeDayClose()">Abbrechen</button>
+        <button class="primary" onclick="submitDayClose()">Abschließen</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
-
