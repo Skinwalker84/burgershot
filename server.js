@@ -74,7 +74,8 @@ function makeFreshDB() {
         pending: [], // orders pending
         done: []     // completed
       }
-    }
+    },
+    closedDays: {}
   };
 }
 
@@ -87,9 +88,13 @@ function normalizeDB(db) {
   if (!db.sessions || typeof db.sessions !== "object") db.sessions = {};
   if (!db.salesByDay || typeof db.salesByDay !== "object") db.salesByDay = {};
   if (!db.kitchenByDay || typeof db.kitchenByDay !== "object") db.kitchenByDay = {};
+  if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
 
   // Ensure day buckets exist
   const day = db.meta.currentDay;
+  if (db.closedDays && db.closedDays[day]) {
+    return res.status(409).json({ success: false, message: "Dieser Tag ist bereits abgeschlossen. Keine neuen Verkäufe möglich." });
+  }
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
   if (!db.kitchenByDay[day]) db.kitchenByDay[day] = { pending: [], done: [] };
   if (!Array.isArray(db.kitchenByDay[day].pending)) db.kitchenByDay[day].pending = [];
@@ -158,6 +163,26 @@ function startOfWeekMonday(dateLocal) {
   d.setHours(0, 0, 0, 0);
   return d;
 }
+
+function parseISOWeek(s) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(String(s || ""));
+  if (!m) return null;
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(week) || week < 1 || week > 53) return null;
+  return { year, week };
+}
+
+// ISO week start (Monday) in local time
+function startOfISOWeek(year, week) {
+  // ISO week 1 is the week with Jan 4th in it.
+  const jan4 = new Date(year, 0, 4);
+  const week1Mon = startOfWeekMonday(jan4);
+  const d = addDays(week1Mon, (week - 1) * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 
 function addDays(dateLocal, n) {
   const d = new Date(dateLocal.getFullYear(), dateLocal.getMonth(), dateLocal.getDate());
@@ -430,6 +455,7 @@ app.get("/stats", requireAuth, (req, res) => {
 
 // -------------------- SALE (POS -> save + kitchen pending) --------------------
 app.post("/sale", requireAuth, (req, res) => {
+  rotateDayIfNeeded();
   const body = req.body || {};
   const register = Number(body.register);
   const items = body.items;
@@ -709,11 +735,103 @@ app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
   return res.json({
     success: true,
     day: dayKey,
+    closed: db.closedDays ? (db.closedDays[dayKey] || null) : null,
     totals,
     byEmployee,
     byRegister,
     sales
   });
+});
+
+// GET /reports/week-employee?week=YYYY-Www
+// Returns: totals + breakdown by employee for the ISO week (Mo–So)
+app.get("/reports/week-employee", requireAuth, requireBoss, (req, res) => {
+  rotateDayIfNeeded();
+
+  const weekStr = String(req.query?.week || "");
+  const parsed = parseISOWeek(weekStr);
+  if (!parsed) return res.status(400).json({ success: false, message: "Ungültige Kalenderwoche. Format: YYYY-Www (z.B. 2026-W09)" });
+
+  const start = startOfISOWeek(parsed.year, parsed.week);
+
+  function summarizeSales(sales) {
+    const revenue = sales.reduce((s, x) => s + Number(x.total || 0), 0);
+    const tips = sales.reduce((s, x) => s + Number(x.tip || 0), 0);
+    const orders = sales.length;
+    const avg = orders > 0 ? revenue / orders : 0;
+    return { revenue, tips, orders, avg };
+  }
+
+  const days = [];
+  const salesAll = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(start, i);
+    const dayKey = getDayKeyLocal(d);
+    days.push(dayKey);
+    const sales = Array.isArray(db.salesByDay[dayKey]) ? db.salesByDay[dayKey] : [];
+    salesAll.push(...sales);
+  }
+
+  const totals = summarizeSales(salesAll);
+
+  const byEmployeeMap = {};
+  for (const s of salesAll) {
+    const empKey = String(s.employeeUsername || s.employee || "—");
+    if (!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue: 0, tips: 0, orders: 0, avg: 0 };
+    byEmployeeMap[empKey].revenue += Number(s.total || 0);
+    byEmployeeMap[empKey].tips += Number(s.tip || 0);
+    byEmployeeMap[empKey].orders += 1;
+  }
+
+  const byEmployee = Object.values(byEmployeeMap)
+    .map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  res.json({
+    success: true,
+    period: "week",
+    week: weekStr,
+    range: { start: days[0], end: days[6] },
+    totals,
+    byEmployee
+  });
+});
+
+
+
+// POST /reports/close-day
+// Body: { date: YYYY-MM-DD, cashCount?: number, note?: string }
+app.post("/reports/close-day", requireAuth, requireBoss, (req, res) => {
+  rotateDayIfNeeded();
+
+  const body = req.body || {};
+  const dateStr = String(body.date || db.meta.currentDay);
+  const date = parseDateYYYYMMDD(dateStr);
+  if (!date) return res.status(400).json({ success: false, message: "Ungültiges Datum. Format: YYYY-MM-DD" });
+
+  const dayKey = getDayKeyLocal(date);
+
+  if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
+  if (db.closedDays[dayKey]) {
+    return res.status(409).json({ success: false, message: "Der Tag ist bereits abgeschlossen." });
+  }
+
+  const cashCountRaw = body.cashCount;
+  const cashCount = Number(cashCountRaw);
+  const note = typeof body.note === "string" ? body.note.trim() : "";
+
+  db.closedDays[dayKey] = {
+    day: dayKey,
+    closedAt: new Date().toISOString(),
+    closedBy: req.user.username,
+    closedByName: req.user.displayName || req.user.username,
+    cashCount: Number.isFinite(cashCount) ? cashCount : null,
+    note: note || null
+  };
+
+  saveDB(db);
+  return res.json({ success: true, closed: db.closedDays[dayKey] });
 });
 
 // Fallback to SPA index (optional)
