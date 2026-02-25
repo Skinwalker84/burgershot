@@ -1005,3 +1005,35 @@ button.ghost{
 
 /* Pay Overlay: nur Trinkgeld -> 1 Spalte */
 .payRow2{ grid-template-columns: 1fr !important; }
+
+/* Pay Overlay: Fokus & Premium */
+.overlay{
+  backdrop-filter: blur(10px);
+  background: rgba(0,0,0,0.55);
+}
+
+#payOverlay .loginCard{
+  box-shadow: 0 22px 80px rgba(0,0,0,0.60) !important;
+}
+
+/* Input noch mehr POS-Fokus */
+#payAmount{
+  background: rgba(20, 55, 90, 0.70) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+#payAmount:focus{
+  border-color: rgba(183, 13, 26, 0.55) !important;
+  box-shadow: 0 0 0 4px rgba(183, 13, 26, 0.16) !important;
+}
+
+/* Trinkgeld-Box standardmäßig etwas dezenter */
+#payTipBox{
+  opacity: 0.85;
+}
+
+/* Hinweistext */
+#payHint{
+  text-align: center;
+  opacity: 0.85;
+}
