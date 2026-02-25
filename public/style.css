@@ -364,3 +364,167 @@ button.danger{
 .loginPage, .loginShell{
   background:var(--bg) !important;
 }
+
+
+/* =========================================================
+   THEME: Burger Shot (Classic Glass POS) — per screenshots
+   - brings back subtle blue gradient + glass panels
+   - keeps everything a bit larger and clearer
+   ========================================================= */
+
+:root{
+  --bg1:#061626;
+  --bg2:#071e33;
+  --panelGlass:rgba(255,255,255,.06);
+  --panelGlass2:rgba(255,255,255,.04);
+  --borderSoft:rgba(255,255,255,.10);
+  --borderSoft2:rgba(255,255,255,.14);
+  --text:#f5f7fb;
+  --muted:#b8c4d8;
+
+  --accent:#c9101a;      /* Burger Shot red */
+  --accent2:#ff3b3b;
+  --ok:#2ee59d;
+
+  --radius:22px;
+  --radiusSm:16px;
+  --shadowSoft:0 16px 40px rgba(0,0,0,.35);
+
+  --fsBase:18px;
+  --fsSmall:14px;
+  --btnH:48px;
+}
+
+body, .appBody{
+  background:
+    radial-gradient(1200px 700px at 20% 0%, rgba(30,88,140,.35), rgba(0,0,0,0) 55%),
+    radial-gradient(900px 600px at 85% 25%, rgba(150,30,50,.18), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, var(--bg2), var(--bg1)) !important;
+  color:var(--text) !important;
+  font-size:var(--fsBase) !important;
+}
+
+/* Header / Topbar */
+.topBar{
+  background:rgba(0,0,0,.22) !important;
+  border:1px solid var(--borderSoft) !important;
+  border-radius:28px !important;
+  padding:16px 18px !important;
+  box-shadow:var(--shadowSoft) !important;
+  backdrop-filter: blur(10px);
+}
+
+.brandName{ font-size:28px !important; letter-spacing:.2px; }
+.muted, .small{ color:var(--muted) !important; }
+.small{ font-size:var(--fsSmall) !important; }
+
+/* Panels */
+.panel{
+  background:var(--panelGlass) !important;
+  border:1px solid var(--borderSoft) !important;
+  border-radius:var(--radius) !important;
+  box-shadow: 0 10px 26px rgba(0,0,0,.25) !important;
+}
+
+/* Tabs (Kasse / Küche / Management) */
+.tabs{ gap:12px !important; }
+.tabBtn{
+  height:46px !important;
+  padding:0 18px !important;
+  border-radius:999px !important;
+  border:1px solid var(--borderSoft) !important;
+  background:rgba(255,255,255,.04) !important;
+  color:var(--text) !important;
+  font-weight:900 !important;
+  font-size:17px !important;
+}
+.tabBtn:hover{ background:rgba(255,255,255,.06) !important; }
+.tabBtn.active{
+  border-color:rgba(201,16,26,.35) !important;
+  background:rgba(201,16,26,.14) !important;
+  box-shadow:0 0 0 4px rgba(201,16,26,.10) !important;
+}
+
+/* Buttons */
+button{
+  height:var(--btnH) !important;
+  border-radius:18px !important;
+  padding:0 18px !important;
+  font-size:17px !important;
+  font-weight:900 !important;
+}
+button.primary{
+  background:linear-gradient(180deg, var(--accent2), var(--accent)) !important;
+  border:1px solid rgba(0,0,0,.25) !important;
+  color:#fff !important;
+  box-shadow:0 10px 24px rgba(201,16,26,.22) !important;
+}
+button.primary:hover{ filter:brightness(1.05); }
+button.ghost{
+  background:rgba(255,255,255,.04) !important;
+  border:1px solid var(--borderSoft) !important;
+  color:var(--text) !important;
+}
+button.ghost:hover{ background:rgba(255,255,255,.06) !important; }
+
+/* Inputs */
+.input{
+  height:var(--btnH) !important;
+  border-radius:18px !important;
+  padding:0 14px !important;
+  border:1px solid var(--borderSoft) !important;
+  background:rgba(0,0,0,.20) !important;
+  color:var(--text) !important;
+  font-size:16px !important;
+}
+.input:focus{
+  border-color:rgba(255,255,255,.22) !important;
+  box-shadow:0 0 0 4px rgba(201,16,26,.16) !important;
+}
+
+/* Tables (less “bubbley” than last attempt, still readable) */
+.table{
+  border-collapse:separate !important;
+  border-spacing:0 10px !important;
+}
+.table thead th{
+  color:var(--muted) !important;
+  font-size:13px !important;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+}
+.table tbody td{
+  background:rgba(0,0,0,.18) !important;
+  border:1px solid rgba(255,255,255,.08) !important;
+  padding:14px 12px !important;
+  font-size:16px !important;
+}
+.table tbody tr:hover td{
+  background:rgba(0,0,0,.24) !important;
+  border-color:rgba(255,255,255,.12) !important;
+}
+
+/* Order / Kitchen cards: glass ticket with subtle border */
+.orderCard, .ticket, .kitchenCard{
+  background:rgba(0,0,0,.18) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  border-radius:var(--radius) !important;
+  box-shadow:0 12px 30px rgba(0,0,0,.25) !important;
+}
+
+/* Overlays */
+.overlay{
+  backdrop-filter: blur(10px);
+}
+.overlayCard{
+  background:rgba(10,14,20,.88) !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  border-radius:26px !important;
+  box-shadow:0 20px 60px rgba(0,0,0,.55) !important;
+}
+
+/* Login background back to classic look */
+.loginPage, .loginShell{
+  background:transparent !important;
+}
+
