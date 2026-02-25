@@ -570,3 +570,227 @@ input{
     font-size: 36px;
   }
 }
+
+/* =========================
+   UI Polish Pack (Overrides)
+   ========================= */
+
+/* Grundlayout */
+.appRoot{
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 18px 28px 18px;
+}
+
+/* Topbar schöner */
+.topBar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(8, 28, 55, 0.55), rgba(8, 28, 55, 0.25));
+  box-shadow: 0 16px 40px rgba(0,0,0,0.30);
+  margin-bottom: 12px;
+}
+
+.brandLeft{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+}
+
+.brandDot{
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #b70d1a; /* dunkelrot accent */
+  box-shadow: 0 0 0 6px rgba(183, 13, 26, 0.18);
+}
+
+.brandName{
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.2px;
+}
+
+.topRight{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+/* Tabs oben */
+.tabsTop{
+  display:flex;
+  gap: 10px;
+  padding: 10px 6px;
+  margin-bottom: 14px;
+}
+
+.tabTop{
+  border-radius: 999px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.88);
+  font-weight: 800;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.tabTop:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+}
+
+.tabTop.active{
+  background: rgba(183, 13, 26, 0.18);
+  border-color: rgba(183, 13, 26, 0.40);
+  box-shadow: 0 0 0 4px rgba(183, 13, 26, 0.12);
+}
+
+/* POS Layout */
+.pos{
+  display:grid;
+  grid-template-columns: 1fr 420px;
+  gap: 16px;
+  align-items:start;
+}
+
+.posLeft, .posRight{
+  border-radius: 18px !important;
+}
+
+/* Warenkorb sticky, damit er beim Scrollen bleibt */
+.posRight{
+  position: sticky;
+  top: 18px;
+}
+
+/* Register/Buttons oben kompakter */
+#tab_pos .row{
+  gap: 10px;
+}
+
+/* Pill Tabs (Burger/Beilagen/...) */
+#tab_pos .tab{
+  border-radius: 999px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.85);
+  font-weight: 800;
+  transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
+}
+
+#tab_pos .tab:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+}
+
+#tab_pos .tab.active{
+  background: rgba(183, 13, 26, 0.18);
+  border-color: rgba(183, 13, 26, 0.40);
+  box-shadow: 0 0 0 4px rgba(183, 13, 26, 0.12);
+}
+
+/* Produkte als Grid (gleichmäßig) */
+.products{
+  display:grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Produktkarten schöner */
+.product{
+  border-radius: 16px !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  padding: 14px 14px !important;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 10px;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.product:hover{
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.16) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)) !important;
+}
+
+.product .name{
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.product .price{
+  font-weight: 900;
+  opacity: 0.95;
+}
+
+/* Warenkorb */
+.cartList{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.cartItem{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+}
+
+.cartItem .controls button{
+  border-radius: 12px;
+}
+
+/* Buttons allgemein etwas "premium" */
+button.primary{
+  border-radius: 14px;
+  font-weight: 900;
+  box-shadow: 0 14px 28px rgba(183, 13, 26, 0.22);
+}
+
+button.ghost{
+  border-radius: 14px;
+}
+
+/* Kitchen & Management Panels runder */
+.panel{
+  border-radius: 18px !important;
+}
+
+/* Kitchen Grid falls noch nicht drin */
+.kitchenList{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items:start;
+}
+
+/* Kleine Lesbarkeit */
+.muted{
+  color: rgba(255,255,255,0.70) !important;
+}
+.small{
+  font-size: 13px;
+}
+
+/* Desktop only: wenn sehr breite Screens, zentriert mehr "App Feel" */
+@media (min-width: 1600px){
+  .appRoot{
+    max-width: 1500px;
+  }
+}
