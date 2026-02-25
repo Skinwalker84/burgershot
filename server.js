@@ -32,7 +32,7 @@ function berlinTimeHM(d = new Date()) {
 }
 
 /* ========= Persistenz ========= */
-const DATA_FILE = path.join(__dirname, "data.json");
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 
 function defaultUsers() {
   return {
