@@ -109,23 +109,32 @@ function makeToken() {
    DEFAULT PRODUCTS (VK)
    ========================= */
 const DEFAULT_PRODUCTS = [
-  { id: "cheeseburger", name: "Cheeseburger", price: 150, cat: "Burger" },
-  { id: "double_cheese", name: "Double Cheeseburger", price: 250, cat: "Burger" },
-  { id: "chicken_burger", name: "Chicken Burger", price: 220, cat: "Burger" },
-  { id: "veggie_burger", name: "Veggie Burger", price: 200, cat: "Burger" },
+  { id:"bleeder", name:"The Bleeder", price:14, cat:"Burger" },
+  { id:"heartstopper", name:"The Heartstopper", price:16, cat:"Burger" },
+  { id:"chicken", name:"The Chicken", price:12, cat:"Burger" },
+  { id:"vegan_burger", name:"Vegan Burger", price:10, cat:"Burger" },
+  { id:"chozzo", name:"The Chozzo", price:12, cat:"Burger" },
+  { id:"german", name:"The German", price:16, cat:"Burger" },
 
-  { id: "pommes", name: "Pommes", price: 80, cat: "Beilagen" },
-  { id: "onion_rings", name: "Onion Rings", price: 100, cat: "Beilagen" },
-  { id: "chili_cheese_fries", name: "Chili Cheese Fries", price: 140, cat: "Beilagen" },
+  { id:"coleslaw", name:"Coleslaw", price:10, cat:"Beilagen" },
+  { id:"fries", name:"Fries", price:6, cat:"Beilagen" },
+  { id:"cheesy_fries", name:"Cheesy Fries", price:8, cat:"Beilagen" },
+  { id:"chicken_nuggets", name:"Chicken Nuggets", price:10, cat:"Beilagen" },
+  { id:"onion_rings", name:"Onion Rings", price:6, cat:"Beilagen" },
 
-  { id: "cola", name: "Cola", price: 60, cat: "Getränke" },
-  { id: "wasser", name: "Wasser", price: 40, cat: "Getränke" },
-  { id: "milkshake", name: "Milkshake", price: 120, cat: "Getränke" },
+  { id:"ecola", name:"ECola", price:8, cat:"Getränke" },
+  { id:"sprunk", name:"Sprunk", price:8, cat:"Getränke" },
+  { id:"blueberry_slush", name:"Blueberry Slush", price:10, cat:"Getränke" },
+  { id:"strawberry_slush", name:"Strawberry Slush", price:10, cat:"Getränke" },
+  { id:"choco_milchshake", name:"Choco Milchshake", price:10, cat:"Getränke" },
+  { id:"vanille_milchshake", name:"Vanille Milchshake", price:10, cat:"Getränke" },
+  { id:"strawberry_milchshake", name:"Strawberry Milchshake", price:10, cat:"Getränke" },
 
-  { id: "donut", name: "Donut", price: 70, cat: "Süßes" },
-  { id: "cookie", name: "Cookie", price: 50, cat: "Süßes" },
-
-  { id: "menu", name: "Menü (Burger+Pommes+Drink)", price: 300, cat: "Menü" }
+  { id:"glazed_donut", name:"Glazed Donut", price:8, cat:"Süßes" },
+  { id:"sprinkle_donut", name:"Sprinke Donut", price:8, cat:"Süßes" },
+  { id:"caramel_sundae", name:"Caramel Sundae", price:8, cat:"Süßes" },
+  { id:"chocolate_sundae", name:"Chocolate Sundae", price:8, cat:"Süßes" },
+  { id:"strawberry_sundae", name:"Strawberry Sundae", price:8, cat:"Süßes" }
 ];
 
 /* =========================
