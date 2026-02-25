@@ -1030,6 +1030,58 @@ async function logout() {
   showLoginPage("Ausgeloggt.");
 }
 
+/* ========= Change Password ========= */
+function openPwChange() {
+  if (!me) return;
+  const ov = document.getElementById("pwOverlay");
+  const msg = document.getElementById("pwMsg");
+  if (msg) msg.innerText = "Gib dein aktuelles und dein neues Passwort ein.";
+
+  ["pwCurrent", "pwNew", "pwNew2"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  ov?.classList.remove("hidden");
+  setTimeout(() => document.getElementById("pwCurrent")?.focus(), 50);
+}
+
+function closePwChange() {
+  document.getElementById("pwOverlay")?.classList.add("hidden");
+}
+
+async function submitPwChange() {
+  if (!me) return;
+  const currentPassword = document.getElementById("pwCurrent")?.value || "";
+  const newPassword = document.getElementById("pwNew")?.value || "";
+  const newPassword2 = document.getElementById("pwNew2")?.value || "";
+  const msg = document.getElementById("pwMsg");
+
+  if (!currentPassword || !newPassword || !newPassword2) {
+    if (msg) msg.innerText = "Bitte alle Felder ausfüllen.";
+    return;
+  }
+  if (newPassword !== newPassword2) {
+    if (msg) msg.innerText = "Neues Passwort stimmt nicht überein.";
+    return;
+  }
+
+  const res = await fetch("/auth/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    if (msg) msg.innerText = data.message || "Passwort ändern fehlgeschlagen.";
+    return;
+  }
+
+  if (msg) msg.innerText = "✅ Passwort geändert.";
+  setTimeout(() => closePwChange(), 600);
+}
+
 /* ========= Day/Time ========= */
 function updateDayTimeUI() {
   const el = document.getElementById("dayInfo");

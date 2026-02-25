@@ -321,6 +321,36 @@ app.post("/auth/logout", (req, res) => {
   res.json({ success: true });
 });
 
+// Change password (logged-in user)
+app.post("/auth/change-password", requireAuth, (req, res) => {
+  const currentPassword = String(req.body?.currentPassword || "");
+  const newPassword = String(req.body?.newPassword || "");
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: "Felder fehlen." });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: "Neues Passwort zu kurz (mind. 6 Zeichen)." });
+  }
+  if (!verifyPassword(currentPassword, req.user.pw)) {
+    return res.status(401).json({ success: false, message: "Aktuelles Passwort ist falsch." });
+  }
+
+  const { salt, hash } = hashPassword(newPassword);
+  req.user.pw = { salt, hash };
+
+  // Invalidate other sessions of this user (keep current)
+  const cookies = parseCookies(req);
+  const currentToken = cookies["bs_token"];
+  for (const [token, s] of Object.entries(db.sessions)) {
+    if (!s) continue;
+    if (s.username === req.user.username && token !== currentToken) delete db.sessions[token];
+  }
+
+  saveDB(db);
+  res.json({ success: true });
+});
+
 // -------------------- USERS (Boss) --------------------
 app.get("/users", requireAuth, requireBoss, (req, res) => {
   const staff = db.users

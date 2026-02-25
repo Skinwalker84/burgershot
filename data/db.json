@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "currentDay": "2026-02-25",
+    "nextOrderId": 1
+  },
+  "users": [
+    {
+      "username": "chris.adams",
+      "displayName": "Chris Adams",
+      "role": "boss",
+      "pw": {
+        "salt": "2e388b08aff3622d8c39a8596a6f5764",
+        "hash": "cf3d39fac7702e4886a72ee82e586fb30fe4bdf351321493bcf8fcb9dee2c5f2"
+      }
+    }
+  ],
+  "sessions": {
+    "9504753a7f18ef2849da7675786c9bd8de07786219ee5566": {
+      "username": "chris.adams",
+      "exp": 1773238425445
+    }
+  },
+  "salesByDay": {
+    "2026-02-25": []
+  },
+  "kitchenByDay": {
+    "2026-02-25": {
+      "pending": [],
+      "done": []
+    }
+  }
+}

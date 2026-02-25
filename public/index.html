@@ -49,6 +49,7 @@
 
       <div class="topRight">
         <div class="muted small" id="whoami">Nicht eingeloggt</div>
+        <button class="ghost" onclick="openPwChange()">Passwort ändern</button>
         <button class="ghost" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -197,6 +198,25 @@
       <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
         <button class="ghost" onclick="closePay()">Abbrechen</button>
         <button class="primary" onclick="confirmPay()">Bestätigen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHANGE PASSWORD OVERLAY ===== -->
+  <div id="pwOverlay" class="overlay hidden">
+    <div class="loginCard" style="width:420px;">
+      <h2 style="margin:0 0 10px 0;">Passwort ändern</h2>
+      <div class="muted small" id="pwMsg" style="margin-bottom:10px;">—</div>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input id="pwCurrent" class="input" placeholder="Aktuelles Passwort" type="password" autocomplete="current-password" />
+        <input id="pwNew" class="input" placeholder="Neues Passwort" type="password" autocomplete="new-password" />
+        <input id="pwNew2" class="input" placeholder="Neues Passwort (wiederholen)" type="password" autocomplete="new-password" />
+      </div>
+
+      <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
+        <button class="ghost" onclick="closePwChange()">Abbrechen</button>
+        <button class="primary" onclick="submitPwChange()">Speichern</button>
       </div>
     </div>
   </div>
