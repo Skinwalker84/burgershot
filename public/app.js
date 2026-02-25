@@ -65,7 +65,7 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
-  await initProducts();
+  initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -85,7 +85,7 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
-  await initProducts();
+  initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -127,12 +127,7 @@ const PRODUCTS_DEFAULT = [
 let PRODUCTS = [];
 
 
-async function initProducts(){
-  await hydrateProducts();
-  renderProducts();
-  // if management editor exists in this build:
-  try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
-}
+function initProducts(){ hydrateProducts(); renderProducts(); }
 
 const PRODUCTS_STORAGE_KEY = "bs_products_v1";
 
@@ -173,34 +168,19 @@ function resetProductsToDefault(){
   renderProductsEditor();
 }
 
-async function hydrateProducts(){
-  // 1) Server (auth required)
-  try{
-    const res = await fetch("/products");
-    if(res.ok){
-      const data = await res.json().catch(()=>({}));
-      const list = Array.isArray(data.products) ? data.products : null;
-      if(data.success && list && list.length){
-        PRODUCTS = list.map(p=>({
-          name: p.name,
-          cat: p.cat ?? p.category,
-          price: Number(p.price)||0
-        }));
-        saveProductsToStorage(PRODUCTS); // keep fallback in sync
-        return;
-      }
-    }
-  }catch(e){}
-
-  // 2) LocalStorage fallback
+function hydrateProducts(){
   const stored = loadProductsFromStorage();
   if(stored){
-    PRODUCTS = stored.map(p=>({ ...p }));
-    return;
+    // merge by name+cat
+    const map = new Map(stored.map(p=>[`${p.cat}||${p.name}`, p]));
+    PRODUCTS = PRODUCTS_DEFAULT.map(p=>{
+      const k = `${p.cat}||${p.name}`;
+      const hit = map.get(k);
+      return hit ? { ...p, price: hit.price } : { ...p };
+    });
+  }else{
+    PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
   }
-
-  // 3) Defaults
-  PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
 }
 
 function renderProductsEditor(){
@@ -220,18 +200,17 @@ function renderProductsEditor(){
   if(msg) msg.innerText = "—";
 }
 
-async function mgmtReloadProducts(){
-  await hydrateProducts();
+function mgmtReloadProducts(){
+  hydrateProducts();
   renderProducts();
-  try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
+  renderProductsEditor();
   const msg = document.getElementById("mgmtProductsMsg");
-  if(msg) msg.innerText = "—";
+  if(msg) msg.innerText = "Neu geladen ✅";
 }
 
-async function mgmtSaveProducts(){
+function mgmtSaveProducts(){
   const msg = document.getElementById("mgmtProductsMsg");
   const list = (PRODUCTS||[]).map(p=>({ ...p }));
-
   for(let i=0;i<list.length;i++){
     const el = document.querySelector(`[data-price-idx="${i}"]`);
     if(!el) continue;
@@ -242,47 +221,11 @@ async function mgmtSaveProducts(){
     }
     list[i].price = Math.round(n);
   }
-
-  // Server first
-  try{
-    const payload = list.map(p=>({
-      id: (p.id ?? slugify(p.name)),
-      name: p.name,
-      cat: p.cat,
-      price: p.price
-    }));
-    const res = await fetch("/products",{
-      method:"PUT",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ products: payload })
-    });
-    const data = await res.json().catch(()=>({}));
-    if(res.ok && data.success){
-      // re-hydrate from server response if present
-      if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ name:p.name, cat:p.cat, price:Number(p.price)||0 }));
-      }else{
-        PRODUCTS = list;
-      }
-      saveProductsToStorage(PRODUCTS);
-      renderProducts();
-      try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
-      if(msg) msg.innerText = "Gespeichert (Server) ✅";
-      return;
-    }
-  }catch(e){}
-
-  // Local fallback
   PRODUCTS = list;
-  saveProductsToStorage(PRODUCTS);
-  renderProducts();
-  try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
-  if(msg) msg.innerText = "Gespeichert (Local) ⚠️";
-}
-
-function slugify(s){
-  return String(s||"").toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
-    .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,40) || "item";
+  if(saveProductsToStorage(PRODUCTS)){
+    renderProducts();
+    if(msg) msg.innerText = "Gespeichert ✅";
+  }
 }
 
 function mgmtResetProducts(){
@@ -315,7 +258,14 @@ function renderProducts(){
 }
 
 /* Cart */
-function addToCart(p){ cart.push({ name:p.name, price:p.price, qty:1 }); renderCart(); }
+function addToCart(p){
+  // Menüs: erst Optionen auswählen (Drink + Cheesy Fries Upgrade)
+  if((p.cat||p.category)==="Menü"){
+    return openMenuOptions(p);
+  }
+  cart.push({ name:p.name, price:p.price, qty:1 });
+  renderCart();
+}
 function clearCart(){ cart=[]; renderCart(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
@@ -328,6 +278,7 @@ function renderCart(){
   box.innerHTML=cart.map((x,idx)=>`
     <div class="cartRow">
       <div style="font-weight:900;">${esc(x.name)}</div>
+      ${x.meta?.lines ? `<div class="muted small">${x.meta.lines.map(esc).join(' · ')}</div>` : ``}
       <div class="muted small">${money(x.price)}</div>
       <button class="ghost" onclick="removeItem(${idx})">x</button>
     </div>`).join("");
@@ -353,7 +304,7 @@ async function submitPay(){
   if(!Number.isFinite(paid) || paid<total) return alert("Bezahlt muss >= Total sein.");
   const payload={
     register: currentRegister,
-    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty })),
+    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty, meta:x.meta||null })),
     total,
     paidAmount: paid,
     time: new Date().toISOString()
@@ -364,6 +315,71 @@ async function submitPay(){
   closePay();
   alert(`Order #${data.orderId} gespeichert. Trinkgeld: ${money(data.tip||0)}`);
   cart=[]; renderCart();
+}
+
+
+/* Menü Optionen */
+function openMenuOptions(p){
+  pendingMenuProduct = p;
+  const sel = document.getElementById("menuDrink");
+  const chk = document.getElementById("menuCheesy");
+  const title = document.getElementById("menuTitle");
+  const priceEl = document.getElementById("menuPrice");
+
+  if(title) title.innerText = p.name;
+  if(chk) chk.checked = false;
+
+  // Drinks aus Produkten
+  const drinks = (PRODUCTS||[]).filter(x => (x.cat||x.category) === "Getränke");
+  if(sel){
+    sel.innerHTML = drinks.map((d,i)=>`<option value="${escAttr(d.name)}">${esc(d.name)}</option>`).join("");
+    if(drinks.length === 0){
+      sel.innerHTML = `<option value="">(Keine Getränke angelegt)</option>`;
+    }
+  }
+
+  if(priceEl) priceEl.innerText = money(p.price);
+  document.getElementById("menuOverlay")?.classList.remove("hidden");
+}
+
+function closeMenuOptions(){
+  document.getElementById("menuOverlay")?.classList.add("hidden");
+  pendingMenuProduct = null;
+}
+
+function updateMenuPrice(){
+  if(!pendingMenuProduct) return;
+  const chk = document.getElementById("menuCheesy");
+  const priceEl = document.getElementById("menuPrice");
+  let price = Number(pendingMenuProduct.price||0);
+  if(chk?.checked) price += 2; // Cheesy Fries +2
+  if(priceEl) priceEl.innerText = money(price);
+}
+
+function addMenuToCart(){
+  if(!pendingMenuProduct) return closeMenuOptions();
+
+  const sel = document.getElementById("menuDrink");
+  const chk = document.getElementById("menuCheesy");
+
+  const drink = String(sel?.value || "").trim();
+  const cheesy = !!chk?.checked;
+
+  let price = Number(pendingMenuProduct.price||0);
+  const lines = [];
+  if(drink) lines.push(`Getränk: ${drink}`);
+  lines.push(`Beilage: ${cheesy ? "Cheesy Fries (+$2)" : "Fries"}`);
+  if(cheesy) price += 2;
+
+  cart.push({
+    name: pendingMenuProduct.name,
+    price,
+    qty: 1,
+    meta: { type: "menu", drink, side: cheesy ? "Cheesy Fries" : "Fries", lines }
+  });
+
+  closeMenuOptions();
+  renderCart();
 }
 
 /* Kitchen */

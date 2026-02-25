@@ -328,6 +328,32 @@
   </div>
 
   <!-- ===== CHANGE PASSWORD OVERLAY ===== -->
+  
+  <div id="menuOverlay" class="overlay hidden">
+    <div class="overlayCard">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Menü zusammenstellen</div>
+        <button class="ghost" onclick="closeMenuOptions()">X</button>
+      </div>
+
+      <div class="muted small" style="margin-top:8px;">Menü: <b id="menuTitle">—</b></div>
+      <div class="muted small" style="margin-top:6px;">Preis: <b id="menuPrice">—</b></div>
+
+      <div style="margin-top:12px;">
+        <div class="muted small">Getränk auswählen</div>
+        <select id="menuDrink" class="input"></select>
+      </div>
+
+      <label style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+        <input id="menuCheesy" type="checkbox" onchange="updateMenuPrice()" />
+        <span>Cheesy Fries statt Fries (+$2)</span>
+      </label>
+
+      <button class="primary" style="margin-top:14px; width:100%;" onclick="addMenuToCart()">Zum Warenkorb</button>
+    </div>
+  </div>
+
+
   <div id="pwOverlay" class="overlay hidden">
     <div class="overlayCard">
       <div class="row" style="justify-content:space-between;">
