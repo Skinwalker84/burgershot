@@ -310,10 +310,13 @@ function renderProducts(){
 
 /* Cart */
 function addToCart(p){
-  if(String(p?.cat||p?.category||"")==="Menü"){ openMenuBuilder(p); return; }
-  cart.push({ name:p.name, price:p.price, qty:1 });
+  if(String(p?.cat||p?.category||"")==="Menü"){
+    openMenuBuilder(p);
+    return;
+  }
+  cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
-}); renderCart(); }
+}
 function clearCart(){ cart=[]; renderCart(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
