@@ -6,10 +6,10 @@ let me = null;
 let serverDay = null;
 
 let cart = [];
-
-let menuBuilderState = null;
 let currentDayReport = null;
 let currentWeekReport = null;
+
+let menuBuilderState = null;
 
 function isBoss(){ return me?.role === "boss"; }
 
@@ -67,7 +67,7 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
-  initProducts();
+  await initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -87,7 +87,7 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
-  initProducts();
+  await initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -170,19 +170,29 @@ function resetProductsToDefault(){
   renderProductsEditor();
 }
 
-function hydrateProducts(){
+async function hydrateProducts(){
+  // 1) Server (auth required)
+  try{
+    const res = await fetch("/products");
+    if(res.ok){
+      const data = await res.json().catch(()=>({}));
+      if(data.success && Array.isArray(data.products) && data.products.length){
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0 }));
+        saveProductsToStorage(PRODUCTS); // keep fallback in sync
+        return;
+      }
+    }
+  }catch(e){}
+
+  // 2) LocalStorage fallback
   const stored = loadProductsFromStorage();
-  if(stored){
-    // merge by name+cat
-    const map = new Map(stored.map(p=>[`${p.cat}||${p.name}`, p]));
-    PRODUCTS = PRODUCTS_DEFAULT.map(p=>{
-      const k = `${p.cat}||${p.name}`;
-      const hit = map.get(k);
-      return hit ? { ...p, price: hit.price } : { ...p };
-    });
-  }else{
-    PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
+  if(stored && Array.isArray(stored) && stored.length){
+    PRODUCTS = stored.map(p=>({ ...p, price:Number(p.price)||0 }));
+    return;
   }
+
+  // 3) Defaults
+  PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p, id: p.id || slugKey(p) }));
 }
 
 function renderProductsEditor(){
@@ -195,38 +205,77 @@ function renderProductsEditor(){
       <td>${esc(p.name)}</td>
       <td>${esc(p.cat)}</td>
       <td style="text-align:right;">
-        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-idx="${idx}" value="${escAttr(p.price)}" />
+        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-key="${escAttr(slugKey(p))}" value="${escAttr(p.price)}" />
       </td>
     </tr>
   `).join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
   if(msg) msg.innerText = "—";
 }
 
-function mgmtReloadProducts(){
-  hydrateProducts();
+async function mgmtReloadProducts(){
+  await hydrateProducts();
   renderProducts();
   renderProductsEditor();
-  const msg = document.getElementById("mgmtProductsMsg");
-  if(msg) msg.innerText = "Neu geladen ✅";
+  const msg=document.getElementById("mgmtProductsMsg");
+  if(msg) msg.innerText="—";
 }
 
-function mgmtSaveProducts(){
+async function mgmtSaveProducts(){
   const msg = document.getElementById("mgmtProductsMsg");
-  const list = (PRODUCTS||[]).map(p=>({ ...p }));
-  for(let i=0;i<list.length;i++){
-    const el = document.querySelector(`[data-price-idx="${i}"]`);
-    if(!el) continue;
+
+  // collect all edited prices by key
+  const inputs = Array.from(document.querySelectorAll("[data-price-key]"));
+  const priceMap = new Map();
+  for(const el of inputs){
+    const key = el.getAttribute("data-price-key");
     const n = parseMoney(el.value);
     if(!Number.isFinite(n) || n<0){
-      if(msg) msg.innerText = `Ungültiger Preis bei "${list[i].name}".`;
+      if(msg) msg.innerText = "Ungültiger Preis.";
       return;
     }
-    list[i].price = Math.round(n);
+    priceMap.set(key, Math.round(n));
   }
-  PRODUCTS = list;
-  if(saveProductsToStorage(PRODUCTS)){
+
+  // apply to PRODUCTS by key
+  const list = (PRODUCTS||[]).map(p=>{
+    const key = slugKey(p);
+    const hit = priceMap.get(key);
+    return hit != null ? { ...p, price: hit } : { ...p };
+  });
+
+  // server first
+  try{
+    const payload = list.map(p=>({
+      id: p.id || slugKey(p),
+      name: p.name,
+      cat: p.cat,
+      price: p.price
+    }));
+    const res = await fetch("/products",{
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ products: payload })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.success){
+      if(Array.isArray(data.products) && data.products.length){
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0 }));
+      }else{
+        PRODUCTS = list;
+      }
+      saveProductsToStorage(PRODUCTS);
+      renderProducts();
+      renderProductsEditor();
+      if(msg) msg.innerText = "Gespeichert (Server) ✅";
+      return;
+    }
+    throw new Error(data.message||"Fehler");
+  }catch(e){
+    PRODUCTS = list;
+    saveProductsToStorage(PRODUCTS);
     renderProducts();
-    if(msg) msg.innerText = "Gespeichert ✅";
+    renderProductsEditor();
+    if(msg) msg.innerText = "Gespeichert (Local) ⚠️";
   }
 }
 
@@ -260,13 +309,26 @@ function renderProducts(){
 }
 
 /* Cart */
-async function addToCart(p){
-  if(String(p?.cat||p?.category||"") === "Menü"){
-    openMenuBuilder(p);
-    return;
-  }
-  cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+function addToCart(p){
+  if(String(p?.cat||p?.category||"")==="Menü"){ openMenuBuilder(p); return; }
+  cart.push({ name:p.name, price:p.price, qty:1 });
   renderCart();
+}); renderCart(); }
+function clearCart(){ cart=[]; renderCart(); }
+function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
+
+function renderCart(){
+  const box=document.getElementById("cart");
+  const tot=document.getElementById("cartTotal");
+  if(tot) tot.innerText=money(cartTotal());
+  if(!box) return;
+  if(cart.length===0){ box.innerHTML=`<div class="muted small">Leer.</div>`; return; }
+  box.innerHTML=cart.map((x,idx)=>`
+    <div class="cartRow">
+      <div style="font-weight:900;">${esc(x.name)}</div>
+      <div class="muted small">${money(x.price)}</div>
+      <button class="ghost" onclick="removeItem(${idx})">x</button>
+    </div>`).join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); }
 
@@ -281,66 +343,51 @@ function openMenuBuilder(menuProduct){
     alert("Keine Getränke vorhanden. Bitte Produkte neu laden.");
     return;
   }
+  menuBuilderState = { base:{...menuProduct}, drinks };
 
-  menuBuilderState = {
-    base: { ...menuProduct },
-    drinks: drinks.map(d => ({ name: d.name, price: Number(d.price)||0, id: d.id })),
-    cheesy: false
-  };
+  const nameEl=document.getElementById("menuBaseName");
+  const priceEl=document.getElementById("menuBasePrice");
+  const sel=document.getElementById("menuDrinkSelect");
+  const chk=document.getElementById("menuCheesy");
 
-  const nameEl = document.getElementById("menuBaseName");
-  const priceEl = document.getElementById("menuBasePrice");
-  const sel = document.getElementById("menuDrinkSelect");
-  const chk = document.getElementById("menuCheesy");
-
-  if(nameEl) nameEl.innerText = menuBuilderState.base.name;
-  if(priceEl) priceEl.innerText = money(menuBuilderState.base.price);
+  if(nameEl) nameEl.innerText = menuProduct.name;
+  if(priceEl) priceEl.innerText = money(menuProduct.price);
 
   if(sel){
-    sel.innerHTML = "";
-    for(const d of menuBuilderState.drinks){
-      const opt = document.createElement("option");
-      opt.value = d.name;
+    sel.innerHTML="";
+    drinks.forEach(d=>{
+      const opt=document.createElement("option");
+      opt.value=d.name;
       opt.textContent = `${d.name} (${money(d.price)})`;
       sel.appendChild(opt);
-    }
+    });
   }
-  if(chk) chk.checked = false;
+  if(chk) chk.checked=false;
 
   document.getElementById("menuOverlay")?.classList.remove("hidden");
 }
 
 function closeMenuBuilder(){
   document.getElementById("menuOverlay")?.classList.add("hidden");
-  menuBuilderState = null;
+  menuBuilderState=null;
 }
 
 function confirmMenuBuilder(){
   if(!menuBuilderState) return;
-
-  const sel = document.getElementById("menuDrinkSelect");
-  const chk = document.getElementById("menuCheesy");
-
-  const drinkName = sel?.value || menuBuilderState.drinks[0]?.name;
+  const sel=document.getElementById("menuDrinkSelect");
+  const chk=document.getElementById("menuCheesy");
+  const drinkName = sel?.value || "";
   const cheesy = !!chk?.checked;
 
   const extra = cheesy ? 2 : 0;
   const friesLabel = cheesy ? "Cheesy Fries (+$2)" : "Fries";
 
   const base = menuBuilderState.base;
-  const finalPrice = Number(base.price||0) + extra;
+  const finalPrice = Math.round(Number(base.price||0) + extra);
 
   const displayName = `${base.name} • Drink: ${drinkName} • ${friesLabel}`;
 
-  cart.push({
-    id: (base.id ? `${base.id}__${slugify(drinkName)}__${cheesy?"cheesy":"fries"}` : undefined),
-    name: displayName,
-    baseName: base.name,
-    price: Math.round(finalPrice),
-    qty: 1,
-    meta: { menu:true, drink: drinkName, fries: friesLabel }
-  });
-
+  cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
   renderCart();
 }
@@ -371,6 +418,18 @@ async function submitPay(){
   closePay();
   alert(`Order #${data.orderId} gespeichert. Trinkgeld: ${money(data.tip||0)}`);
   cart=[]; renderCart();
+}
+
+function slugify(s){
+  return String(s||"")
+    .toLowerCase()
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+    .replace(/[^a-z0-9]+/g,"_")
+    .replace(/^_+|_+$/g,"")
+    .slice(0,60) || "item";
+}
+function slugKey(p){
+  return `${slugify(p.cat||p.category||"")}__${slugify(p.name||"")}`;
 }
 
 /* Kitchen */
@@ -668,15 +727,6 @@ function currentISOWeekString(d){
   const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
   const y = date.getUTCFullYear();
   return `${y}-W${String(weekNo).padStart(2,"0")}`;
-}
-
-function slugify(s){
-  return String(s||"")
-    .toLowerCase()
-    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
-    .replace(/[^a-z0-9]+/g,"_")
-    .replace(/^_+|_+$/g,"")
-    .slice(0,60) || "item";
 }
 
 /* Boot */
