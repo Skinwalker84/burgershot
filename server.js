@@ -1,348 +1,649 @@
+// server.js
+// Burger Shot – Firmensoftware (GTA RP)
+// Features: Login (Boss/Staff), Mitarbeiterverwaltung, POS Sales, Küche, Reset (heute),
+// Persistenz via JSON, + Buchhaltung Reports (Tag/Woche/Monat/Jahr)
+
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const cookieParser = require("cookie-parser");
 const crypto = require("crypto");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(cookieParser());
+app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ========= Zeit helpers (Berlin) ========= */
-function berlinDateISO(d = new Date()) {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Berlin",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  });
-  return fmt.format(d);
+// -------------------- Simple JSON DB --------------------
+const DATA_DIR = path.join(__dirname, "data");
+const DB_FILE = path.join(DATA_DIR, "db.json");
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function berlinTimeHM(d = new Date()) {
-  const fmt = new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-  return fmt.format(d);
-}
-
-/* ========= Persistenz ========= */
-const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
-
-function defaultUsers() {
-  return {
-    boss: { username: "chrisadams", password: "burger123", displayName: "Chris Adams" },
-    staff: [
-      { username: "kasse1", password: "1234", displayName: "Kasse 1" },
-      { username: "kasse2", password: "1234", displayName: "Kasse 2" },
-      { username: "kasse3", password: "1234", displayName: "Kasse 3" }
-    ]
-  };
-}
-
-function normalizeUsername(u) {
-  return String(u || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[^a-z0-9_-]/g, "");
-}
-
-function cleanDisplayName(n, fallback) {
-  const s = String(n || "").trim();
-  return s.length ? s : fallback;
-}
-
-function migrateUsers(u) {
-  const def = defaultUsers();
-  const users = (u && typeof u === "object") ? u : def;
-
-  if (!users.boss || typeof users.boss !== "object") users.boss = def.boss;
-  users.boss.username = users.boss.username || def.boss.username;
-  users.boss.password = users.boss.password || def.boss.password;
-  users.boss.displayName = cleanDisplayName(users.boss.displayName, users.boss.username);
-
-  if (!Array.isArray(users.staff)) users.staff = def.staff;
-  users.staff = users.staff.map(s => {
-    const username = s?.username || "";
-    return {
-      username,
-      password: s?.password || "1234",
-      displayName: cleanDisplayName(s?.displayName, username || "Mitarbeiter")
-    };
-  });
-
-  return users;
-}
-
-function defaultData() {
-  return {
-    currentDay: berlinDateISO(),
-    sales: [],
-    employeeTotals: {}, // {name: {total, orders, tips}}
-    dailyReports: [],
-    users: defaultUsers(),
-
-    kitchenOrders: [],
-    orderSeq: 1
-  };
-}
-
-function loadData() {
+function loadDB() {
+  ensureDataDir();
+  if (!fs.existsSync(DB_FILE)) {
+    const db = makeFreshDB();
+    saveDB(db);
+    return db;
+  }
   try {
-    if (!fs.existsSync(DATA_FILE)) return defaultData();
-    const raw = fs.readFileSync(DATA_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-
-    const base = defaultData();
-    const et = parsed.employeeTotals && typeof parsed.employeeTotals === "object" ? parsed.employeeTotals : {};
-
-    // migrate employeeTotals -> ensure tips exists
-    for (const k of Object.keys(et)) {
-      if (!et[k] || typeof et[k] !== "object") et[k] = { total: 0, orders: 0, tips: 0 };
-      if (!Number.isFinite(et[k].total)) et[k].total = 0;
-      if (!Number.isFinite(et[k].orders)) et[k].orders = 0;
-      if (!Number.isFinite(et[k].tips)) et[k].tips = 0;
-    }
-
-    return {
-      currentDay: typeof parsed.currentDay === "string" ? parsed.currentDay : base.currentDay,
-      sales: Array.isArray(parsed.sales) ? parsed.sales : [],
-      employeeTotals: et,
-      dailyReports: Array.isArray(parsed.dailyReports) ? parsed.dailyReports : [],
-      users: migrateUsers(parsed.users),
-
-      kitchenOrders: Array.isArray(parsed.kitchenOrders) ? parsed.kitchenOrders : [],
-      orderSeq: Number.isFinite(parsed.orderSeq) ? parsed.orderSeq : 1
-    };
+    const raw = fs.readFileSync(DB_FILE, "utf-8");
+    const db = JSON.parse(raw);
+    return normalizeDB(db);
   } catch (e) {
-    console.error("Fehler beim Laden data.json:", e);
-    return defaultData();
+    const db = makeFreshDB();
+    saveDB(db);
+    return db;
   }
 }
 
-function saveData() {
-  fs.writeFileSync(
-    DATA_FILE,
-    JSON.stringify({ currentDay, sales, employeeTotals, dailyReports, users, kitchenOrders, orderSeq }, null, 2),
-    "utf-8"
-  );
+function saveDB(db) {
+  ensureDataDir();
+  const tmp = DB_FILE + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(db, null, 2), "utf-8");
+  fs.renameSync(tmp, DB_FILE);
 }
 
-let { currentDay, sales, employeeTotals, dailyReports, users, kitchenOrders, orderSeq } = loadData();
+function makeFreshDB() {
+  const today = getDayKeyLocal(new Date());
+  const bossUsername = "chris.adams";
 
-/* ========= Sessions ========= */
-const sessions = new Map(); // token -> { username, role, displayName }
-
-function newToken() {
-  return crypto.randomBytes(24).toString("hex");
+  const { salt, hash } = hashPassword("admin"); // Default Boss Passwort: admin (bitte danach ändern)
+  return {
+    meta: {
+      currentDay: today,
+      nextOrderId: 1
+    },
+    users: [
+      {
+        username: bossUsername,
+        displayName: "Chris Adams",
+        role: "boss",
+        pw: { salt, hash }
+      }
+    ],
+    sessions: {}, // token -> { username, exp }
+    salesByDay: {
+      [today]: []
+    },
+    kitchenByDay: {
+      [today]: {
+        pending: [], // orders pending
+        done: []     // completed
+      }
+    }
+  };
 }
 
-function authRequired(req, res, next) {
-  const token = req.cookies?.bs_session;
-  if (!token || !sessions.has(token)) return res.status(401).json({ success: false, message: "Not logged in" });
-  req.user = sessions.get(token);
+function normalizeDB(db) {
+  if (!db || typeof db !== "object") return makeFreshDB();
+  if (!db.meta) db.meta = {};
+  if (!db.meta.currentDay) db.meta.currentDay = getDayKeyLocal(new Date());
+  if (!db.meta.nextOrderId) db.meta.nextOrderId = 1;
+  if (!Array.isArray(db.users)) db.users = [];
+  if (!db.sessions || typeof db.sessions !== "object") db.sessions = {};
+  if (!db.salesByDay || typeof db.salesByDay !== "object") db.salesByDay = {};
+  if (!db.kitchenByDay || typeof db.kitchenByDay !== "object") db.kitchenByDay = {};
+
+  // Ensure day buckets exist
+  const day = db.meta.currentDay;
+  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
+  if (!db.kitchenByDay[day]) db.kitchenByDay[day] = { pending: [], done: [] };
+  if (!Array.isArray(db.kitchenByDay[day].pending)) db.kitchenByDay[day].pending = [];
+  if (!Array.isArray(db.kitchenByDay[day].done)) db.kitchenByDay[day].done = [];
+
+  // Ensure at least one boss
+  const hasBoss = db.users.some(u => u.role === "boss");
+  if (!hasBoss) {
+    const { salt, hash } = hashPassword("admin");
+    db.users.push({
+      username: "chris.adams",
+      displayName: "Chris Adams",
+      role: "boss",
+      pw: { salt, hash }
+    });
+  }
+
+  return db;
+}
+
+let db = loadDB();
+
+// Rotate day if needed (local time)
+function rotateDayIfNeeded() {
+  const today = getDayKeyLocal(new Date());
+  if (db.meta.currentDay !== today) {
+    db.meta.currentDay = today;
+    if (!Array.isArray(db.salesByDay[today])) db.salesByDay[today] = [];
+    if (!db.kitchenByDay[today]) db.kitchenByDay[today] = { pending: [], done: [] };
+    saveDB(db);
+  }
+}
+
+// -------------------- Time helpers --------------------
+function getDayKeyLocal(d) {
+  // YYYY-MM-DD in local time
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toHM(isoString) {
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function parseDateYYYYMMDD(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s))) return null;
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+  // Ensure it matches (e.g. no overflow)
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+  return dt;
+}
+
+function startOfWeekMonday(dateLocal) {
+  const d = new Date(dateLocal.getFullYear(), dateLocal.getMonth(), dateLocal.getDate());
+  const day = d.getDay(); // 0=Sun..6=Sat
+  const diff = (day === 0 ? -6 : 1 - day); // Monday as start
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(dateLocal, n) {
+  const d = new Date(dateLocal.getFullYear(), dateLocal.getMonth(), dateLocal.getDate());
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function monthKey(dateLocal) {
+  const y = dateLocal.getFullYear();
+  const m = String(dateLocal.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+// -------------------- Password hashing --------------------
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, 120000, 32, "sha256").toString("hex");
+  return { salt, hash };
+}
+
+function verifyPassword(password, pwObj) {
+  if (!pwObj?.salt || !pwObj?.hash) return false;
+  const hash = crypto.pbkdf2Sync(password, pwObj.salt, 120000, 32, "sha256").toString("hex");
+  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(pwObj.hash, "hex"));
+}
+
+// -------------------- Cookies + sessions --------------------
+function parseCookies(req) {
+  const header = req.headers.cookie;
+  const out = {};
+  if (!header) return out;
+  header.split(";").forEach(part => {
+    const [k, ...rest] = part.trim().split("=");
+    if (!k) return;
+    out[k] = decodeURIComponent(rest.join("=") || "");
+  });
+  return out;
+}
+
+function setCookie(res, name, value, opts = {}) {
+  const parts = [`${name}=${encodeURIComponent(value)}`];
+  if (opts.httpOnly !== false) parts.push("HttpOnly");
+  parts.push("Path=/");
+  if (opts.maxAge != null) parts.push(`Max-Age=${opts.maxAge}`);
+  if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
+  else parts.push("SameSite=Lax");
+
+  // If behind https (Railway) we can set Secure
+  if (opts.secure) parts.push("Secure");
+
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+
+function createSession(username) {
+  const token = crypto.randomBytes(24).toString("hex");
+  const exp = Date.now() + 1000 * 60 * 60 * 24 * 14; // 14 days
+  db.sessions[token] = { username, exp };
+  saveDB(db);
+  return token;
+}
+
+function cleanupSessions() {
+  const now = Date.now();
+  for (const [token, s] of Object.entries(db.sessions)) {
+    if (!s || !s.exp || s.exp < now) delete db.sessions[token];
+  }
+}
+
+function getUserFromReq(req) {
+  cleanupSessions();
+  const cookies = parseCookies(req);
+  const token = cookies["bs_token"];
+  if (!token) return null;
+  const sess = db.sessions[token];
+  if (!sess) return null;
+  if (sess.exp < Date.now()) {
+    delete db.sessions[token];
+    saveDB(db);
+    return null;
+  }
+  const user = db.users.find(u => u.username === sess.username);
+  if (!user) return null;
+  return user;
+}
+
+function requireAuth(req, res, next) {
+  rotateDayIfNeeded();
+  const user = getUserFromReq(req);
+  if (!user) return res.status(401).json({ success: false, message: "Not logged in" });
+  req.user = user;
   next();
 }
 
-function bossOnly(req, res, next) {
-  if (req.user?.role !== "boss") return res.status(403).json({ success: false, message: "Boss only" });
+function requireBoss(req, res, next) {
+  if (!req.user || req.user.role !== "boss") {
+    return res.status(403).json({ success: false, message: "Boss only" });
+  }
   next();
 }
 
-/* ========= Auth ========= */
+// -------------------- Core helpers --------------------
+function publicUser(u) {
+  return {
+    username: u.username,
+    displayName: u.displayName,
+    role: u.role
+  };
+}
+
+function todaysSales() {
+  const day = db.meta.currentDay;
+  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
+  return db.salesByDay[day];
+}
+
+function todaysKitchen() {
+  const day = db.meta.currentDay;
+  if (!db.kitchenByDay[day]) db.kitchenByDay[day] = { pending: [], done: [] };
+  if (!Array.isArray(db.kitchenByDay[day].pending)) db.kitchenByDay[day].pending = [];
+  if (!Array.isArray(db.kitchenByDay[day].done)) db.kitchenByDay[day].done = [];
+  return db.kitchenByDay[day];
+}
+
+// -------------------- AUTH --------------------
+app.get("/auth/me", (req, res) => {
+  rotateDayIfNeeded();
+  const user = getUserFromReq(req);
+  if (!user) return res.json({ loggedIn: false });
+  return res.json({ loggedIn: true, user: publicUser(user) });
+});
+
 app.post("/auth/login", (req, res) => {
+  rotateDayIfNeeded();
   const { username, password } = req.body || {};
-  if (!username || !password) return res.status(400).json({ success: false, message: "Missing credentials" });
 
-  const uname = normalizeUsername(username);
+  const u = db.users.find(x => x.username === String(username || "").trim().toLowerCase());
+  if (!u) return res.status(401).json({ success: false, message: "Falscher Login." });
 
-  if (normalizeUsername(users?.boss?.username) === uname && users?.boss?.password === password) {
-    const token = newToken();
-    const displayName = cleanDisplayName(users.boss.displayName, users.boss.username);
-    sessions.set(token, { username: users.boss.username, role: "boss", displayName });
-    res.cookie("bs_session", token, { httpOnly: true, sameSite: "lax" });
-    return res.json({ success: true, role: "boss", username: users.boss.username, displayName });
+  if (!verifyPassword(String(password || ""), u.pw)) {
+    return res.status(401).json({ success: false, message: "Falscher Login." });
   }
 
-  const staff = Array.isArray(users?.staff) ? users.staff : [];
-  const found = staff.find(u => normalizeUsername(u.username) === uname && u.password === password);
-  if (found) {
-    const token = newToken();
-    const displayName = cleanDisplayName(found.displayName, found.username);
-    sessions.set(token, { username: found.username, role: "staff", displayName });
-    res.cookie("bs_session", token, { httpOnly: true, sameSite: "lax" });
-    return res.json({ success: true, role: "staff", username: found.username, displayName });
-  }
+  const token = createSession(u.username);
 
-  return res.status(401).json({ success: false, message: "Falscher Login" });
+  const secure = (req.headers["x-forwarded-proto"] || "").includes("https") || req.secure;
+  setCookie(res, "bs_token", token, { secure, maxAge: 60 * 60 * 24 * 14 });
+
+  res.json({ success: true, user: publicUser(u) });
 });
 
 app.post("/auth/logout", (req, res) => {
-  const token = req.cookies?.bs_session;
-  if (token) sessions.delete(token);
-  res.clearCookie("bs_session");
+  rotateDayIfNeeded();
+  const cookies = parseCookies(req);
+  const token = cookies["bs_token"];
+  if (token && db.sessions[token]) {
+    delete db.sessions[token];
+    saveDB(db);
+  }
+  const secure = (req.headers["x-forwarded-proto"] || "").includes("https") || req.secure;
+  setCookie(res, "bs_token", "", { secure, maxAge: 0 });
   res.json({ success: true });
 });
 
-app.get("/auth/me", (req, res) => {
-  const token = req.cookies?.bs_session;
-  if (!token || !sessions.has(token)) return res.json({ loggedIn: false });
-  res.json({ loggedIn: true, ...sessions.get(token) });
+// -------------------- USERS (Boss) --------------------
+app.get("/users", requireAuth, requireBoss, (req, res) => {
+  const staff = db.users
+    .filter(u => u.role !== "boss")
+    .map(publicUser);
+  res.json({ success: true, staff });
 });
 
-/* ========= Sale + Trinkgeld + Küche ========= */
-app.post("/sale", authRequired, (req, res) => {
-  const sale = req.body;
+app.post("/users/add", requireAuth, requireBoss, (req, res) => {
+  const displayName = String(req.body?.displayName || "").trim();
+  const usernameRaw = String(req.body?.username || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
 
-  if (!sale || !Array.isArray(sale.items) || typeof sale.total !== "number") {
-    return res.status(400).json({ success: false, message: "Invalid sale payload" });
+  if (!displayName || !usernameRaw || !password) {
+    return res.status(400).json({ success: false, message: "Felder fehlen." });
+  }
+  if (!/^[a-z0-9._-]{3,32}$/.test(usernameRaw)) {
+    return res.status(400).json({ success: false, message: "Username ungültig (3-32, a-z 0-9 . _ -)." });
+  }
+  if (db.users.some(u => u.username === usernameRaw)) {
+    return res.status(400).json({ success: false, message: "Username existiert bereits." });
   }
 
-  const today = berlinDateISO();
-  if (today !== currentDay) currentDay = today;
+  const { salt, hash } = hashPassword(password);
 
-  const total = Number(sale.total);
-  if (!Number.isFinite(total) || total < 0) {
-    return res.status(400).json({ success: false, message: "Invalid total" });
-  }
+  db.users.push({
+    username: usernameRaw,
+    displayName,
+    role: "staff",
+    pw: { salt, hash }
+  });
+  saveDB(db);
 
-  // bezahlt (optional)
-  let paid = sale.paidAmount;
-  paid = paid === undefined || paid === null || paid === "" ? total : Number(paid);
-  if (!Number.isFinite(paid) || paid < 0) {
-    return res.status(400).json({ success: false, message: "Invalid paidAmount" });
-  }
-
-  // Trinkgeld serverseitig berechnen
-  const tip = Math.max(0, Math.round((paid - total) * 100) / 100);
-
-  const record = {
-    day: currentDay,
-    employee: req.user.displayName,
-    employeeUser: req.user.username,
-    register: sale.register ?? null,
-    time: sale.time || new Date().toISOString(),
-    items: sale.items,
-    total: total,
-    paidAmount: paid,
-    tip: tip
-  };
-
-  sales.push(record);
-
-  // Mitarbeiter totals
-  const key = req.user.displayName;
-  if (!employeeTotals[key]) employeeTotals[key] = { total: 0, orders: 0, tips: 0 };
-  employeeTotals[key].total += total;
-  employeeTotals[key].orders += 1;
-  employeeTotals[key].tips += tip;
-
-  // Küche Order
-  const order = {
-    id: orderSeq++,
-    day: currentDay,
-    time: record.time,
-    timeHM: berlinTimeHM(new Date(record.time)),
-    register: record.register,
-    employee: record.employee,
-    items: record.items,
-    total: record.total,
-    status: "pending"
-  };
-  kitchenOrders.push(order);
-
-  saveData();
-  res.json({ success: true, orderId: order.id, tip });
-});
-
-/* ========= Stats ========= */
-app.get("/stats", authRequired, (req, res) => {
-  res.json({ success: true, currentDay, sales, employees: employeeTotals, me: req.user });
-});
-
-/* ========= Küche API ========= */
-app.get("/kitchen/orders", authRequired, (req, res) => {
-  const pending = kitchenOrders.filter(o => o.status === "pending");
-  res.json({ success: true, pending, currentDay });
-});
-
-app.post("/kitchen/complete", authRequired, (req, res) => {
-  const { id } = req.body || {};
-  const orderId = Number(id);
-  if (!Number.isFinite(orderId)) return res.status(400).json({ success: false, message: "Invalid id" });
-
-  const order = kitchenOrders.find(o => o.id === orderId);
-  if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-
-  order.status = "done";
-  order.doneTime = new Date().toISOString();
-  saveData();
   res.json({ success: true });
 });
 
-/* ========= Chef: Mitarbeiter ========= */
-app.get("/users", authRequired, bossOnly, (req, res) => {
-  const staff = Array.isArray(users.staff) ? users.staff : [];
+app.post("/users/delete", requireAuth, requireBoss, (req, res) => {
+  const username = String(req.body?.username || "").trim().toLowerCase();
+  if (!username) return res.status(400).json({ success: false, message: "Username fehlt." });
+
+  const user = db.users.find(u => u.username === username);
+  if (!user) return res.status(404).json({ success: false, message: "Nicht gefunden." });
+  if (user.role === "boss") return res.status(400).json({ success: false, message: "Chef kann nicht gelöscht werden." });
+
+  db.users = db.users.filter(u => u.username !== username);
+
+  // sessions cleanup
+  for (const [token, s] of Object.entries(db.sessions)) {
+    if (s?.username === username) delete db.sessions[token];
+  }
+
+  saveDB(db);
+  res.json({ success: true });
+});
+
+// -------------------- STATS (today) --------------------
+app.get("/stats", requireAuth, (req, res) => {
+  const sales = todaysSales();
+
+  const employees = {}; // displayName -> { total, tips, orders }
+  for (const s of sales) {
+    const name = s.employee || "Unbekannt";
+    if (!employees[name]) employees[name] = { total: 0, tips: 0, orders: 0 };
+    employees[name].total += Number(s.total || 0);
+    employees[name].tips += Number(s.tip || 0);
+    employees[name].orders += 1;
+  }
+
   res.json({
     success: true,
-    boss: { username: users.boss.username, displayName: users.boss.displayName },
-    staff: staff.map(u => ({ username: u.username, displayName: u.displayName }))
+    me: publicUser(req.user),
+    currentDay: db.meta.currentDay,
+    sales,
+    employees
   });
 });
 
-app.post("/users/add", authRequired, bossOnly, (req, res) => {
-  let { username, password, displayName } = req.body || {};
-  const rawUsername = username;
+// -------------------- SALE (POS -> save + kitchen pending) --------------------
+app.post("/sale", requireAuth, (req, res) => {
+  const body = req.body || {};
+  const register = Number(body.register);
+  const items = body.items;
+  const total = Number(body.total);
+  const time = String(body.time || new Date().toISOString());
+  const paidAmount = Number(body.paidAmount);
 
-  username = normalizeUsername(username);
-  password = String(password || "");
-  displayName = cleanDisplayName(displayName, rawUsername || username);
+  if (!Number.isFinite(register) || register < 1) {
+    return res.status(400).json({ success: false, message: "Invalid sale payload (register)." });
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: "Invalid sale payload (items)." });
+  }
+  if (!Number.isFinite(total) || total < 0) {
+    return res.status(400).json({ success: false, message: "Invalid sale payload (total)." });
+  }
+  if (!Number.isFinite(paidAmount) || paidAmount < total) {
+    return res.status(400).json({ success: false, message: "Invalid sale payload (paidAmount)." });
+  }
 
-  if (!username) return res.status(400).json({ success: false, message: "Ungültiger Username" });
-  if (password.length < 3) return res.status(400).json({ success: false, message: "Passwort zu kurz" });
+  const tip = Math.max(0, paidAmount - total);
 
-  const staff = Array.isArray(users.staff) ? users.staff : [];
-  const exists =
-    normalizeUsername(users.boss.username) === username ||
-    staff.some(u => normalizeUsername(u.username) === username);
+  const day = db.meta.currentDay;
+  const orderId = db.meta.nextOrderId++;
+  const sale = {
+    id: orderId,
+    day,
+    time,
+    timeHM: toHM(time),
+    employee: req.user.displayName || req.user.username,
+    employeeUsername: req.user.username,
+    register,
+    items,
+    total,
+    paidAmount,
+    tip
+  };
 
-  if (exists) return res.status(400).json({ success: false, message: "Username existiert schon" });
+  // Store sale for today
+  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
+  db.salesByDay[day].push(sale);
 
-  staff.push({ username, password, displayName });
-  users.staff = staff;
-  saveData();
+  // Kitchen pending
+  const kitchen = todaysKitchen();
+  kitchen.pending.push({
+    id: orderId,
+    day,
+    time,
+    timeHM: sale.timeHM,
+    employee: sale.employee,
+    register,
+    items,
+    total
+  });
+
+  saveDB(db);
+
+  res.json({ success: true, orderId, tip });
+});
+
+// -------------------- KITCHEN --------------------
+app.get("/kitchen/orders", requireAuth, (req, res) => {
+  const kitchen = todaysKitchen();
+  const pending = kitchen.pending
+    .slice()
+    .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+
+  res.json({
+    success: true,
+    currentDay: db.meta.currentDay,
+    pending
+  });
+});
+
+app.post("/kitchen/complete", requireAuth, (req, res) => {
+  const id = Number(req.body?.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ success: false, message: "ID fehlt." });
+
+  const kitchen = todaysKitchen();
+  const idx = kitchen.pending.findIndex(o => Number(o.id) === id);
+  if (idx === -1) return res.status(404).json({ success: false, message: "Order nicht gefunden." });
+
+  const doneOrder = kitchen.pending.splice(idx, 1)[0];
+  kitchen.done.push({ ...doneOrder, completedAt: new Date().toISOString() });
+
+  saveDB(db);
   res.json({ success: true });
 });
 
-app.post("/users/delete", authRequired, bossOnly, (req, res) => {
-  let { username } = req.body || {};
-  username = normalizeUsername(username);
-  if (!username) return res.status(400).json({ success: false, message: "Ungültiger Username" });
-
-  const before = users.staff.length;
-  users.staff = users.staff.filter(u => normalizeUsername(u.username) !== username);
-  if (users.staff.length === before) return res.status(404).json({ success: false, message: "User nicht gefunden" });
-
-  saveData();
+// -------------------- RESET (today) --------------------
+app.post("/reset", requireAuth, requireBoss, (req, res) => {
+  const day = db.meta.currentDay;
+  db.salesByDay[day] = [];
+  db.kitchenByDay[day] = { pending: [], done: [] };
+  saveDB(db);
   res.json({ success: true });
 });
 
-/* ========= Chef: Reset ========= */
-app.post("/reset", authRequired, bossOnly, (req, res) => {
-  sales = [];
-  employeeTotals = {};
-  kitchenOrders = [];
-  orderSeq = 1;
-  saveData();
-  res.json({ success: true });
+// -------------------- REPORTS / BUCHHALTUNG --------------------
+// GET /reports/summary?period=day|week|month|year&date=YYYY-MM-DD
+app.get("/reports/summary", requireAuth, requireBoss, (req, res) => {
+  rotateDayIfNeeded();
+
+  const period = String(req.query?.period || "day");
+  const dateStr = String(req.query?.date || db.meta.currentDay);
+
+  const date = parseDateYYYYMMDD(dateStr);
+  if (!date) return res.status(400).json({ success: false, message: "Ungültiges Datum. Format: YYYY-MM-DD" });
+
+  // Helper to compute sums for a dayKey
+  function summarizeDay(dayKey) {
+    const sales = Array.isArray(db.salesByDay[dayKey]) ? db.salesByDay[dayKey] : [];
+    const revenue = sales.reduce((s, x) => s + Number(x.total || 0), 0);
+    const tips = sales.reduce((s, x) => s + Number(x.tip || 0), 0);
+    const orders = sales.length;
+    const avg = orders > 0 ? revenue / orders : 0;
+    return { day: dayKey, revenue, tips, orders, avg };
+  }
+
+  // DAY
+  if (period === "day") {
+    const dayKey = getDayKeyLocal(date);
+    const sum = summarizeDay(dayKey);
+    return res.json({
+      success: true,
+      period: "day",
+      range: { start: dayKey, end: dayKey },
+      totals: {
+        revenue: sum.revenue,
+        tips: sum.tips,
+        orders: sum.orders,
+        avg: sum.avg
+      },
+      breakdown: [sum] // 1 element
+    });
+  }
+
+  // WEEK (Mon-Sun)
+  if (period === "week") {
+    const start = startOfWeekMonday(date);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(start, i);
+      days.push(getDayKeyLocal(d));
+    }
+    const breakdown = days.map(summarizeDay);
+    const totals = {
+      revenue: breakdown.reduce((s, x) => s + x.revenue, 0),
+      tips: breakdown.reduce((s, x) => s + x.tips, 0),
+      orders: breakdown.reduce((s, x) => s + x.orders, 0)
+    };
+    totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+
+    return res.json({
+      success: true,
+      period: "week",
+      range: { start: days[0], end: days[6] },
+      totals,
+      breakdown
+    });
+  }
+
+  // MONTH (all days)
+  if (period === "month") {
+    const y = date.getFullYear();
+    const m = date.getMonth(); // 0-11
+    const first = new Date(y, m, 1);
+    const next = new Date(y, m + 1, 1);
+    const breakdown = [];
+
+    for (let d = new Date(first); d < next; d = addDays(d, 1)) {
+      const dayKey = getDayKeyLocal(d);
+      breakdown.push(summarizeDay(dayKey));
+    }
+
+    const totals = {
+      revenue: breakdown.reduce((s, x) => s + x.revenue, 0),
+      tips: breakdown.reduce((s, x) => s + x.tips, 0),
+      orders: breakdown.reduce((s, x) => s + x.orders, 0)
+    };
+    totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+
+    return res.json({
+      success: true,
+      period: "month",
+      range: { start: breakdown[0]?.day, end: breakdown[breakdown.length - 1]?.day },
+      totals,
+      breakdown
+    });
+  }
+
+  // YEAR (months)
+  if (period === "year") {
+    const y = date.getFullYear();
+    const breakdown = [];
+
+    for (let month = 0; month < 12; month++) {
+      const first = new Date(y, month, 1);
+      const next = new Date(y, month + 1, 1);
+
+      let revenue = 0, tips = 0, orders = 0;
+
+      for (let d = new Date(first); d < next; d = addDays(d, 1)) {
+        const dayKey = getDayKeyLocal(d);
+        const sum = summarizeDay(dayKey);
+        revenue += sum.revenue;
+        tips += sum.tips;
+        orders += sum.orders;
+      }
+
+      const avg = orders > 0 ? revenue / orders : 0;
+      breakdown.push({
+        month: `${y}-${String(month + 1).padStart(2, "0")}`,
+        revenue,
+        tips,
+        orders,
+        avg
+      });
+    }
+
+    const totals = {
+      revenue: breakdown.reduce((s, x) => s + x.revenue, 0),
+      tips: breakdown.reduce((s, x) => s + x.tips, 0),
+      orders: breakdown.reduce((s, x) => s + x.orders, 0)
+    };
+    totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+
+    return res.json({
+      success: true,
+      period: "year",
+      range: { start: `${y}-01-01`, end: `${y}-12-31` },
+      totals,
+      breakdown
+    });
+  }
+
+  return res.status(400).json({ success: false, message: "period muss day|week|month|year sein." });
 });
 
-/* ========= Start ========= */
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.listen(PORT, () => console.log("Server läuft auf Port " + PORT));
+// Fallback to SPA index (optional)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.listen(PORT, () => {
+  console.log(`Burger Shot running on port ${PORT}`);
+});
