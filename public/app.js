@@ -670,12 +670,19 @@ async function loadUsers(){
 }
 
 function openAddUser(){
-  const username=prompt("Username (login) (ohne Leerzeichen, z.B. max.mustermann):");
+  const username = prompt("Username (Login, z.B. max.mustermann):");
   if(!username) return;
-  const displayName=prompt("Anzeigename:", username) || username;
-  const role=prompt("Rolle: staff oder boss", "staff") || "staff";
-  const password=prompt("Passwort (default admin):", "admin") || "admin";
-  addUser(username, displayName, role, password);
+
+  const displayName = prompt("Anzeigename:", username) || username;
+
+  let roleInput = prompt("Rolle auswählen:\n1 = Chef\n2 = Mitarbeiter", "2");
+  let role = "staff";
+  if(roleInput === "1") role = "chef";
+  if(roleInput === "2") role = "staff";
+
+  const password = prompt("Passwort (Standard: admin):", "admin") || "admin";
+
+  addUser(username.trim().toLowerCase(), displayName.trim(), role, password);
 }
 
 async function addUser(username, displayName, role, password){
