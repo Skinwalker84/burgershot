@@ -176,7 +176,7 @@ function makeFreshDB() {
   return {
     meta: { currentDay: today, nextOrderId: 1 },
     users: [
-      { username: bossUsername, displayName: "Chris Adams", role: "chef", pw: { salt, hash } }
+      { username: bossUsername, displayName: "Chris Adams", role: "boss", pw: { salt, hash } }
     ],
     sessions: {},
 
@@ -238,10 +238,10 @@ function normalizeDB(db) {
   if (!Array.isArray(db.kitchenByDay[day].pending)) db.kitchenByDay[day].pending = [];
   if (!Array.isArray(db.kitchenByDay[day].done)) db.kitchenByDay[day].done = [];
 
-  const hasBoss = db.users.some(u => u.role === "chef");
+  const hasBoss = db.users.some(u => u.role === "boss");
   if (!hasBoss) {
     const { salt, hash } = hashPassword("admin");
-    db.users.push({ username: "chris.adams", displayName: "Chris Adams", role: "chef", pw: { salt, hash } });
+    db.users.push({ username: "chris.adams", displayName: "Chris Adams", role: "boss", pw: { salt, hash } });
   }
 
   return db;
@@ -323,7 +323,7 @@ function requireAuth(req, res, next) {
 }
 
 function requireBoss(req, res, next) {
-  if (req.user?.role !== "chef") return res.status(403).json({ success: false, message: "Nur Chef." });
+  if (req.user?.role !== "boss") return res.status(403).json({ success: false, message: "Nur Chef." });
   next();
 }
 
@@ -431,7 +431,7 @@ app.post("/users", requireAuth, requireBoss, (req, res) => {
   const username = String(req.body?.username || "").trim().toLowerCase();
   const displayName = String(req.body?.displayName || "").trim() || username;
   let role = String(req.body?.role || "staff").toLowerCase();
-  if (!["chef", "staff"].includes(role)) role = "staff";
+  if (!["boss", "staff"].includes(role)) role = "staff";
   const password = String(req.body?.password || "admin");
 
   if (!username) return res.status(400).json({ success: false, message: "Username fehlt." });
