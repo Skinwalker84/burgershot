@@ -47,8 +47,6 @@ function applyRoleVisibility() {
     mgmtBtn.style.display = "";
   } else {
     mgmtBtn.style.display = "none";
-
-    // wenn Mitarbeiter irgendwie in Management landet -> zurück zur Kasse
     if (!mgmtTab.classList.contains("hidden")) {
       const kassBtn = document.querySelector(".tabsTop .tabTop");
       openTab("tab_pos", kassBtn || null);
@@ -61,7 +59,6 @@ function applyRoleVisibility() {
 let kitchenPoll = null;
 
 function openTab(tabId, btn) {
-  // Management sperren für Nicht-Chef
   if (tabId === "tab_mgmt" && !isBoss()) {
     alert("Management ist nur für den Chef verfügbar.");
     const kassBtn = document.querySelector(".tabsTop .tabTop");
@@ -80,8 +77,10 @@ function openTab(tabId, btn) {
   if (tabId === "tab_kitchen") {
     loadKitchen();
     startKitchenPolling();
+    startKitchenAgeTicker();
   } else {
     stopKitchenPolling();
+    stopKitchenAgeTicker();
   }
 }
 
@@ -129,18 +128,8 @@ function renderProducts() {
 
   if (currentCategory === "Menü") {
     const menuItems = [
-      {
-        name: "Burgermenü",
-        price: 26,
-        desc: "1 Burger + Fries + 1 Getränk auswählen",
-        onClick: () => openMenuBuilder("burgermenu")
-      },
-      {
-        name: "Spar Paket 10/10",
-        price: 200,
-        desc: "10× Burger + 10× Getränk (frei zusammenstellen)",
-        onClick: () => openMenuBuilder("spar1010")
-      }
+      { name: "Burgermenü", price: 26, desc: "1 Burger + Fries + 1 Getränk auswählen", onClick: () => openMenuBuilder("burgermenu") },
+      { name: "Spar Paket 10/10", price: 200, desc: "10× Burger + 10× Getränk (frei zusammenstellen)", onClick: () => openMenuBuilder("spar1010") }
     ];
 
     menuItems.forEach(m => {
@@ -156,23 +145,20 @@ function renderProducts() {
       div.onclick = m.onClick;
       container.appendChild(div);
     });
-
     return;
   }
 
-  products
-    .filter(p => p.category === currentCategory)
-    .forEach(p => {
-      const div = document.createElement("div");
-      div.className = "product";
-      div.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="price">$${p.price}</div>`;
-      div.onclick = () => addToCart(p);
-      container.appendChild(div);
-    });
+  products.filter(p => p.category === currentCategory).forEach(p => {
+    const div = document.createElement("div");
+    div.className = "product";
+    div.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="price">$${p.price}</div>`;
+    div.onclick = () => addToCart(p);
+    container.appendChild(div);
+  });
 }
 
 /* ========= Menü Builder ========= */
-let menuMode = null; // "burgermenu" | "spar1010"
+let menuMode = null;
 let spar = { burgers: {}, drinks: {} };
 
 function ensureMenuOverlay() {
@@ -186,20 +172,15 @@ function ensureMenuOverlay() {
       <h2 id="menuTitle">Menü</h2>
       <div class="muted" id="menuSubtitle">Auswahl</div>
 
-      <!-- Burgermenü Mode -->
       <div id="simpleMode">
         <div style="margin-top:10px;">
           <div class="muted small" style="margin-bottom:6px;">Burger</div>
-          <select id="menuBurger"
-            style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);">
-          </select>
+          <select id="menuBurger" style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);"></select>
         </div>
 
         <div style="margin-top:10px;">
           <div class="muted small" style="margin-bottom:6px;">Getränk</div>
-          <select id="menuDrink"
-            style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);">
-          </select>
+          <select id="menuDrink" style="width:100%; padding:10px 12px; border-radius:10px; background:#0e243a; color:white; border:1px solid rgba(255,255,255,0.12);"></select>
         </div>
 
         <div id="cheesyWrap" style="margin-top:12px; display:none; width:100%;">
@@ -212,7 +193,6 @@ function ensureMenuOverlay() {
         </div>
       </div>
 
-      <!-- Spar Mode -->
       <div id="sparMode" style="display:none; margin-top:10px;">
         <div class="muted small" style="margin-bottom:8px;">
           Wähle insgesamt <b>10 Burger</b> und <b>10 Getränke</b>.
@@ -250,31 +230,18 @@ function ensureMenuOverlay() {
   document.body.appendChild(overlay);
 }
 
-function resetSparState() {
-  spar = { burgers: {}, drinks: {} };
-}
-
-function sparTotal(obj) {
-  return Object.values(obj).reduce((s, n) => s + (Number(n) || 0), 0);
-}
-
+function resetSparState() { spar = { burgers: {}, drinks: {} }; }
+function sparTotal(obj) { return Object.values(obj).reduce((s, n) => s + (Number(n) || 0), 0); }
 function summarizeCounts(obj) {
   const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
   if (!entries.length) return "—";
   return entries.map(([n, q]) => `${n} x${q}`).join(", ");
 }
-
 function sparAdd(type, name) {
-  if (type === "burger") {
-    if (sparTotal(spar.burgers) >= 10) return;
-    spar.burgers[name] = (spar.burgers[name] || 0) + 1;
-  } else {
-    if (sparTotal(spar.drinks) >= 10) return;
-    spar.drinks[name] = (spar.drinks[name] || 0) + 1;
-  }
+  if (type === "burger") { if (sparTotal(spar.burgers) >= 10) return; spar.burgers[name] = (spar.burgers[name] || 0) + 1; }
+  else { if (sparTotal(spar.drinks) >= 10) return; spar.drinks[name] = (spar.drinks[name] || 0) + 1; }
   renderSparLists();
 }
-
 function sparRemove(type, name) {
   const obj = type === "burger" ? spar.burgers : spar.drinks;
   const v = obj[name] || 0;
@@ -282,7 +249,6 @@ function sparRemove(type, name) {
   else obj[name] = v - 1;
   renderSparLists();
 }
-
 function renderSparLists() {
   const bCount = document.getElementById("sparBurgerCount");
   const dCount = document.getElementById("sparDrinkCount");
@@ -293,9 +259,8 @@ function renderSparLists() {
 
   const bt = sparTotal(spar.burgers);
   const dt = sparTotal(spar.drinks);
-
-  if (bCount) bCount.textContent = `${bt} / 10`;
-  if (dCount) dCount.textContent = `${dt} / 10`;
+  bCount && (bCount.textContent = `${bt} / 10`);
+  dCount && (dCount.textContent = `${dt} / 10`);
 
   bList.innerHTML = "";
   dList.innerHTML = "";
@@ -307,7 +272,6 @@ function renderSparLists() {
     row.style.alignItems = "center";
     row.style.justifyContent = "space-between";
     row.style.gap = "8px";
-
     row.innerHTML = `
       <div style="flex:1; min-width:0;">${escapeHtml(name)}</div>
       <div class="muted small" style="width:46px; text-align:center;">${qty}</div>
@@ -326,7 +290,6 @@ function renderSparLists() {
     row.style.alignItems = "center";
     row.style.justifyContent = "space-between";
     row.style.gap = "8px";
-
     row.innerHTML = `
       <div style="flex:1; min-width:0;">${escapeHtml(name)}</div>
       <div class="muted small" style="width:46px; text-align:center;">${qty}</div>
@@ -346,7 +309,6 @@ function renderSparLists() {
     `;
   }
 }
-
 function openMenuBuilder(mode) {
   ensureMenuOverlay();
   menuMode = mode;
@@ -354,59 +316,46 @@ function openMenuBuilder(mode) {
   const title = document.getElementById("menuTitle");
   const sub = document.getElementById("menuSubtitle");
   const hint = document.getElementById("menuHint");
+
   const simpleMode = document.getElementById("simpleMode");
   const sparMode = document.getElementById("sparMode");
 
   const burgerSel = document.getElementById("menuBurger");
   const drinkSel = document.getElementById("menuDrink");
-  const cheesyWrap = document.getElementById("cheesyWrap");
-  const cheesyCheck = document.getElementById("cheesyCheck");
 
   if (burgerSel && drinkSel) {
     burgerSel.innerHTML = "";
     drinkSel.innerHTML = "";
-    burgerOptions().forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      burgerSel.appendChild(opt);
-    });
-    drinkOptions().forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      drinkSel.appendChild(opt);
-    });
+    burgerOptions().forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; burgerSel.appendChild(o); });
+    drinkOptions().forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; drinkSel.appendChild(o); });
   }
 
-  if (cheesyCheck) cheesyCheck.checked = false;
+  document.getElementById("cheesyCheck") && (document.getElementById("cheesyCheck").checked = false);
 
   if (mode === "burgermenu") {
-    if (title) title.textContent = "Burgermenü";
-    if (sub) sub.textContent = "Burger + Fries + Getränk auswählen";
-    if (hint) hint.textContent = "VK: $26 (Cheesy Fries +$2)";
-    if (simpleMode) simpleMode.style.display = "block";
-    if (sparMode) sparMode.style.display = "none";
-    if (cheesyWrap) cheesyWrap.style.display = "block";
+    title && (title.textContent = "Burgermenü");
+    sub && (sub.textContent = "Burger + Fries + Getränk auswählen");
+    hint && (hint.textContent = "VK: $26 (Cheesy Fries +$2)");
+    simpleMode && (simpleMode.style.display = "block");
+    sparMode && (sparMode.style.display = "none");
+    document.getElementById("cheesyWrap") && (document.getElementById("cheesyWrap").style.display = "block");
   } else {
-    if (title) title.textContent = "Spar Paket 10/10";
-    if (sub) sub.textContent = "10× Burger + 10× Getränk frei zusammenstellen";
-    if (hint) hint.textContent = "VK: $200";
-    if (simpleMode) simpleMode.style.display = "none";
-    if (sparMode) sparMode.style.display = "block";
-    if (cheesyWrap) cheesyWrap.style.display = "none";
+    title && (title.textContent = "Spar Paket 10/10");
+    sub && (sub.textContent = "10× Burger + 10× Getränk frei zusammenstellen");
+    hint && (hint.textContent = "VK: $200");
+    simpleMode && (simpleMode.style.display = "none");
+    sparMode && (sparMode.style.display = "block");
+    document.getElementById("cheesyWrap") && (document.getElementById("cheesyWrap").style.display = "none");
     resetSparState();
     renderSparLists();
   }
 
   document.getElementById("menuOverlay")?.classList.remove("hidden");
 }
-
 function closeMenuBuilder() {
   document.getElementById("menuOverlay")?.classList.add("hidden");
   menuMode = null;
 }
-
 function confirmMenuBuilder() {
   if (menuMode === "burgermenu") {
     const burger = document.getElementById("menuBurger")?.value;
@@ -444,24 +393,14 @@ function confirmMenuBuilder() {
 
 /* ========= Cart ========= */
 function addToCart(product) {
-  // gleiche Bundles separat behandeln
   const keyA = JSON.stringify(product.bundle || {});
-  const found = cart.find(
-    i => i.name === product.name && i.price === product.price && JSON.stringify(i.bundle || {}) === keyA
-  );
+  const found = cart.find(i => i.name === product.name && i.price === product.price && JSON.stringify(i.bundle || {}) === keyA);
   if (found) found.qty++;
   else cart.push({ ...product, qty: 1 });
   renderCart();
 }
-
-function clearCart() {
-  cart = [];
-  renderCart();
-}
-
-function getTotal() {
-  return cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-}
+function clearCart() { cart = []; renderCart(); }
+function getTotal() { return cart.reduce((sum, i) => sum + i.price * i.qty, 0); }
 
 function renderCart() {
   const list = document.getElementById("cart");
@@ -492,9 +431,9 @@ function renderCart() {
         <div class="small">${item.qty} × $${item.price} = <b>$${item.qty * item.price}</b></div>
       </div>
       <div class="controls">
-        <button onclick="decItem('${escapeAttr(item.name)}', '${escapeAttr(JSON.stringify(item.bundle||{}))}')">-1</button>
-        <button onclick="incItem('${escapeAttr(item.name)}', '${escapeAttr(JSON.stringify(item.bundle||{}))}')">+1</button>
-        <button class="danger" onclick="removeItem('${escapeAttr(item.name)}', '${escapeAttr(JSON.stringify(item.bundle||{}))}')">Entfernen</button>
+        <button onclick="decItem('${escapeAttr(item.name)}','${escapeAttr(JSON.stringify(item.bundle||{}))}')">-1</button>
+        <button onclick="incItem('${escapeAttr(item.name)}','${escapeAttr(JSON.stringify(item.bundle||{}))}')">+1</button>
+        <button class="danger" onclick="removeItem('${escapeAttr(item.name)}','${escapeAttr(JSON.stringify(item.bundle||{}))}')">Entfernen</button>
       </div>
     `;
     list.appendChild(li);
@@ -509,30 +448,11 @@ function findCartItem(name, bundleJson) {
   const key = JSON.stringify(b);
   return cart.find(i => i.name === name && JSON.stringify(i.bundle || {}) === key);
 }
+function incItem(name, bundleJson) { const i = findCartItem(name, bundleJson); if (!i) return; i.qty++; renderCart(); }
+function decItem(name, bundleJson) { const i = findCartItem(name, bundleJson); if (!i) return; i.qty--; if (i.qty <= 0) cart = cart.filter(x => x !== i); renderCart(); }
+function removeItem(name, bundleJson) { const i = findCartItem(name, bundleJson); if (!i) return; cart = cart.filter(x => x !== i); renderCart(); }
 
-function incItem(name, bundleJson) {
-  const item = findCartItem(name, bundleJson);
-  if (!item) return;
-  item.qty++;
-  renderCart();
-}
-
-function decItem(name, bundleJson) {
-  const item = findCartItem(name, bundleJson);
-  if (!item) return;
-  item.qty--;
-  if (item.qty <= 0) cart = cart.filter(i => i !== item);
-  renderCart();
-}
-
-function removeItem(name, bundleJson) {
-  const item = findCartItem(name, bundleJson);
-  if (!item) return;
-  cart = cart.filter(i => i !== item);
-  renderCart();
-}
-
-/* ========= Payment Overlay + Checkout + Trinkgeld ========= */
+/* ========= Payment Overlay + Checkout ========= */
 let pendingSale = null;
 
 function openPay() {
@@ -560,24 +480,20 @@ function openPay() {
 
 function closePay() {
   document.getElementById("payOverlay")?.classList.add("hidden");
-  // pendingSale NICHT löschen! (wird nach erfolgreichem Checkout gelöscht)
+  // pendingSale NICHT löschen (wird nach erfolgreichem Checkout gelöscht)
 }
 
 function confirmPay() {
   if (!pendingSale) return closePay();
-
   const raw = document.getElementById("payAmount")?.value;
   const paid = Number(raw);
-
   if (!Number.isFinite(paid) || paid < 0) return alert("Bitte gültigen Betrag eingeben.");
   if (paid < pendingSale.total) return alert("Der bezahlte Betrag darf nicht kleiner als der VK sein.");
-
   closePay();
   checkout(paid);
 }
 
 async function checkout(paidAmount = null) {
-  // Klick auf Bezahlen -> erst Popup
   if (paidAmount === null) return openPay();
 
   if (!pendingSale || !Array.isArray(pendingSale.items) || typeof pendingSale.total !== "number") {
@@ -601,20 +517,17 @@ async function checkout(paidAmount = null) {
   const tip = Number(data.tip || 0);
 
   clearCart();
-  pendingSale = null; // erst nach Erfolg löschen
+  pendingSale = null;
   refreshStats();
 
-  if (tip > 0) {
-    alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
-  } else {
-    alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
-  }
+  if (tip > 0) alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
+  else alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
 
   const kitchenVisible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
   if (kitchenVisible) loadKitchen();
 }
 
-/* ========= Küche: 2 Spalten + Sortierung + Sound ========= */
+/* ========= Küche: 2 Spalten + Sortierung + Sound + Timer + Farben ========= */
 let kitchenInitialized = false;
 let lastMaxOrderId = 0;
 
@@ -622,39 +535,27 @@ function playNewOrderSound() {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
-
     const ctx = new Ctx();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
-
     o.type = "sine";
     o.frequency.value = 880;
     g.gain.value = 0.0001;
-
-    o.connect(g);
-    g.connect(ctx.destination);
-
+    o.connect(g); g.connect(ctx.destination);
     o.start();
-
     const t = ctx.currentTime;
     g.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
-
     o.stop(t + 0.22);
-
-    o.onended = () => {
-      try { ctx.close(); } catch (e) {}
-    };
-  } catch (e) {}
+    o.onended = () => { try { ctx.close(); } catch(e){} };
+  } catch(e) {}
 }
 
 function itemLinesForKitchen(item) {
   if (!item.bundle) return [`${item.qty}× ${item.name}`];
-
   if (item.bundle.type === "burgermenu") {
     return [`${item.qty}× Burgermenü: ${item.bundle.burger} + ${item.bundle.fries} + ${item.bundle.drink}`];
   }
-
   if (item.bundle.type === "spar1010") {
     return [
       `${item.qty}× Spar Paket 10/10`,
@@ -662,8 +563,21 @@ function itemLinesForKitchen(item) {
       `— Getränke: ${summarizeCounts(item.bundle.drinks || {})}`
     ];
   }
-
   return [`${item.qty}× ${item.name}`];
+}
+
+function fmtAge(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+function ageClass(ms) {
+  const min = ms / 60000;
+  if (min >= 6) return "age-hot";
+  if (min >= 3) return "age-warn";
+  return "age-ok";
 }
 
 async function loadKitchen() {
@@ -679,7 +593,7 @@ async function loadKitchen() {
   // älteste zuerst
   const pending = (data.pending || []).slice().sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
-  // Sound wenn neue Order reinkommt
+  // Sound bei neuer Order
   const currentMax = pending.reduce((m, o) => Math.max(m, Number(o.id) || 0), 0);
   if (kitchenInitialized && currentMax > lastMaxOrderId) playNewOrderSound();
   lastMaxOrderId = Math.max(lastMaxOrderId, currentMax);
@@ -692,30 +606,49 @@ async function loadKitchen() {
   pendEl.innerHTML = "";
   if (emptyEl) emptyEl.style.display = pending.length === 0 ? "block" : "none";
 
+  const now = Date.now();
+
   pending.forEach(o => {
     const box = document.createElement("div");
-    box.className = "panel";
+    box.className = "panel orderCard";
 
     const reg = o.register ? `Kasse ${o.register}` : "Kasse —";
     const lines = [];
     (o.items || []).forEach(it => itemLinesForKitchen(it).forEach(l => lines.push(l)));
 
+    const ts = Date.parse(o.time || "") || now;
+    const ageMs = Math.max(0, now - ts);
+    const cls = ageClass(ageMs);
+
+    box.classList.add(cls);
+    box.dataset.orderTs = String(ts);
+
     box.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div class="orderTop">
         <div>
-          <div style="font-size:18px; font-weight:800;">Order #${o.id}</div>
-          <div class="muted small">${escapeHtml(o.timeHM || "")} · ${escapeHtml(reg)} · von ${escapeHtml(o.employee || "")}</div>
+          <div class="orderTitle">Order #${o.id}</div>
+          <div class="muted small">
+            ${escapeHtml(o.timeHM || "")} · ${escapeHtml(reg)} · von ${escapeHtml(o.employee || "")}
+          </div>
         </div>
-        <button class="primary" onclick="completeKitchenOrder(${o.id})">Erledigt ✅</button>
+
+        <div class="orderRight">
+          <div class="orderAge" data-role="age">${fmtAge(ageMs)}</div>
+          <button class="primary" onclick="completeKitchenOrder(${o.id})">Erledigt ✅</button>
+        </div>
       </div>
 
-      <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.10); padding-top:10px;">
-        ${lines.map(l => `<div style="padding:3px 0;">${escapeHtml(l)}</div>`).join("")}
-        <div style="margin-top:8px;" class="muted small">Gesamt: <b>$${Number(o.total || 0)}</b></div>
+      <div class="orderBody">
+        ${lines.map(l => `<div class="orderLine">${escapeHtml(l)}</div>`).join("")}
+        <div class="muted small" style="margin-top:8px;">Gesamt: <b>$${Number(o.total || 0)}</b></div>
       </div>
     `;
+
     pendEl.appendChild(box);
   });
+
+  // Timer direkt nach dem Render updaten lassen
+  tickKitchenAges();
 }
 
 async function completeKitchenOrder(id) {
@@ -732,6 +665,45 @@ async function completeKitchenOrder(id) {
   }
 
   loadKitchen();
+}
+
+/* Live-Timer: updatet jede Sekunde die Anzeige + Farben */
+let kitchenAgeTicker = null;
+
+function startKitchenAgeTicker() {
+  if (kitchenAgeTicker) return;
+  kitchenAgeTicker = setInterval(() => {
+    const visible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
+    if (!visible) return;
+    tickKitchenAges();
+  }, 1000);
+}
+
+function stopKitchenAgeTicker() {
+  if (!kitchenAgeTicker) return;
+  clearInterval(kitchenAgeTicker);
+  kitchenAgeTicker = null;
+}
+
+function tickKitchenAges() {
+  const pendEl = document.getElementById("kitchenPending");
+  if (!pendEl) return;
+
+  const now = Date.now();
+  const cards = pendEl.querySelectorAll(".orderCard");
+  cards.forEach(card => {
+    const ts = Number(card.dataset.orderTs || 0);
+    if (!ts) return;
+    const ageMs = Math.max(0, now - ts);
+
+    // Klassen aktualisieren
+    card.classList.remove("age-ok", "age-warn", "age-hot");
+    card.classList.add(ageClass(ageMs));
+
+    // Timer aktualisieren
+    const ageEl = card.querySelector('[data-role="age"]');
+    if (ageEl) ageEl.textContent = fmtAge(ageMs);
+  });
 }
 
 /* ========= Management / Stats (inkl Trinkgeld Anzeige) ========= */
@@ -817,9 +789,7 @@ async function loadUsers() {
 
   const staff = data.staff || [];
   el.innerHTML = staff.length
-    ? staff
-        .map(
-          u => `
+    ? staff.map(u => `
         <div class="panel" style="margin-top:8px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div>
@@ -829,9 +799,7 @@ async function loadUsers() {
             <button class="danger" onclick="deleteUser('${escapeAttr(u.username)}')">Löschen</button>
           </div>
         </div>
-      `
-        )
-        .join("")
+      `).join("")
     : `<div class="muted small">Keine Mitarbeiter vorhanden.</div>`;
 }
 
@@ -841,7 +809,6 @@ async function addUser() {
   const displayName = document.getElementById("newUserDisplayName")?.value?.trim() || "";
   const username = document.getElementById("newUserUsername")?.value?.trim() || "";
   const password = document.getElementById("newUserPassword")?.value || "";
-
   if (!displayName || !username || !password) return alert("Bitte alle Felder ausfüllen.");
 
   const res = await fetch("/users/add", {
@@ -894,12 +861,10 @@ function showLogin(msg) {
   document.getElementById("loginOverlay")?.classList.remove("hidden");
   document.getElementById("loginMsg").innerText = msg || "—";
 }
-
 function hideLogin() {
   document.getElementById("loginOverlay")?.classList.add("hidden");
   document.getElementById("loginMsg").innerText = "—";
 }
-
 async function login() {
   const username = document.getElementById("loginUser")?.value?.trim() || "";
   const password = document.getElementById("loginPass")?.value || "";
@@ -917,7 +882,6 @@ async function login() {
   hideLogin();
   await refreshStats();
 }
-
 async function logout() {
   await fetch("/auth/logout", { method: "POST" });
   me = null;
@@ -925,11 +889,10 @@ async function logout() {
   showLogin("Ausgeloggt.");
 }
 
-/* ========= Uhrzeit/Tag Anzeige ========= */
+/* ========= Uhrzeit/Tag ========= */
 function updateDayTimeUI() {
   const el = document.getElementById("dayInfo");
   if (!el) return;
-
   const now = new Date();
   const time = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   const day = serverDay || "—";
@@ -945,7 +908,6 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll("\n", " ").replaceAll("\r", " ");
 }
@@ -968,5 +930,4 @@ async function boot() {
   hideLogin();
   await refreshStats();
 }
-
 boot();
