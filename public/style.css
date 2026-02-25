@@ -794,3 +794,110 @@ button.ghost{
     max-width: 1500px;
   }
 }
+
+/* =========================
+   POS Focus: Warenkorb/Total (Option 2)
+   ========================= */
+
+/* Rechtes Panel mehr wie Kassen-Checkout */
+.posRight{
+  padding: 16px !important;
+}
+
+/* Header im Warenkorb besser ausrichten */
+.posRight .row:first-child{
+  align-items:flex-start;
+}
+
+/* "Warenkorb" Titel */
+.posRight .row:first-child > div:first-child{
+  display:flex;
+  flex-direction:column;
+  gap: 4px;
+}
+
+/* Total Bereich: größer + eigener Block */
+#total{
+  display:inline-block;
+  font-size: 42px !important;
+  font-weight: 1000 !important;
+  letter-spacing: 0.5px;
+  line-height: 1.0;
+}
+
+/* Optional: kleines "Zu zahlen" über total */
+.posRight .row:first-child > div:last-child .muted.small{
+  font-size: 12px !important;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Items Counter etwas deutlicher */
+#itemsCount{
+  font-weight: 900;
+}
+
+/* Cart List: mehr Abstand */
+.cartList{
+  margin-top: 14px !important;
+  gap: 12px !important;
+}
+
+/* Cart Item: moderner + klare Kanten */
+.cartItem{
+  padding: 14px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)) !important;
+}
+
+/* Controls Buttons im Cart kompakter */
+.cartItem .controls{
+  margin-top: 10px;
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cartItem .controls button{
+  padding: 8px 10px !important;
+  font-weight: 900;
+  border-radius: 12px !important;
+}
+
+/* Untere Button-Leiste im Warenkorb */
+.posRight .row:last-child{
+  margin-top: 14px !important;
+  gap: 10px;
+}
+
+/* Reset Button kleiner/sekundär */
+.posRight .row:last-child .ghost{
+  padding: 10px 12px !important;
+  opacity: 0.85;
+}
+
+/* Bezahlen Button groß und dominant */
+.posRight .row:last-child .primary{
+  flex: 1 1 auto;
+  padding: 14px 16px !important;
+  font-size: 16px !important;
+  font-weight: 1000 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 18px 38px rgba(183, 13, 26, 0.26);
+}
+
+/* Bezahlen Button Hover: "klick mich" */
+.posRight .row:last-child .primary:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 22px 48px rgba(183, 13, 26, 0.30);
+}
+
+/* Kleine Trennlinie zwischen Header und Liste (subtil) */
+.posRight::before{
+  content:"";
+  display:block;
+  height: 1px;
+  margin: 10px 0 14px 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.10), rgba(255,255,255,0.00));
+}
