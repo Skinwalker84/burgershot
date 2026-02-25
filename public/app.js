@@ -1,6 +1,12 @@
+/* =========================
+   Burger Shot – App JS
+   passend zu index.html (Login-Seite, kein Popup)
+   ========================= */
+
 let currentRegister = 1;
 let currentCategory = "Burger";
 let me = null;
+let serverDay = null;
 
 const products = [
   { name: "The Bleeder", price: 14, category: "Burger" },
@@ -33,6 +39,26 @@ const products = [
 
 let cart = [];
 
+/* ========= UI: Login/App View ========= */
+function showLoginPage(msg = "Bitte einloggen.") {
+  const lp = document.getElementById("loginPage");
+  const app = document.getElementById("appRoot");
+  if (lp) lp.classList.remove("hidden");
+  if (app) app.classList.add("hidden");
+
+  const m = document.getElementById("loginMsg");
+  if (m) m.innerText = msg;
+
+  setTimeout(() => document.getElementById("loginUser")?.focus(), 50);
+}
+
+function showApp() {
+  const lp = document.getElementById("loginPage");
+  const app = document.getElementById("appRoot");
+  if (lp) lp.classList.add("hidden");
+  if (app) app.classList.remove("hidden");
+}
+
 /* ========= Roles ========= */
 function isBoss() {
   return me?.role === "boss";
@@ -41,17 +67,26 @@ function isBoss() {
 function applyRoleVisibility() {
   const mgmtBtn = document.getElementById("tabBtnMgmt");
   const mgmtTab = document.getElementById("tab_mgmt");
+
   if (!mgmtBtn || !mgmtTab) return;
 
   if (isBoss()) {
     mgmtBtn.style.display = "";
   } else {
     mgmtBtn.style.display = "none";
+
+    // Falls ein Mitarbeiter irgendwie im Management landet -> zurück zur Kasse
     if (!mgmtTab.classList.contains("hidden")) {
-      const kassBtn = document.querySelector(".tabsTop .tabTop");
-      openTab("tab_pos", kassBtn || null);
+      const kassBtn = document.querySelector(".tabsTop .tabTop.active") || document.querySelector(".tabsTop .tabTop");
+      openTab("tab_pos", kassBtn);
       alert("Management ist nur für den Chef verfügbar.");
     }
+  }
+
+  const bossPanel = document.getElementById("bossPanel");
+  if (bossPanel) {
+    if (isBoss()) bossPanel.classList.remove("hidden");
+    else bossPanel.classList.add("hidden");
   }
 }
 
@@ -62,9 +97,8 @@ let kitchenAgeTicker = null;
 function openTab(tabId, btn) {
   if (tabId === "tab_mgmt" && !isBoss()) {
     alert("Management ist nur für den Chef verfügbar.");
-    const kassBtn = document.querySelector(".tabsTop .tabTop");
     tabId = "tab_pos";
-    btn = kassBtn || null;
+    btn = document.querySelector(".tabsTop .tabTop") || btn;
   }
 
   document.querySelectorAll(".tabPage").forEach(p => p.classList.add("hidden"));
@@ -117,14 +151,14 @@ function stopKitchenAgeTicker() {
 /* ========= POS ========= */
 function setRegister(n) {
   currentRegister = n;
-  const reg = document.getElementById("registerDisplay");
-  if (reg) reg.innerText = "Kasse " + n;
+  document.getElementById("registerDisplay").innerText = "Kasse " + n;
   clearCart();
 }
 
 function setCategory(cat, btn) {
   currentCategory = cat;
-  document.querySelectorAll("#tab_pos .tab, .pos .tab").forEach(b => b.classList.remove("active"));
+  // Buttons in index.html haben class "tab"
+  document.querySelectorAll("#tab_pos .tab").forEach(b => b.classList.remove("active"));
   btn?.classList.add("active");
   renderProducts();
 }
@@ -132,7 +166,6 @@ function setCategory(cat, btn) {
 function burgerOptions() {
   return products.filter(p => p.category === "Burger").map(p => p.name);
 }
-
 function drinkOptions() {
   return products.filter(p => p.category === "Getränke").map(p => p.name);
 }
@@ -186,7 +219,7 @@ function renderProducts() {
     });
 }
 
-/* ========= Menü Builder ========= */
+/* ========= Menü Builder (Overlay) ========= */
 let menuMode = null; // "burgermenu" | "spar1010"
 let spar = { burgers: {}, drinks: {} };
 
@@ -201,6 +234,7 @@ function ensureMenuOverlay() {
       <h2 id="menuTitle">Menü</h2>
       <div class="muted" id="menuSubtitle">Auswahl</div>
 
+      <!-- Burgermenü Mode -->
       <div id="simpleMode">
         <div style="margin-top:10px;">
           <div class="muted small" style="margin-bottom:6px;">Burger</div>
@@ -226,6 +260,7 @@ function ensureMenuOverlay() {
         </div>
       </div>
 
+      <!-- Spar Mode -->
       <div id="sparMode" style="display:none; margin-top:10px;">
         <div class="muted small" style="margin-bottom:8px;">
           Wähle insgesamt <b>10 Burger</b> und <b>10 Getränke</b>.
@@ -572,7 +607,6 @@ function openPay() {
 
 function closePay() {
   document.getElementById("payOverlay")?.classList.add("hidden");
-  // pendingSale NICHT löschen (wird nach erfolgreichem Checkout gelöscht)
 }
 
 function confirmPay() {
@@ -589,6 +623,7 @@ function confirmPay() {
 }
 
 async function checkout(paidAmount = null) {
+  // Klick "Bezahlen" -> erst Popup fragen
   if (paidAmount === null) return openPay();
 
   if (!pendingSale || !Array.isArray(pendingSale.items) || typeof pendingSale.total !== "number") {
@@ -605,7 +640,7 @@ async function checkout(paidAmount = null) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) {
-    if (res.status === 401) return showLogin("Bitte einloggen.");
+    if (res.status === 401) return showLoginPage("Bitte einloggen.");
     return alert(data.message || "Fehler beim Speichern.");
   }
 
@@ -613,19 +648,18 @@ async function checkout(paidAmount = null) {
 
   clearCart();
   pendingSale = null; // erst NACH Erfolg löschen
+
   refreshStats();
 
-  if (tip > 0) {
-    alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
-  } else {
-    alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
-  }
+  if (tip > 0) alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
+  else alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
 
+  // Küche ggf. aktualisieren wenn offen
   const kitchenVisible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
   if (kitchenVisible) loadKitchen();
 }
 
-/* ========= Küche: Ping + Blink 2-4 Warn, >4 Hot ========= */
+/* ========= Küche: Ping + Blink (2–4 warn, >4 rot) ========= */
 let kitchenInitialized = false;
 let lastMaxOrderId = 0;
 
@@ -694,7 +728,7 @@ function ageClass(ms) {
 
 async function loadKitchen() {
   const res = await fetch("/kitchen/orders");
-  if (res.status === 401) return showLogin("Bitte einloggen.");
+  if (res.status === 401) return showLoginPage("Bitte einloggen.");
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) return;
@@ -724,6 +758,7 @@ async function loadKitchen() {
     box.className = "panel orderCard";
 
     const reg = o.register ? `Kasse ${o.register}` : "Kasse —";
+
     const lines = [];
     (o.items || []).forEach(it => itemLinesForKitchen(it).forEach(l => lines.push(l)));
 
@@ -769,7 +804,7 @@ async function completeKitchenOrder(id) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) {
-    if (res.status === 401) return showLogin("Bitte einloggen.");
+    if (res.status === 401) return showLoginPage("Bitte einloggen.");
     return alert(data.message || "Fehler beim Erledigt markieren.");
   }
 
@@ -795,12 +830,14 @@ function tickKitchenAges() {
   });
 }
 
-/* ========= Management / Stats (inkl Trinkgeld) ========= */
-let serverDay = null;
-
+/* ========= Management / Stats ========= */
 async function refreshStats() {
   const res = await fetch("/stats");
-  if (res.status === 401) return showLogin("Bitte einloggen.");
+  if (res.status === 401) {
+    me = null;
+    applyRoleVisibility();
+    return showLoginPage("Bitte einloggen.");
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) return;
@@ -808,9 +845,11 @@ async function refreshStats() {
   me = data.me || null;
 
   const display = me?.displayName || me?.username || "—";
+
   const who = document.getElementById("whoami");
-  const statMe = document.getElementById("statMe");
   if (who) who.innerText = me ? `Eingeloggt: ${display} (${me.role})` : "Nicht eingeloggt";
+
+  const statMe = document.getElementById("statMe");
   if (statMe) statMe.innerText = display;
 
   applyRoleVisibility();
@@ -847,14 +886,8 @@ async function refreshStats() {
     `;
   }
 
-  const bossPanel = document.getElementById("bossPanel");
-  if (bossPanel) {
-    if (isBoss()) {
-      bossPanel.classList.remove("hidden");
-      loadUsers(); // ✅ Mitarbeiterliste wieder
-    } else {
-      bossPanel.classList.add("hidden");
-    }
+  if (isBoss()) {
+    await loadUsers();
   }
 
   if (data.currentDay) {
@@ -863,15 +896,15 @@ async function refreshStats() {
   }
 }
 
-/* ========= Chef: Users (wieder drin!) ========= */
+/* ========= Chef: Users ========= */
 async function loadUsers() {
   if (!isBoss()) return;
 
   const res = await fetch("/users");
-  if (!res.ok) return;
+  if (res.status === 401) return showLoginPage("Bitte einloggen.");
 
   const data = await res.json().catch(() => ({}));
-  if (!data.success) return;
+  if (!res.ok || !data.success) return;
 
   const el = document.getElementById("usersList");
   if (!el) return;
@@ -943,29 +976,24 @@ async function resetAll() {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) return alert(data.message || "Reset fehlgeschlagen.");
 
-  refreshStats();
-  loadKitchen();
-
+  // Danach alles neu laden
   kitchenInitialized = false;
   lastMaxOrderId = 0;
+
+  await refreshStats();
+  await loadKitchen();
 }
 
-/* ========= Auth UI ========= */
-function showLogin(msg) {
-  document.getElementById("loginOverlay")?.classList.remove("hidden");
-  document.getElementById("loginMsg").innerText = msg || "—";
-}
-
-function hideLogin() {
-  document.getElementById("loginOverlay")?.classList.add("hidden");
-  document.getElementById("loginMsg").innerText = "—";
-}
-
+/* ========= Auth ========= */
 async function login() {
   const username = document.getElementById("loginUser")?.value?.trim() || "";
   const password = document.getElementById("loginPass")?.value || "";
-  if (!username || !password)
-    return (document.getElementById("loginMsg").innerText = "Bitte Username/Passwort eingeben.");
+
+  if (!username || !password) {
+    const m = document.getElementById("loginMsg");
+    if (m) m.innerText = "Bitte Username & Passwort eingeben.";
+    return;
+  }
 
   const res = await fetch("/auth/login", {
     method: "POST",
@@ -974,21 +1002,35 @@ async function login() {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success)
-    return (document.getElementById("loginMsg").innerText = data.message || "Login fehlgeschlagen");
+  if (!res.ok || !data.success) {
+    const m = document.getElementById("loginMsg");
+    if (m) m.innerText = data.message || "Login fehlgeschlagen.";
+    return;
+  }
 
-  hideLogin();
+  // Eingeloggt -> App zeigen
+  showApp();
   await refreshStats();
+
+  // Standard Tab: Kasse
+  const kassBtn = document.querySelector(".tabsTop .tabTop");
+  openTab("tab_pos", kassBtn);
+
+  // Fokus weg
+  document.getElementById("loginPass") && (document.getElementById("loginPass").value = "");
 }
 
 async function logout() {
   await fetch("/auth/logout", { method: "POST" });
   me = null;
   applyRoleVisibility();
-  showLogin("Ausgeloggt.");
+  clearCart();
+  stopKitchenPolling();
+  stopKitchenAgeTicker();
+  showLoginPage("Ausgeloggt.");
 }
 
-/* ========= Uhrzeit/Tag Anzeige ========= */
+/* ========= Day/Time ========= */
 function updateDayTimeUI() {
   const el = document.getElementById("dayInfo");
   if (!el) return;
@@ -1015,21 +1057,32 @@ function escapeAttr(str) {
 
 /* ========= Boot ========= */
 async function boot() {
+  // Menu overlay vorbereiten
   ensureMenuOverlay();
+
+  // Produkte rendern (Kasse-Ansicht)
   renderProducts();
 
+  // Uhrzeit tick
   updateDayTimeUI();
   setInterval(updateDayTimeUI, 1000);
 
+  // Check Session
   const res = await fetch("/auth/me");
   const data = await res.json().catch(() => ({}));
+
   if (!data.loggedIn) {
-    showLogin("Bitte einloggen.");
+    showLoginPage("Bitte einloggen.");
     return;
   }
 
-  hideLogin();
+  // schon eingeloggt
+  showApp();
   await refreshStats();
+
+  // Standard Tab: Kasse
+  const kassBtn = document.querySelector(".tabsTop .tabTop");
+  openTab("tab_pos", kassBtn);
 }
 
 boot();
