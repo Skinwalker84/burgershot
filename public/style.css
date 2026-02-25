@@ -1,1062 +1,153 @@
+/* style.css — Burger Shot UI */
+
 :root{
-  --bg:#0b1a2b;
-  --panel:#16202a;
-  --panel2:#1c2b3a;
-  --text:#ffffff;
-  --muted:#b8c4d6;
-  --accent:#c1121f; /* dunkelrot */
+  --bg:#0b0e14;
+  --panel:#111826;
+  --panel2:#0f1623;
+  --muted:#7f8aa3;
+  --text:#e9eefb;
+  --accent:#3b82f6;
+  --accent2:#22c55e;
+  --danger:#ef4444;
+  --border:rgba(255,255,255,.08);
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --radius:16px;
+  --sans:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
 }
 
-*{box-sizing:border-box}
+*{ box-sizing:border-box; }
+html, body{ height:100%; }
 body{
   margin:0;
-  background:var(--bg);
+  font-family:var(--sans);
+  background:radial-gradient(1200px 600px at 10% 10%, #122044 0%, var(--bg) 55%);
   color:var(--text);
-  font-family:Arial, Helvetica, sans-serif;
 }
 
-.hidden{display:none !important;}
-.small{font-size:12px;}
+.hidden{ display:none !important; }
+.appRoot{ padding:14px; max-width:1300px; margin:0 auto; }
 
-.container{padding:20px; max-width:1200px; margin:0 auto;}
-
-.header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-end;
-  gap:12px;
-  margin-bottom:14px;
+.topBar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 14px; border:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border-radius:var(--radius); box-shadow:var(--shadow);
 }
-h1{margin:0; color:var(--accent); letter-spacing:0.2px;}
-.sub{color:var(--muted); font-size:13px; margin-top:4px;}
-.muted{color:var(--muted); margin-top:6px;}
 
-button{
-  background:var(--panel2);
-  color:var(--text);
-  border:0;
-  padding:10px 12px;
-  border-radius:10px;
-  cursor:pointer;
+.brandLeft{ display:flex; align-items:center; gap:12px; }
+.brandDot{
+  width:14px; height:14px; border-radius:999px;
+  background:linear-gradient(180deg, #ffcc00, #ff6b00);
+  box-shadow:0 0 0 4px rgba(255,165,0,.14);
 }
-button:hover{filter:brightness(1.12);}
-button.primary{background:var(--accent);}
-button.ghost{background:transparent; border:1px solid rgba(255,255,255,0.15);}
-button.danger{background:#7a0000;}
-.registers{display:flex; gap:8px; flex-wrap:wrap}
+.brandName{ font-weight:900; letter-spacing:.3px; font-size:18px; }
+.muted{ color:var(--muted); }
+.small{ font-size:12px; }
+.topRight{ display:flex; align-items:center; gap:10px; }
 
-.panels{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-bottom:12px;
+.tabsTop{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.tabTop{
+  border:1px solid var(--border); background:rgba(255,255,255,.02); color:var(--text);
+  padding:10px 12px; border-radius:999px; cursor:pointer; transition:all .15s ease; font-weight:700;
 }
+.tabTop:hover{ transform:translateY(-1px); }
+.tabTop.active{ background:rgba(59,130,246,.18); border-color:rgba(59,130,246,.35); }
+
+.tabPage{ margin-top:12px; }
 
 .panel{
-  background:var(--panel);
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:14px;
-  padding:12px;
+  border:1px solid var(--border); background:rgba(255,255,255,.03);
+  border-radius:var(--radius); box-shadow:var(--shadow); padding:14px;
 }
 
-.panel h3{margin:0 0 10px 0;}
-.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
-input{
-  background:#0e243a;
-  color:var(--text);
-  border:1px solid rgba(255,255,255,0.12);
-  padding:10px 12px;
-  border-radius:10px;
-  outline:none;
-  min-width:220px;
+.row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
+.pos{ display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+.posLeft{ flex:1 1 520px; }
+.posRight{ flex:1 1 330px; }
+
+.input{
+  width:100%; padding:10px 12px; border-radius:12px;
+  border:1px solid var(--border); background:rgba(0,0,0,.25);
+  color:var(--text); outline:none;
 }
-
-.pos{
-  display:grid;
-  grid-template-columns: 1fr 380px;
-  gap:12px;
-  align-items:start;
-  margin-bottom:12px;
+.input:focus{
+  border-color:rgba(59,130,246,.6);
+  box-shadow:0 0 0 4px rgba(59,130,246,.14);
 }
-
-.topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
-.tabs{display:flex; gap:8px; flex-wrap:wrap;}
-.tab{padding:10px 12px; border-radius:999px;}
-.tab.active{background:var(--accent);}
-
-.badge{
-  background:rgba(193,18,31,0.18);
-  border:1px solid rgba(193,18,31,0.35);
-  color:#ffd9dc;
+.inputInline{
+  width:120px;
+  text-align:right;
   padding:8px 10px;
-  border-radius:999px;
-  font-size:12px;
+  border-radius:10px;
 }
+
+button{ font-family:inherit; }
+
+.primary{
+  border:0; background:linear-gradient(180deg, rgba(59,130,246,1), rgba(37,99,235,1));
+  color:white; padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:800; transition:all .15s ease;
+}
+.primary:hover{ transform:translateY(-1px); }
+
+.ghost{
+  border:1px solid var(--border); background:rgba(255,255,255,.02); color:var(--text);
+  padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:700;
+}
+.ghost:hover{ transform:translateY(-1px); }
+
+.tab{
+  border:1px solid var(--border); background:rgba(255,255,255,.02); color:var(--text);
+  padding:9px 11px; border-radius:999px; cursor:pointer; font-weight:800;
+}
+.tab.active{ background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.35); }
 
 .products{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:10px;
 }
-.product{
-  width:calc(33.333% - 10px);
-  min-width:220px;
-  background:var(--panel2);
-  border:1px solid rgba(255,255,255,0.08);
-  padding:14px 12px;
-  border-radius:14px;
-  cursor:pointer;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+.productBtn{
+  border:1px solid var(--border); background:rgba(255,255,255,.02); color:var(--text);
+  padding:12px; border-radius:14px; cursor:pointer; text-align:left;
 }
-.product:hover{background:rgba(193,18,31,0.45);}
-.product .name{font-weight:700;}
-.product .price{opacity:0.95;}
+.productBtn:hover{ transform:translateY(-1px); }
 
-.cartHeader{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
-.cartList{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;}
-.cartItem{
-  background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:12px;
-  padding:10px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:8px;
+.cart{ display:flex; flex-direction:column; gap:8px; }
+.cartRow{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 10px; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,.15);
 }
-.cartItem .meta{display:flex; flex-direction:column; gap:2px;}
-.cartItem .meta .small{color:var(--muted); font-size:12px;}
-.cartItem .controls{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
-.cartItem .controls button{padding:8px 10px; border-radius:10px;}
-.cartItem .controls .danger{background:rgba(193,18,31,0.25); border:1px solid rgba(193,18,31,0.35);}
 
-.totals{margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.10);}
-.line{display:flex; justify-content:space-between; margin:6px 0; color:var(--muted);}
-.line.total{color:var(--text); font-weight:800; font-size:18px;}
-.actions{margin-top:10px;}
-.pay{width:100%; padding:12px; font-size:16px; border-radius:14px;}
-.hint{margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35;}
+.kitchenGrid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:12px;
+}
+.kCard{
+  border:1px solid var(--border); background:rgba(0,0,0,.15); border-radius:16px; padding:12px;
+}
 
-.statsGrid{
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  gap:10px;
-  margin-top:10px;
+.userRow{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:10px 10px; border:1px solid var(--border); border-radius:14px; background:rgba(0,0,0,.15);
+  margin-bottom:8px;
 }
-.stat{
-  background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:12px;
-  padding:10px;
-}
-.stat .k{color:var(--muted); font-size:12px;}
-.stat .v{font-weight:800; font-size:18px; margin-top:4px;}
 
-.details{margin-top:10px;}
-.details summary{cursor:pointer; color:#ffd9dc;}
-.table{
-  margin-top:10px;
-  width:100%;
-  border-collapse:collapse;
-}
-.table th, .table td{
-  border-bottom:1px solid rgba(255,255,255,0.08);
-  padding:8px 6px;
-  text-align:left;
-  font-size:13px;
-  color:var(--text);
-}
-.table th{color:var(--muted); font-weight:700;}
+.table{ width:100%; border-collapse:collapse; font-size:14px; }
+.table th, .table td{ border-bottom:1px solid var(--border); padding:8px 6px; }
+.table th{ text-align:left; color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.2px; }
 
-/* ===== Login Overlay ===== */
 .overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.65);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
+  position:fixed; inset:0; background:rgba(0,0,0,.55);
+  display:flex; align-items:center; justify-content:center; padding:16px; z-index:30;
+}
+.overlayCard{
+  width:min(420px, 92vw); border-radius:18px; border:1px solid var(--border);
+  background:rgba(17,24,38,.96); box-shadow:var(--shadow); padding:14px;
+}
+
+.loginPage{
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px;
 }
 .loginCard{
-  width:420px;
-  background:var(--panel);
-  border:1px solid rgba(255,255,255,0.12);
-  border-radius:16px;
-  padding:16px;
+  width:min(420px, 92vw); border-radius:18px; border:1px solid var(--border);
+  background:rgba(17,24,38,.92); box-shadow:var(--shadow); padding:16px;
 }
-.loginCard h2{margin:0 0 6px 0;}
-/* Inputs in LoginCard sollen breit sein - aber NICHT Checkbox/Radio */
-.loginCard input:not([type="checkbox"]):not([type="radio"]){
-  min-width:100%;
-  margin-top:10px;
-}
-
-/* Checkbox/Radio normal lassen */
-.loginCard input[type="checkbox"],
-.loginCard input[type="radio"]{
-  min-width:auto;
-  width:auto;
-  margin-top:0;
-}
-.loginCard button{width:100%; margin-top:10px;}
-
-/* Boss Panel spacing */
-#bossPanel .row { margin-top: 6px; }
-
-.tabsTop{
-  display:flex;
-  gap:8px;
-  margin: 8px 0 14px 0;
-  flex-wrap:wrap;
-}
-.tabTop{
-  padding:10px 14px;
-  border-radius:999px;
-}
-.tabTop.active{
-  background: var(--accent);
-}
-.tabPage{ }
-
-.tabsTop{
-  display:flex;
-  gap:8px;
-  margin: 8px 0 14px 0;
-  flex-wrap:wrap;
-}
-.tabTop{
-  padding:10px 14px;
-  border-radius:999px;
-}
-.tabTop.active{
-  background: var(--accent);
-}
-
-/* Fix für Cheesy Checkbox Layout im Menü */
-#cheesyWrap{
-  width:100%;
-}
-
-#cheesyWrap > div{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  width:100%;
-}
-
-#cheesyWrap input{
-  flex:0 0 auto;
-}
-
-#cheesyWrap div > div{
-  flex:1 1 auto;
-  min-width:0;
-  white-space:normal;
-  word-break:break-word;
-}
-
-/* === Burger Shot Custom Checkbox === */
-
-#cheesyWrap input[type="checkbox"]{
-  appearance:none;
-  -webkit-appearance:none;
-  width:20px;
-  height:20px;
-  border-radius:6px;
-  border:2px solid rgba(255,255,255,0.3);
-  background:#0e243a;
-  cursor:pointer;
-  position:relative;
-  transition:all .2s ease;
-}
-
-/* Hover */
-#cheesyWrap input[type="checkbox"]:hover{
-  border-color:var(--accent);
-  box-shadow:0 0 6px rgba(208,20,31,0.4);
-}
-
-/* Checked State */
-#cheesyWrap input[type="checkbox"]:checked{
-  background:var(--accent);
-  border-color:var(--accent);
-}
-
-/* Checkmark */
-#cheesyWrap input[type="checkbox"]:checked::after{
-  content:"";
-  position:absolute;
-  left:5px;
-  top:1px;
-  width:6px;
-  height:12px;
-  border:solid white;
-  border-width:0 3px 3px 0;
-  transform:rotate(45deg);
-}
-
-#cheesyWrap{
-  padding:8px 12px;
-  background:rgba(255,255,255,0.03);
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.05);
-}
-
-.kitchenList .panel{
-  border: 1px solid rgba(255,255,255,0.10);
-}
-
-
-/* ===== Küche: 2 Spalten Layout ===== */
-.kitchenList{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.kitchenList .panel{
-  margin-top: 0 !important; /* falls irgendwo margin-top gesetzt war */
-
-}
-
-/* ===== Küche Upgrade: 2-Spalten Grid + Timer Styles ===== */
-.kitchenList{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  align-items: start;
-}
-
-.orderCard{
-  position: relative;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.orderTop{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap: 12px;
-}
-
-.orderTitle{
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.orderRight{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap: 8px;
-}
-
-.orderAge{
-  font-weight: 900;
-  font-size: 16px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.18);
-  min-width: 70px;
-  text-align:center;
-}
-
-.orderBody{
-  margin-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  padding-top: 10px;
-}
-
-.orderLine{
-  padding: 3px 0;
-}
-
-/* Zeit-Farben */
-.orderCard.age-ok{
-  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.20);
-}
-.orderCard.age-ok .orderAge{
-  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.20);
-}
-
-.orderCard.age-warn{
-  box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.28);
-}
-.orderCard.age-warn .orderAge{
-  box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.28);
-}
-
-.orderCard.age-hot{
-  box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.28);
-}
-.orderCard.age-hot .orderAge{
-  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.28);
-}
-
-
-/* ===== Küche: Grid + Blink-Alarm ===== */
-.kitchenList{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  align-items: start;
-}
-
-.orderCard{
-  position: relative;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.orderTop{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap: 12px;
-}
-
-.orderTitle{
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.orderRight{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap: 8px;
-}
-
-.orderAge{
-  font-weight: 900;
-  font-size: 16px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.18);
-  min-width: 70px;
-  text-align:center;
-}
-
-.orderBody{
-  margin-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  padding-top: 10px;
-}
-
-.orderLine{
-  padding: 3px 0;
-}
-
-/* Normal */
-.orderCard.age-ok{
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
-}
-
-/* Blink Animationen */
-@keyframes blinkWarn {
-  0%   { box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.10); background: rgba(241, 196, 15, 0.06); }
-  50%  { box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.40); background: rgba(241, 196, 15, 0.14); }
-  100% { box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.10); background: rgba(241, 196, 15, 0.06); }
-}
-
-@keyframes blinkHot {
-  0%   { box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.10); background: rgba(231, 76, 60, 0.06); }
-  50%  { box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.48); background: rgba(231, 76, 60, 0.16); }
-  100% { box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.10); background: rgba(231, 76, 60, 0.06); }
-}
-
-.orderCard.age-warn-blink{
-  animation: blinkWarn 1s infinite;
-}
-
-.orderCard.age-hot-blink{
-  animation: blinkHot 0.9s infinite;
-}
-
-/* Timer Badge etwas mitziehen */
-.orderCard.age-warn-blink .orderAge{
-  box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.25);
-}
-.orderCard.age-hot-blink .orderAge{
-  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.30);
-}
-
-/* =========================
-   Login Page (Startscreen)
-   ========================= */
-.loginPage{
-  min-height: 100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding: 24px;
-}
-
-.loginShell{
-  width: 100%;
-  max-width: 980px;
-  display:grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 22px;
-  align-items: center;
-}
-
-.loginBrand{
-  border-radius: 20px;
-  padding: 26px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: linear-gradient(180deg, rgba(8, 28, 55, 0.55), rgba(8, 28, 55, 0.28));
-  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-}
-
-.loginLogo{
-  width: 140px;
-  height: auto;
-  display:block;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.45));
-}
-
-.loginTitle{
-  font-size: 42px;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-  line-height: 1.05;
-}
-
-.loginSub{
-  margin-top: 8px;
-  color: rgba(255,255,255,0.75);
-  font-size: 14px;
-}
-
-.loginCardWide{
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(8, 18, 36, 0.58);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-}
-
-/* Inputs auf der Login-Seite schön */
-.input{
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(14, 36, 58, 0.75);
-  color: #fff;
-  outline: none;
-}
-
-.input:focus{
-  border-color: rgba(255,255,255,0.22);
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
-}
-
-/* Kleine mobile Absicherung (auch wenn desktop only) */
-@media (max-width: 920px){
-  .loginShell{
-    grid-template-columns: 1fr;
-  }
-  .loginTitle{
-    font-size: 36px;
-  }
-}
-
-/* =========================
-   UI Polish Pack (Overrides)
-   ========================= */
-
-/* Grundlayout */
-.appRoot{
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 18px 18px 28px 18px;
-}
-
-/* Topbar schöner */
-.topBar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: linear-gradient(180deg, rgba(8, 28, 55, 0.55), rgba(8, 28, 55, 0.25));
-  box-shadow: 0 16px 40px rgba(0,0,0,0.30);
-  margin-bottom: 12px;
-}
-
-.brandLeft{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-}
-
-.brandDot{
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: #b70d1a; /* dunkelrot accent */
-  box-shadow: 0 0 0 6px rgba(183, 13, 26, 0.18);
-}
-
-.brandName{
-  font-weight: 900;
-  font-size: 20px;
-  letter-spacing: 0.2px;
-}
-
-.topRight{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-
-/* Tabs oben */
-.tabsTop{
-  display:flex;
-  gap: 10px;
-  padding: 10px 6px;
-  margin-bottom: 14px;
-}
-
-.tabTop{
-  border-radius: 999px;
-  padding: 10px 14px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.88);
-  font-weight: 800;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
-}
-
-.tabTop:hover{
-  transform: translateY(-1px);
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.14);
-}
-
-.tabTop.active{
-  background: rgba(183, 13, 26, 0.18);
-  border-color: rgba(183, 13, 26, 0.40);
-  box-shadow: 0 0 0 4px rgba(183, 13, 26, 0.12);
-}
-
-/* POS Layout */
-.pos{
-  display:grid;
-  grid-template-columns: 1fr 420px;
-  gap: 16px;
-  align-items:start;
-}
-
-.posLeft, .posRight{
-  border-radius: 18px !important;
-}
-
-/* Warenkorb sticky, damit er beim Scrollen bleibt */
-.posRight{
-  position: sticky;
-  top: 18px;
-}
-
-/* Register/Buttons oben kompakter */
-#tab_pos .row{
-  gap: 10px;
-}
-
-/* Pill Tabs (Burger/Beilagen/...) */
-#tab_pos .tab{
-  border-radius: 999px;
-  padding: 9px 12px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.85);
-  font-weight: 800;
-  transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
-}
-
-#tab_pos .tab:hover{
-  transform: translateY(-1px);
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.14);
-}
-
-#tab_pos .tab.active{
-  background: rgba(183, 13, 26, 0.18);
-  border-color: rgba(183, 13, 26, 0.40);
-  box-shadow: 0 0 0 4px rgba(183, 13, 26, 0.12);
-}
-
-/* Produkte als Grid (gleichmäßig) */
-.products{
-  display:grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-/* Produktkarten schöner */
-.product{
-  border-radius: 16px !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)) !important;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
-  padding: 14px 14px !important;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap: 10px;
-  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
-}
-
-.product:hover{
-  transform: translateY(-2px);
-  border-color: rgba(255,255,255,0.16) !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)) !important;
-}
-
-.product .name{
-  font-weight: 900;
-  font-size: 16px;
-}
-
-.product .price{
-  font-weight: 900;
-  opacity: 0.95;
-}
-
-/* Warenkorb */
-.cartList{
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.cartItem{
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.03);
-  padding: 12px;
-}
-
-.cartItem .controls button{
-  border-radius: 12px;
-}
-
-/* Buttons allgemein etwas "premium" */
-button.primary{
-  border-radius: 14px;
-  font-weight: 900;
-  box-shadow: 0 14px 28px rgba(183, 13, 26, 0.22);
-}
-
-button.ghost{
-  border-radius: 14px;
-}
-
-/* Kitchen & Management Panels runder */
-.panel{
-  border-radius: 18px !important;
-}
-
-/* Kitchen Grid falls noch nicht drin */
-.kitchenList{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  align-items:start;
-}
-
-/* Kleine Lesbarkeit */
-.muted{
-  color: rgba(255,255,255,0.70) !important;
-}
-.small{
-  font-size: 13px;
-}
-
-/* Desktop only: wenn sehr breite Screens, zentriert mehr "App Feel" */
-@media (min-width: 1600px){
-  .appRoot{
-    max-width: 1500px;
-  }
-}
-
-/* =========================
-   POS Focus: Warenkorb/Total (Option 2)
-   ========================= */
-
-/* Rechtes Panel mehr wie Kassen-Checkout */
-.posRight{
-  padding: 16px !important;
-}
-
-/* Header im Warenkorb besser ausrichten */
-.posRight .row:first-child{
-  align-items:flex-start;
-}
-
-/* "Warenkorb" Titel */
-.posRight .row:first-child > div:first-child{
-  display:flex;
-  flex-direction:column;
-  gap: 4px;
-}
-
-/* Total Bereich: größer + eigener Block */
-#total{
-  display:inline-block;
-  font-size: 42px !important;
-  font-weight: 1000 !important;
-  letter-spacing: 0.5px;
-  line-height: 1.0;
-}
-
-/* Optional: kleines "Zu zahlen" über total */
-.posRight .row:first-child > div:last-child .muted.small{
-  font-size: 12px !important;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  opacity: 0.85;
-}
-
-/* Items Counter etwas deutlicher */
-#itemsCount{
-  font-weight: 900;
-}
-
-/* Cart List: mehr Abstand */
-.cartList{
-  margin-top: 14px !important;
-  gap: 12px !important;
-}
-
-/* Cart Item: moderner + klare Kanten */
-.cartItem{
-  padding: 14px !important;
-  border-radius: 16px !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)) !important;
-}
-
-/* Controls Buttons im Cart kompakter */
-.cartItem .controls{
-  margin-top: 10px;
-  display:flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.cartItem .controls button{
-  padding: 8px 10px !important;
-  font-weight: 900;
-  border-radius: 12px !important;
-}
-
-/* Untere Button-Leiste im Warenkorb */
-.posRight .row:last-child{
-  margin-top: 14px !important;
-  gap: 10px;
-}
-
-/* Reset Button kleiner/sekundär */
-.posRight .row:last-child .ghost{
-  padding: 10px 12px !important;
-  opacity: 0.85;
-}
-
-/* Bezahlen Button groß und dominant */
-.posRight .row:last-child .primary{
-  flex: 1 1 auto;
-  padding: 14px 16px !important;
-  font-size: 16px !important;
-  font-weight: 1000 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 18px 38px rgba(183, 13, 26, 0.26);
-}
-
-/* Bezahlen Button Hover: "klick mich" */
-.posRight .row:last-child .primary:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 22px 48px rgba(183, 13, 26, 0.30);
-}
-
-/* Kleine Trennlinie zwischen Header und Liste (subtil) */
-.posRight::before{
-  content:"";
-  display:block;
-  height: 1px;
-  margin: 10px 0 14px 0;
-  background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.10), rgba(255,255,255,0.00));
-}
-
-/* =========================
-   Pay Overlay – POS Style
-   ========================= */
-#payOverlay .loginCard{
-  width: 520px !important;
-  border-radius: 20px !important;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(180deg, rgba(8,18,36,0.70), rgba(8,18,36,0.55));
-  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
-}
-
-.payGrid{
-  display:grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-.payDueBox{
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.03);
-  padding: 14px;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-end;
-  gap: 12px;
-}
-
-.payDueLabel{
-  font-size: 12px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.72);
-}
-
-.payDueValue{
-  font-size: 44px;
-  font-weight: 1000;
-  line-height: 1;
-}
-
-.payRow2{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.payMini{
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.02);
-  padding: 12px;
-}
-
-.payMini .label{
-  font-size: 12px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.70);
-}
-
-.payMini .value{
-  margin-top: 6px;
-  font-weight: 1000;
-  font-size: 22px;
-}
-
-.payMini.ok .value{
-  color: rgba(255,255,255,0.95);
-}
-
-.payMini.bad .value{
-  color: rgba(255, 120, 120, 0.95);
-}
-
-#payAmount{
-  font-size: 18px;
-  padding: 14px 16px !important;
-  border-radius: 16px !important;
-}
-
-.payActions{
-  display:flex;
-  gap: 10px;
-  justify-content:flex-end;
-  margin-top: 8px;
-}
-
-.payActions .primary{
-  flex: 1 1 auto;
-  padding: 14px 16px !important;
-  border-radius: 16px !important;
-  font-weight: 1000 !important;
-  font-size: 16px !important;
-}
-
-.payActions .ghost{
-  padding: 14px 14px !important;
-  border-radius: 16px !important;
-}
-
-/* Pay Overlay: nur Trinkgeld -> 1 Spalte */
-.payRow2{ grid-template-columns: 1fr !important; }
-
-/* Pay Overlay: Fokus & Premium */
-.overlay{
-  backdrop-filter: blur(10px);
-  background: rgba(0,0,0,0.55);
-}
-
-#payOverlay .loginCard{
-  box-shadow: 0 22px 80px rgba(0,0,0,0.60) !important;
-}
-
-/* Input noch mehr POS-Fokus */
-#payAmount{
-  background: rgba(20, 55, 90, 0.70) !important;
-  border-color: rgba(255,255,255,0.14) !important;
-}
-
-#payAmount:focus{
-  border-color: rgba(183, 13, 26, 0.55) !important;
-  box-shadow: 0 0 0 4px rgba(183, 13, 26, 0.16) !important;
-}
-
-/* Trinkgeld-Box standardmäßig etwas dezenter */
-#payTipBox{
-  opacity: 0.85;
-}
-
-/* Hinweistext */
-#payHint{
-  text-align: center;
-  opacity: 0.85;
-}
-
-
-/* ===== Print (PDF) ===== */
-.noPrint{ }
-.printOnly{ display:none; }
-@media print{
-  body{ background:#fff; }
-  .noPrint{ display:none !important; }
-  .printOnly{ display:block !important; }
-  .tabsTop, .tabBtns, #loginOverlay, #payOverlay, #pwOverlay, #dayCloseOverlay{ display:none !important; }
-
-  /* hide everything except the chosen report tab */
-  .tabPage{ display:none !important; }
-
-  /* default: day */
-  #tab_day{ display:block !important; }
-  body.printWeek #tab_day{ display:none !important; }
-  body.printWeek #tab_week{ display:block !important; }
-  body.printDay #tab_day{ display:block !important; }
-  body.printDay #tab_week{ display:none !important; }
-
-  #tab_day .panel, #tab_week .panel{ border:none !important; box-shadow:none !important; }
-}
+.brandRow{ display:flex; gap:12px; align-items:center; }
