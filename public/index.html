@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Burger Shot System</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay" class="overlay hidden">
+    <div class="loginCard">
+      <h2>🍔 Burger Shot Login</h2>
+      <div class="muted">Chef oder Mitarbeiter anmelden</div>
+
+      <input id="loginUser" placeholder="Username (z.B. chrisadams)" />
+      <input id="loginPass" type="password" placeholder="Passwort" />
+
+      <button class="primary" onclick="login()">Login</button>
+      <div class="muted" id="loginMsg">—</div>
+    </div>
+  </div>
+
+  <!-- PAYMENT OVERLAY (NEU) -->
+  <div id="payOverlay" class="overlay hidden">
+    <div class="loginCard" style="width:520px;">
+      <h2>💵 Zahlung</h2>
+      <div class="muted">Wie viel hat der Kunde bezahlt?</div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Zu zahlen</div>
+        <div style="font-size:26px; font-weight:900;" id="payDue">$0</div>
+      </div>
+
+      <input id="payAmount" type="number" step="1" min="0" placeholder="Bezahlt (z.B. 50)" />
+
+      <div class="muted small" id="payHint" style="margin-top:6px;">—</div>
+
+      <div class="row" style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
+        <button class="ghost" onclick="closePay()">Abbrechen</button>
+        <button class="primary" onclick="confirmPay()">Bezahlen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <header class="header">
+      <div>
+        <h1>🍔 Burger Shot</h1>
+        <div class="sub">Kasse & Firmensoftware (RP)</div>
+        <div class="muted small" id="whoami">Nicht eingeloggt</div>
+        <div class="muted small" id="dayInfo">Tag: — · Uhrzeit: —</div>
+      </div>
+
+      <div class="registers">
+        <button onclick="setRegister(1)">Kasse 1</button>
+        <button onclick="setRegister(2)">Kasse 2</button>
+        <button onclick="setRegister(3)">Kasse 3</button>
+        <button class="ghost" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- TOP TABS -->
+    <nav class="tabsTop">
+      <button class="tabTop active" onclick="openTab('tab_pos', this)">Kasse</button>
+      <button class="tabTop" onclick="openTab('tab_kitchen', this)">Küche</button>
+      <button class="tabTop" id="tabBtnMgmt" onclick="openTab('tab_mgmt', this)">Management</button>
+    </nav>
+
+    <!-- TAB: KASSE -->
+    <section id="tab_pos" class="tabPage">
+      <section class="pos">
+        <div class="left">
+          <div class="topbar">
+            <div class="tabs">
+              <button class="tab active" onclick="setCategory('Burger', this)">Burger</button>
+              <button class="tab" onclick="setCategory('Beilagen', this)">Beilagen</button>
+              <button class="tab" onclick="setCategory('Getränke', this)">Getränke</button>
+              <button class="tab" onclick="setCategory('Menü', this)">Menü</button>
+              <button class="tab" onclick="setCategory('Süßes', this)">Süßes</button>
+            </div>
+            <div class="badge" id="registerDisplay">Kasse 1</div>
+          </div>
+
+          <div id="products" class="products"></div>
+        </div>
+
+        <aside class="cart panel">
+          <div class="cartHeader">
+            <h2>Warenkorb</h2>
+            <button class="ghost" onclick="clearCart()">Leeren</button>
+          </div>
+
+          <ul id="cart" class="cartList"></ul>
+
+          <div class="totals">
+            <div class="line">
+              <span>Positionen</span>
+              <span id="itemsCount">0</span>
+            </div>
+            <div class="line total">
+              <span>Gesamt</span>
+              <span id="total">$0</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="primary pay" onclick="checkout()">Bezahlen</button>
+          </div>
+
+          <div class="hint">Klick Produkt = +1. Im Warenkorb: -1 / +1 / Entfernen.</div>
+        </aside>
+      </section>
+    </section>
+
+    <!-- TAB: KÜCHE -->
+    <section id="tab_kitchen" class="tabPage hidden">
+      <section class="panel">
+        <div class="statsHeader" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div>
+            <h3 style="margin:0;">Küche</h3>
+            <div class="muted small" id="kitchenInfo">—</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="loadKitchen()">Aktualisieren</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h3 style="margin:0 0 8px 0;">Noch zu bearbeiten</h3>
+          <div id="kitchenPending" class="kitchenList"></div>
+          <div class="muted small" id="kitchenEmpty" style="margin-top:8px; display:none;">
+            Keine offenen Bestellungen ✅
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- TAB: MANAGEMENT (Chef-only per JS) -->
+    <section id="tab_mgmt" class="tabPage hidden">
+      <section class="grid2">
+        <div class="panel">
+          <div class="statsHeader">
+            <h3>Übersicht</h3>
+            <button onclick="refreshStats()">Aktualisieren</button>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Gesamtumsatz (heute)</div>
+              <div class="value" id="statRevenue">$0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Bestellungen (heute)</div>
+              <div class="value" id="statOrders">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Trinkgeld (heute)</div>
+              <div class="value" id="statTips">$0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Eingeloggt als</div>
+              <div class="value" id="statMe">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Mitarbeiter Umsatz</h3>
+          <div class="muted small">inkl. Trinkgeld</div>
+          <div id="employeeTable" style="margin-top:10px;"></div>
+        </div>
+      </section>
+
+      <section id="bossPanel" class="panel hidden" style="margin-top:14px;">
+        <div class="statsHeader">
+          <h3>Chef Panel</h3>
+          <div class="muted small">Nur Chef</div>
+        </div>
+
+        <div class="panel" style="margin-top:10px;">
+          <h3>Mitarbeiter</h3>
+          <div class="muted small">Neue Mitarbeiter hinzufügen</div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px;">
+            <input id="newUserDisplayName" placeholder="Name ausgeschrieben" />
+            <input id="newUserUsername" placeholder="Username (z.B. mia)" />
+            <input id="newUserPassword" placeholder="Passwort" />
+          </div>
+
+          <div class="row" style="display:flex; gap:10px; margin-top:10px;">
+            <button class="primary" onclick="addUser()">Mitarbeiter hinzufügen</button>
+            <button class="ghost" onclick="loadUsers()">Liste aktualisieren</button>
+            <button class="danger" onclick="resetAll()">Reset (heute)</button>
+          </div>
+
+          <div id="usersList" style="margin-top:12px;"></div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

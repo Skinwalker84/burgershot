@@ -1,0 +1,322 @@
+:root{
+  --bg:#0b1a2b;
+  --panel:#16202a;
+  --panel2:#1c2b3a;
+  --text:#ffffff;
+  --muted:#b8c4d6;
+  --accent:#c1121f; /* dunkelrot */
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+.hidden{display:none !important;}
+.small{font-size:12px;}
+
+.container{padding:20px; max-width:1200px; margin:0 auto;}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:12px;
+  margin-bottom:14px;
+}
+h1{margin:0; color:var(--accent); letter-spacing:0.2px;}
+.sub{color:var(--muted); font-size:13px; margin-top:4px;}
+.muted{color:var(--muted); margin-top:6px;}
+
+button{
+  background:var(--panel2);
+  color:var(--text);
+  border:0;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+}
+button:hover{filter:brightness(1.12);}
+button.primary{background:var(--accent);}
+button.ghost{background:transparent; border:1px solid rgba(255,255,255,0.15);}
+button.danger{background:#7a0000;}
+.registers{display:flex; gap:8px; flex-wrap:wrap}
+
+.panels{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.panel{
+  background:var(--panel);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;
+  padding:12px;
+}
+
+.panel h3{margin:0 0 10px 0;}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+input{
+  background:#0e243a;
+  color:var(--text);
+  border:1px solid rgba(255,255,255,0.12);
+  padding:10px 12px;
+  border-radius:10px;
+  outline:none;
+  min-width:220px;
+}
+
+.pos{
+  display:grid;
+  grid-template-columns: 1fr 380px;
+  gap:12px;
+  align-items:start;
+  margin-bottom:12px;
+}
+
+.topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+.tabs{display:flex; gap:8px; flex-wrap:wrap;}
+.tab{padding:10px 12px; border-radius:999px;}
+.tab.active{background:var(--accent);}
+
+.badge{
+  background:rgba(193,18,31,0.18);
+  border:1px solid rgba(193,18,31,0.35);
+  color:#ffd9dc;
+  padding:8px 10px;
+  border-radius:999px;
+  font-size:12px;
+}
+
+.products{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.product{
+  width:calc(33.333% - 10px);
+  min-width:220px;
+  background:var(--panel2);
+  border:1px solid rgba(255,255,255,0.08);
+  padding:14px 12px;
+  border-radius:14px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.product:hover{background:rgba(193,18,31,0.45);}
+.product .name{font-weight:700;}
+.product .price{opacity:0.95;}
+
+.cartHeader{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+.cartList{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;}
+.cartItem{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+.cartItem .meta{display:flex; flex-direction:column; gap:2px;}
+.cartItem .meta .small{color:var(--muted); font-size:12px;}
+.cartItem .controls{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+.cartItem .controls button{padding:8px 10px; border-radius:10px;}
+.cartItem .controls .danger{background:rgba(193,18,31,0.25); border:1px solid rgba(193,18,31,0.35);}
+
+.totals{margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.10);}
+.line{display:flex; justify-content:space-between; margin:6px 0; color:var(--muted);}
+.line.total{color:var(--text); font-weight:800; font-size:18px;}
+.actions{margin-top:10px;}
+.pay{width:100%; padding:12px; font-size:16px; border-radius:14px;}
+.hint{margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35;}
+
+.statsGrid{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+  margin-top:10px;
+}
+.stat{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  padding:10px;
+}
+.stat .k{color:var(--muted); font-size:12px;}
+.stat .v{font-weight:800; font-size:18px; margin-top:4px;}
+
+.details{margin-top:10px;}
+.details summary{cursor:pointer; color:#ffd9dc;}
+.table{
+  margin-top:10px;
+  width:100%;
+  border-collapse:collapse;
+}
+.table th, .table td{
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:8px 6px;
+  text-align:left;
+  font-size:13px;
+  color:var(--text);
+}
+.table th{color:var(--muted); font-weight:700;}
+
+/* ===== Login Overlay ===== */
+.overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+.loginCard{
+  width:420px;
+  background:var(--panel);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:16px;
+  padding:16px;
+}
+.loginCard h2{margin:0 0 6px 0;}
+/* Inputs in LoginCard sollen breit sein - aber NICHT Checkbox/Radio */
+.loginCard input:not([type="checkbox"]):not([type="radio"]){
+  min-width:100%;
+  margin-top:10px;
+}
+
+/* Checkbox/Radio normal lassen */
+.loginCard input[type="checkbox"],
+.loginCard input[type="radio"]{
+  min-width:auto;
+  width:auto;
+  margin-top:0;
+}
+.loginCard button{width:100%; margin-top:10px;}
+
+/* Boss Panel spacing */
+#bossPanel .row { margin-top: 6px; }
+
+.tabsTop{
+  display:flex;
+  gap:8px;
+  margin: 8px 0 14px 0;
+  flex-wrap:wrap;
+}
+.tabTop{
+  padding:10px 14px;
+  border-radius:999px;
+}
+.tabTop.active{
+  background: var(--accent);
+}
+.tabPage{ }
+
+.tabsTop{
+  display:flex;
+  gap:8px;
+  margin: 8px 0 14px 0;
+  flex-wrap:wrap;
+}
+.tabTop{
+  padding:10px 14px;
+  border-radius:999px;
+}
+.tabTop.active{
+  background: var(--accent);
+}
+
+/* Fix für Cheesy Checkbox Layout im Menü */
+#cheesyWrap{
+  width:100%;
+}
+
+#cheesyWrap > div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+}
+
+#cheesyWrap input{
+  flex:0 0 auto;
+}
+
+#cheesyWrap div > div{
+  flex:1 1 auto;
+  min-width:0;
+  white-space:normal;
+  word-break:break-word;
+}
+
+/* === Burger Shot Custom Checkbox === */
+
+#cheesyWrap input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  width:20px;
+  height:20px;
+  border-radius:6px;
+  border:2px solid rgba(255,255,255,0.3);
+  background:#0e243a;
+  cursor:pointer;
+  position:relative;
+  transition:all .2s ease;
+}
+
+/* Hover */
+#cheesyWrap input[type="checkbox"]:hover{
+  border-color:var(--accent);
+  box-shadow:0 0 6px rgba(208,20,31,0.4);
+}
+
+/* Checked State */
+#cheesyWrap input[type="checkbox"]:checked{
+  background:var(--accent);
+  border-color:var(--accent);
+}
+
+/* Checkmark */
+#cheesyWrap input[type="checkbox"]:checked::after{
+  content:"";
+  position:absolute;
+  left:5px;
+  top:1px;
+  width:6px;
+  height:12px;
+  border:solid white;
+  border-width:0 3px 3px 0;
+  transform:rotate(45deg);
+}
+
+#cheesyWrap{
+  padding:8px 12px;
+  background:rgba(255,255,255,0.03);
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.05);
+}
+
+.kitchenList .panel{
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+
+/* ===== Küche: 2 Spalten Layout ===== */
+.kitchenList{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.kitchenList .panel{
+  margin-top: 0 !important; /* falls irgendwo margin-top gesetzt war */
+}

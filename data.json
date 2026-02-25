@@ -1,0 +1,81 @@
+{
+  "currentDay": "2026-02-25",
+  "sales": [],
+  "employeeTotals": {},
+  "dailyReports": [
+    {
+      "date": "2026-02-25",
+      "revenue": 52,
+      "orders": 1,
+      "employees": {
+        "Chris Adams": {
+          "total": 52,
+          "orders": 1
+        }
+      },
+      "sales": [
+        {
+          "register": 1,
+          "items": [
+            {
+              "name": "The Bleeder",
+              "price": 14,
+              "category": "Burger",
+              "qty": 1
+            },
+            {
+              "name": "The German",
+              "price": 16,
+              "category": "Burger",
+              "qty": 1
+            },
+            {
+              "name": "Fries",
+              "price": 6,
+              "category": "Beilagen",
+              "qty": 1
+            },
+            {
+              "name": "Onion Rings",
+              "price": 6,
+              "category": "Beilagen",
+              "qty": 1
+            },
+            {
+              "name": "Strawberry Milchshake",
+              "price": 10,
+              "category": "Getränke",
+              "qty": 1
+            }
+          ],
+          "total": 52,
+          "time": "2026-02-24T23:09:33.648Z",
+          "day": "2026-02-25",
+          "employee": "Chris Adams",
+          "employeeUser": "Chris Adams"
+        }
+      ]
+    }
+  ],
+  "users": {
+    "boss": {
+      "username": "Chris Adams",
+      "password": "burger123",
+      "displayName": "Chris Adams"
+    },
+    "staff": [
+      {
+        "username": "kasse1",
+        "password": "1234",
+        "displayName": "kasse1"
+      },
+      {
+        "username": "Paul Bellardi",
+        "password": "1234",
+        "displayName": "Paul Bellardi"
+      }
+    ]
+  },
+  "kitchenOrders": [],
+  "orderSeq": 1
+}
