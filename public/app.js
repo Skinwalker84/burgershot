@@ -65,7 +65,7 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
-  initProducts();
+  await initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -85,7 +85,7 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
-  initProducts();
+  await initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -127,7 +127,11 @@ const PRODUCTS_DEFAULT = [
 let PRODUCTS = [];
 
 
-function initProducts(){ hydrateProducts(); renderProducts(); }
+async function initProducts(){
+  await hydrateProducts();
+  renderProducts();
+  try{ if(typeof renderProductsEditor === 'function') renderProductsEditor(); }catch(e){}
+}
 
 const PRODUCTS_STORAGE_KEY = "bs_products_v1";
 
@@ -168,20 +172,37 @@ function resetProductsToDefault(){
   renderProductsEditor();
 }
 
-function hydrateProducts(){
+async function hydrateProducts(){
+  // 1) Try server (auth required)
+  try{
+    const res = await fetch("/products");
+    if(res.ok){
+      const data = await res.json().catch(()=>({}));
+      const list = Array.isArray(data.products) ? data.products : null;
+      if(data.success && list && list.length){
+        PRODUCTS = list.map(p=>({
+          id: p.id,
+          name: p.name,
+          cat: p.cat,
+          price: Number(p.price)||0
+        }));
+        saveProductsToStorage(PRODUCTS); // keep fallback in sync
+        return;
+      }
+    }
+  }catch(e){}
+
+  // 2) LocalStorage fallback
   const stored = loadProductsFromStorage();
-  if(stored){
-    // merge by name+cat
-    const map = new Map(stored.map(p=>[`${p.cat}||${p.name}`, p]));
-    PRODUCTS = PRODUCTS_DEFAULT.map(p=>{
-      const k = `${p.cat}||${p.name}`;
-      const hit = map.get(k);
-      return hit ? { ...p, price: hit.price } : { ...p };
-    });
-  }else{
-    PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
+  if(stored && Array.isArray(stored) && stored.length){
+    PRODUCTS = stored.map(p=>({ ...p, price: Number(p.price)||0 }));
+    return;
   }
+
+  // 3) Defaults
+  PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p, id: p.id || slugify(p.name) }));
 }
+
 
 function renderProductsEditor(){
   const body = document.getElementById("mgmtProductsBody");
@@ -193,7 +214,7 @@ function renderProductsEditor(){
       <td>${esc(p.name)}</td>
       <td>${esc(p.cat)}</td>
       <td style="text-align:right;">
-        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-idx="${idx}" value="${escAttr(p.price)}" />
+        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-key="${escAttr(prodKey(p))}" data-price-idx="${idx}" value="${escAttr(p.price)}" />
       </td>
     </tr>
   `).join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
@@ -315,6 +336,20 @@ async function submitPay(){
   closePay();
   alert(`Order #${data.orderId} gespeichert. Trinkgeld: ${money(data.tip||0)}`);
   cart=[]; renderCart();
+}
+
+
+function slugify(s){
+  return String(s||"")
+    .toLowerCase()
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+    .replace(/[^a-z0-9]+/g,"_")
+    .replace(/^_+|_+$/g,"")
+    .slice(0,60) || "item";
+}
+
+function prodKey(p){
+  return String(p?.id || "") || (slugify(p?.cat) + "__" + slugify(p?.name));
 }
 
 
