@@ -901,3 +901,104 @@ button.ghost{
   margin: 10px 0 14px 0;
   background: linear-gradient(90deg, rgba(255,255,255,0.00), rgba(255,255,255,0.10), rgba(255,255,255,0.00));
 }
+
+/* =========================
+   Pay Overlay – POS Style
+   ========================= */
+#payOverlay .loginCard{
+  width: 520px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(180deg, rgba(8,18,36,0.70), rgba(8,18,36,0.55));
+  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+}
+
+.payGrid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.payDueBox{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  padding: 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap: 12px;
+}
+
+.payDueLabel{
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+}
+
+.payDueValue{
+  font-size: 44px;
+  font-weight: 1000;
+  line-height: 1;
+}
+
+.payRow2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.payMini{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.02);
+  padding: 12px;
+}
+
+.payMini .label{
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.70);
+}
+
+.payMini .value{
+  margin-top: 6px;
+  font-weight: 1000;
+  font-size: 22px;
+}
+
+.payMini.ok .value{
+  color: rgba(255,255,255,0.95);
+}
+
+.payMini.bad .value{
+  color: rgba(255, 120, 120, 0.95);
+}
+
+#payAmount{
+  font-size: 18px;
+  padding: 14px 16px !important;
+  border-radius: 16px !important;
+}
+
+.payActions{
+  display:flex;
+  gap: 10px;
+  justify-content:flex-end;
+  margin-top: 8px;
+}
+
+.payActions .primary{
+  flex: 1 1 auto;
+  padding: 14px 16px !important;
+  border-radius: 16px !important;
+  font-weight: 1000 !important;
+  font-size: 16px !important;
+}
+
+.payActions .ghost{
+  padding: 14px 14px !important;
+  border-radius: 16px !important;
+}
