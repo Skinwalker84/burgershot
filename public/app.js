@@ -1,6 +1,6 @@
 /* =========================
    Burger Shot – App JS
-   passend zu index.html (Login-Seite, kein Popup)
+   (Login-Seite + POS Pay Overlay improved)
    ========================= */
 
 let currentRegister = 1;
@@ -75,9 +75,8 @@ function applyRoleVisibility() {
   } else {
     mgmtBtn.style.display = "none";
 
-    // Falls ein Mitarbeiter irgendwie im Management landet -> zurück zur Kasse
     if (!mgmtTab.classList.contains("hidden")) {
-      const kassBtn = document.querySelector(".tabsTop .tabTop.active") || document.querySelector(".tabsTop .tabTop");
+      const kassBtn = document.querySelector(".tabsTop .tabTop");
       openTab("tab_pos", kassBtn);
       alert("Management ist nur für den Chef verfügbar.");
     }
@@ -157,7 +156,6 @@ function setRegister(n) {
 
 function setCategory(cat, btn) {
   currentCategory = cat;
-  // Buttons in index.html haben class "tab"
   document.querySelectorAll("#tab_pos .tab").forEach(b => b.classList.remove("active"));
   btn?.classList.add("active");
   renderProducts();
@@ -177,18 +175,8 @@ function renderProducts() {
 
   if (currentCategory === "Menü") {
     const menuItems = [
-      {
-        name: "Burgermenü",
-        price: 26,
-        desc: "1 Burger + Fries + 1 Getränk auswählen",
-        onClick: () => openMenuBuilder("burgermenu")
-      },
-      {
-        name: "Spar Paket 10/10",
-        price: 200,
-        desc: "10× Burger + 10× Getränk (frei zusammenstellen)",
-        onClick: () => openMenuBuilder("spar1010")
-      }
+      { name: "Burgermenü", price: 26, desc: "1 Burger + Fries + 1 Getränk auswählen", onClick: () => openMenuBuilder("burgermenu") },
+      { name: "Spar Paket 10/10", price: 200, desc: "10× Burger + 10× Getränk (frei zusammenstellen)", onClick: () => openMenuBuilder("spar1010") }
     ];
 
     menuItems.forEach(m => {
@@ -220,7 +208,7 @@ function renderProducts() {
 }
 
 /* ========= Menü Builder (Overlay) ========= */
-let menuMode = null; // "burgermenu" | "spar1010"
+let menuMode = null;
 let spar = { burgers: {}, drinks: {} };
 
 function ensureMenuOverlay() {
@@ -234,7 +222,6 @@ function ensureMenuOverlay() {
       <h2 id="menuTitle">Menü</h2>
       <div class="muted" id="menuSubtitle">Auswahl</div>
 
-      <!-- Burgermenü Mode -->
       <div id="simpleMode">
         <div style="margin-top:10px;">
           <div class="muted small" style="margin-bottom:6px;">Burger</div>
@@ -260,7 +247,6 @@ function ensureMenuOverlay() {
         </div>
       </div>
 
-      <!-- Spar Mode -->
       <div id="sparMode" style="display:none; margin-top:10px;">
         <div class="muted small" style="margin-bottom:8px;">
           Wähle insgesamt <b>10 Burger</b> und <b>10 Getränke</b>.
@@ -298,31 +284,18 @@ function ensureMenuOverlay() {
   document.body.appendChild(overlay);
 }
 
-function resetSparState() {
-  spar = { burgers: {}, drinks: {} };
-}
-
-function sparTotal(obj) {
-  return Object.values(obj).reduce((s, n) => s + (Number(n) || 0), 0);
-}
-
+function resetSparState() { spar = { burgers: {}, drinks: {} }; }
+function sparTotal(obj) { return Object.values(obj).reduce((s, n) => s + (Number(n) || 0), 0); }
 function summarizeCounts(obj) {
   const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
   if (!entries.length) return "—";
   return entries.map(([n, q]) => `${n} x${q}`).join(", ");
 }
-
 function sparAdd(type, name) {
-  if (type === "burger") {
-    if (sparTotal(spar.burgers) >= 10) return;
-    spar.burgers[name] = (spar.burgers[name] || 0) + 1;
-  } else {
-    if (sparTotal(spar.drinks) >= 10) return;
-    spar.drinks[name] = (spar.drinks[name] || 0) + 1;
-  }
+  if (type === "burger") { if (sparTotal(spar.burgers) >= 10) return; spar.burgers[name] = (spar.burgers[name] || 0) + 1; }
+  else { if (sparTotal(spar.drinks) >= 10) return; spar.drinks[name] = (spar.drinks[name] || 0) + 1; }
   renderSparLists();
 }
-
 function sparRemove(type, name) {
   const obj = type === "burger" ? spar.burgers : spar.drinks;
   const v = obj[name] || 0;
@@ -330,7 +303,6 @@ function sparRemove(type, name) {
   else obj[name] = v - 1;
   renderSparLists();
 }
-
 function renderSparLists() {
   const bCount = document.getElementById("sparBurgerCount");
   const dCount = document.getElementById("sparDrinkCount");
@@ -341,10 +313,8 @@ function renderSparLists() {
 
   const bt = sparTotal(spar.burgers);
   const dt = sparTotal(spar.drinks);
-
   if (bCount) bCount.textContent = `${bt} / 10`;
   if (dCount) dCount.textContent = `${dt} / 10`;
-
   bList.innerHTML = "";
   dList.innerHTML = "";
 
@@ -355,7 +325,6 @@ function renderSparLists() {
     row.style.alignItems = "center";
     row.style.justifyContent = "space-between";
     row.style.gap = "8px";
-
     row.innerHTML = `
       <div style="flex:1; min-width:0;">${escapeHtml(name)}</div>
       <div class="muted small" style="width:46px; text-align:center;">${qty}</div>
@@ -374,7 +343,6 @@ function renderSparLists() {
     row.style.alignItems = "center";
     row.style.justifyContent = "space-between";
     row.style.gap = "8px";
-
     row.innerHTML = `
       <div style="flex:1; min-width:0;">${escapeHtml(name)}</div>
       <div class="muted small" style="width:46px; text-align:center;">${qty}</div>
@@ -394,7 +362,6 @@ function renderSparLists() {
     `;
   }
 }
-
 function openMenuBuilder(mode) {
   ensureMenuOverlay();
   menuMode = mode;
@@ -404,7 +371,6 @@ function openMenuBuilder(mode) {
   const hint = document.getElementById("menuHint");
   const simpleMode = document.getElementById("simpleMode");
   const sparMode = document.getElementById("sparMode");
-
   const burgerSel = document.getElementById("menuBurger");
   const drinkSel = document.getElementById("menuDrink");
   const cheesyWrap = document.getElementById("cheesyWrap");
@@ -413,20 +379,9 @@ function openMenuBuilder(mode) {
   if (burgerSel && drinkSel) {
     burgerSel.innerHTML = "";
     drinkSel.innerHTML = "";
-    burgerOptions().forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      burgerSel.appendChild(opt);
-    });
-    drinkOptions().forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      drinkSel.appendChild(opt);
-    });
+    burgerOptions().forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; burgerSel.appendChild(o); });
+    drinkOptions().forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; drinkSel.appendChild(o); });
   }
-
   if (cheesyCheck) cheesyCheck.checked = false;
 
   if (mode === "burgermenu") {
@@ -449,12 +404,10 @@ function openMenuBuilder(mode) {
 
   document.getElementById("menuOverlay")?.classList.remove("hidden");
 }
-
 function closeMenuBuilder() {
   document.getElementById("menuOverlay")?.classList.add("hidden");
   menuMode = null;
 }
-
 function confirmMenuBuilder() {
   if (menuMode === "burgermenu") {
     const burger = document.getElementById("menuBurger")?.value;
@@ -465,13 +418,7 @@ function confirmMenuBuilder() {
     const friesName = cheesy ? "Cheesy Fries" : "Fries";
     const price = cheesy ? 28 : 26;
 
-    addToCart({
-      name: "Burgermenü",
-      price,
-      category: "Menü",
-      bundle: { type: "burgermenu", burger, drink, fries: friesName, cheesy }
-    });
-
+    addToCart({ name: "Burgermenü", price, category: "Menü", bundle: { type: "burgermenu", burger, drink, fries: friesName, cheesy } });
     closeMenuBuilder();
     return;
   }
@@ -480,35 +427,20 @@ function confirmMenuBuilder() {
     return alert("Du musst genau 10 Burger und 10 Getränke auswählen.");
   }
 
-  addToCart({
-    name: "Spar Paket 10/10",
-    price: 200,
-    category: "Menü",
-    bundle: { type: "spar1010", burgers: spar.burgers, drinks: spar.drinks }
-  });
-
+  addToCart({ name: "Spar Paket 10/10", price: 200, category: "Menü", bundle: { type: "spar1010", burgers: spar.burgers, drinks: spar.drinks } });
   closeMenuBuilder();
 }
 
 /* ========= Cart ========= */
 function addToCart(product) {
   const keyA = JSON.stringify(product.bundle || {});
-  const found = cart.find(
-    i => i.name === product.name && i.price === product.price && JSON.stringify(i.bundle || {}) === keyA
-  );
+  const found = cart.find(i => i.name === product.name && i.price === product.price && JSON.stringify(i.bundle || {}) === keyA);
   if (found) found.qty++;
   else cart.push({ ...product, qty: 1 });
   renderCart();
 }
-
-function clearCart() {
-  cart = [];
-  renderCart();
-}
-
-function getTotal() {
-  return cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-}
+function clearCart() { cart = []; renderCart(); }
+function getTotal() { return cart.reduce((sum, i) => sum + i.price * i.qty, 0); }
 
 function renderCart() {
   const list = document.getElementById("cart");
@@ -556,31 +488,135 @@ function findCartItem(name, bundleJson) {
   const key = JSON.stringify(b);
   return cart.find(i => i.name === name && JSON.stringify(i.bundle || {}) === key);
 }
+function incItem(name, bundleJson) { const item = findCartItem(name, bundleJson); if (!item) return; item.qty++; renderCart(); }
+function decItem(name, bundleJson) { const item = findCartItem(name, bundleJson); if (!item) return; item.qty--; if (item.qty <= 0) cart = cart.filter(i => i !== item); renderCart(); }
+function removeItem(name, bundleJson) { const item = findCartItem(name, bundleJson); if (!item) return; cart = cart.filter(i => i !== item); renderCart(); }
 
-function incItem(name, bundleJson) {
-  const item = findCartItem(name, bundleJson);
-  if (!item) return;
-  item.qty++;
-  renderCart();
-}
-
-function decItem(name, bundleJson) {
-  const item = findCartItem(name, bundleJson);
-  if (!item) return;
-  item.qty--;
-  if (item.qty <= 0) cart = cart.filter(i => i !== item);
-  renderCart();
-}
-
-function removeItem(name, bundleJson) {
-  const item = findCartItem(name, bundleJson);
-  if (!item) return;
-  cart = cart.filter(i => i !== item);
-  renderCart();
-}
-
-/* ========= Payment Overlay + Checkout + Trinkgeld ========= */
+/* ========= Payment Overlay (POS Style + Live Change/Tip) ========= */
 let pendingSale = null;
+let payKeyHandlerBound = false;
+
+function ensurePayUI() {
+  // Struktur im Pay-Overlay einmal upgraden (ohne index.html zu ändern)
+  const card = document.querySelector("#payOverlay .loginCard");
+  if (!card) return;
+
+  if (card.dataset.enhanced === "1") return;
+  card.dataset.enhanced = "1";
+
+  // Wir bauen den Inhalt neu zusammen, aber benutzen weiterhin die existierenden IDs:
+  // payDue, payAmount, payHint, confirmPay(), closePay()
+  card.innerHTML = `
+    <h2 style="margin:0 0 10px 0;">Zahlung</h2>
+
+    <div class="payGrid">
+      <div class="payDueBox">
+        <div>
+          <div class="payDueLabel">Zu zahlen</div>
+          <div class="muted small">VK gesamt</div>
+        </div>
+        <div class="payDueValue" id="payDue">$0</div>
+      </div>
+
+      <div>
+        <div class="muted small" style="margin-bottom:6px;">Kunde zahlt</div>
+        <input id="payAmount" class="input" placeholder="z.B. 30" inputmode="decimal" />
+      </div>
+
+      <div class="payRow2">
+        <div class="payMini ok" id="payChangeBox">
+          <div class="label">Wechselgeld</div>
+          <div class="value" id="payChange">$0</div>
+        </div>
+        <div class="payMini ok" id="payTipBox">
+          <div class="label">Trinkgeld</div>
+          <div class="value" id="payTip">$0</div>
+        </div>
+      </div>
+
+      <div class="muted small" id="payHint">—</div>
+
+      <div class="payActions">
+        <button class="ghost" onclick="closePay()">Abbrechen (ESC)</button>
+        <button class="primary" onclick="confirmPay()">Bestätigen (Enter)</button>
+      </div>
+    </div>
+  `;
+
+  if (!payKeyHandlerBound) {
+    payKeyHandlerBound = true;
+    document.addEventListener("keydown", (e) => {
+      const open = !document.getElementById("payOverlay")?.classList.contains("hidden");
+      if (!open) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closePay();
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmPay();
+      }
+    });
+  }
+}
+
+function parseMoney(val) {
+  // Erlaubt "30", "30.5", "30,5"
+  const s = String(val ?? "").trim().replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function updatePayLive() {
+  const due = pendingSale?.total ?? 0;
+  const raw = document.getElementById("payAmount")?.value;
+  const paid = parseMoney(raw);
+
+  const changeEl = document.getElementById("payChange");
+  const tipEl = document.getElementById("payTip");
+  const changeBox = document.getElementById("payChangeBox");
+  const tipBox = document.getElementById("payTipBox");
+  const hint = document.getElementById("payHint");
+
+  if (!changeEl || !tipEl || !changeBox || !tipBox || !hint) return;
+
+  if (!Number.isFinite(paid)) {
+    changeEl.textContent = "$0";
+    tipEl.textContent = "$0";
+    changeBox.classList.remove("bad"); changeBox.classList.add("ok");
+    tipBox.classList.remove("bad"); tipBox.classList.add("ok");
+    hint.textContent = "Gib ein, wie viel der Kunde bezahlt hat. Überschuss = Trinkgeld.";
+    return;
+  }
+
+  if (paid < due) {
+    const missing = (due - paid);
+    changeEl.textContent = "$0";
+    tipEl.textContent = "$0";
+    changeBox.classList.add("bad"); changeBox.classList.remove("ok");
+    tipBox.classList.add("bad"); tipBox.classList.remove("ok");
+    hint.textContent = `Fehlt noch: $${missing.toFixed(2).replace(".00","")}`;
+    return;
+  }
+
+  // Paid >= due
+  const extra = paid - due;
+  // Wir behandeln "extra" als Trinkgeld (wie du willst).
+  // Wechselgeld nur wenn du es irgendwann anders willst – aktuell bleibt es 0.
+  const tip = extra;
+  const change = 0;
+
+  changeEl.textContent = "$" + (change % 1 === 0 ? String(change) : change.toFixed(2));
+  tipEl.textContent = "$" + (tip % 1 === 0 ? String(tip) : tip.toFixed(2));
+
+  changeBox.classList.remove("bad"); changeBox.classList.add("ok");
+  tipBox.classList.remove("bad"); tipBox.classList.add("ok");
+
+  hint.textContent = extra > 0
+    ? "Überschuss wird als Trinkgeld verbucht."
+    : "Passend bezahlt.";
+}
 
 function openPay() {
   const due = getTotal();
@@ -593,16 +629,19 @@ function openPay() {
     time: new Date().toISOString()
   };
 
+  ensurePayUI();
+
   const dueEl = document.getElementById("payDue");
   const input = document.getElementById("payAmount");
-  const hint = document.getElementById("payHint");
 
   if (dueEl) dueEl.innerText = "$" + due;
   if (input) input.value = String(due);
-  if (hint) hint.innerText = "Wenn mehr bezahlt wird, wird der Überschuss als Trinkgeld verbucht.";
 
   document.getElementById("payOverlay")?.classList.remove("hidden");
   setTimeout(() => input?.focus(), 50);
+
+  input?.addEventListener("input", updatePayLive, { passive: true });
+  updatePayLive();
 }
 
 function closePay() {
@@ -613,7 +652,7 @@ function confirmPay() {
   if (!pendingSale) return closePay();
 
   const raw = document.getElementById("payAmount")?.value;
-  const paid = Number(raw);
+  const paid = parseMoney(raw);
 
   if (!Number.isFinite(paid) || paid < 0) return alert("Bitte gültigen Betrag eingeben.");
   if (paid < pendingSale.total) return alert("Der bezahlte Betrag darf nicht kleiner als der VK sein.");
@@ -623,7 +662,6 @@ function confirmPay() {
 }
 
 async function checkout(paidAmount = null) {
-  // Klick "Bezahlen" -> erst Popup fragen
   if (paidAmount === null) return openPay();
 
   if (!pendingSale || !Array.isArray(pendingSale.items) || typeof pendingSale.total !== "number") {
@@ -647,19 +685,18 @@ async function checkout(paidAmount = null) {
   const tip = Number(data.tip || 0);
 
   clearCart();
-  pendingSale = null; // erst NACH Erfolg löschen
+  pendingSale = null;
 
   refreshStats();
 
   if (tip > 0) alert(`Bestellung abgeschickt! (Order #${data.orderId})\nTrinkgeld: $${tip}`);
   else alert(`Bestellung abgeschickt! (Order #${data.orderId})`);
 
-  // Küche ggf. aktualisieren wenn offen
   const kitchenVisible = !document.getElementById("tab_kitchen")?.classList.contains("hidden");
   if (kitchenVisible) loadKitchen();
 }
 
-/* ========= Küche: Ping + Blink (2–4 warn, >4 rot) ========= */
+/* ========= Küche: Ping + Blink ========= */
 let kitchenInitialized = false;
 let lastMaxOrderId = 0;
 
@@ -687,28 +724,8 @@ function playPingSound() {
     beep(880, t, 0.11);
     beep(1175, t + 0.14, 0.12);
 
-    setTimeout(() => {
-      try { ctx.close(); } catch (e) {}
-    }, 500);
+    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 500);
   } catch (e) {}
-}
-
-function itemLinesForKitchen(item) {
-  if (!item.bundle) return [`${item.qty}× ${item.name}`];
-
-  if (item.bundle.type === "burgermenu") {
-    return [`${item.qty}× Burgermenü: ${item.bundle.burger} + ${item.bundle.fries} + ${item.bundle.drink}`];
-  }
-
-  if (item.bundle.type === "spar1010") {
-    return [
-      `${item.qty}× Spar Paket 10/10`,
-      `— Burger: ${summarizeCounts(item.bundle.burgers || {})}`,
-      `— Getränke: ${summarizeCounts(item.bundle.drinks || {})}`
-    ];
-  }
-
-  return [`${item.qty}× ${item.name}`];
 }
 
 function fmtAge(ms) {
@@ -718,12 +735,26 @@ function fmtAge(ms) {
   return `${m}:${String(r).padStart(2, "0")}`;
 }
 
-// 0-2 min normal, 2-4 warn blink, >4 hot blink
 function ageClass(ms) {
   const min = ms / 60000;
   if (min >= 4) return "age-hot-blink";
   if (min >= 2) return "age-warn-blink";
   return "age-ok";
+}
+
+function itemLinesForKitchen(item) {
+  if (!item.bundle) return [`${item.qty}× ${item.name}`];
+  if (item.bundle.type === "burgermenu") {
+    return [`${item.qty}× Burgermenü: ${item.bundle.burger} + ${item.bundle.fries} + ${item.bundle.drink}`];
+  }
+  if (item.bundle.type === "spar1010") {
+    return [
+      `${item.qty}× Spar Paket 10/10`,
+      `— Burger: ${summarizeCounts(item.bundle.burgers || {})}`,
+      `— Getränke: ${summarizeCounts(item.bundle.drinks || {})}`
+    ];
+  }
+  return [`${item.qty}× ${item.name}`];
 }
 
 async function loadKitchen() {
@@ -738,7 +769,6 @@ async function loadKitchen() {
 
   const pending = (data.pending || []).slice().sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
-  // Ping bei neuer Order
   const currentMax = pending.reduce((m, o) => Math.max(m, Number(o.id) || 0), 0);
   if (kitchenInitialized && currentMax > lastMaxOrderId) playPingSound();
   lastMaxOrderId = Math.max(lastMaxOrderId, currentMax);
@@ -758,7 +788,6 @@ async function loadKitchen() {
     box.className = "panel orderCard";
 
     const reg = o.register ? `Kasse ${o.register}` : "Kasse —";
-
     const lines = [];
     (o.items || []).forEach(it => itemLinesForKitchen(it).forEach(l => lines.push(l)));
 
@@ -845,7 +874,6 @@ async function refreshStats() {
   me = data.me || null;
 
   const display = me?.displayName || me?.username || "—";
-
   const who = document.getElementById("whoami");
   if (who) who.innerText = me ? `Eingeloggt: ${display} (${me.role})` : "Nicht eingeloggt";
 
@@ -886,9 +914,7 @@ async function refreshStats() {
     `;
   }
 
-  if (isBoss()) {
-    await loadUsers();
-  }
+  if (isBoss()) await loadUsers();
 
   if (data.currentDay) {
     serverDay = data.currentDay;
@@ -976,7 +1002,6 @@ async function resetAll() {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.success) return alert(data.message || "Reset fehlgeschlagen.");
 
-  // Danach alles neu laden
   kitchenInitialized = false;
   lastMaxOrderId = 0;
 
@@ -1008,15 +1033,12 @@ async function login() {
     return;
   }
 
-  // Eingeloggt -> App zeigen
   showApp();
   await refreshStats();
 
-  // Standard Tab: Kasse
   const kassBtn = document.querySelector(".tabsTop .tabTop");
   openTab("tab_pos", kassBtn);
 
-  // Fokus weg
   document.getElementById("loginPass") && (document.getElementById("loginPass").value = "");
 }
 
@@ -1050,24 +1072,21 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll("\n", " ").replaceAll("\r", " ");
 }
 
 /* ========= Boot ========= */
 async function boot() {
-  // Menu overlay vorbereiten
   ensureMenuOverlay();
-
-  // Produkte rendern (Kasse-Ansicht)
   renderProducts();
 
-  // Uhrzeit tick
   updateDayTimeUI();
   setInterval(updateDayTimeUI, 1000);
 
-  // Check Session
+  // Pay UI verbessern (auch wenn noch hidden)
+  ensurePayUI();
+
   const res = await fetch("/auth/me");
   const data = await res.json().catch(() => ({}));
 
@@ -1076,11 +1095,9 @@ async function boot() {
     return;
   }
 
-  // schon eingeloggt
   showApp();
   await refreshStats();
 
-  // Standard Tab: Kasse
   const kassBtn = document.querySelector(".tabsTop .tabTop");
   openTab("tab_pos", kassBtn);
 }
