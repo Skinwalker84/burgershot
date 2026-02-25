@@ -71,19 +71,30 @@ function applyRoleVisibility() {
   const dayBtn = document.getElementById("tabBtnDay");
   const dayTab = document.getElementById("tab_day");
 
+  const weekBtn = document.getElementById("tabBtnWeek");
+  const weekTab = document.getElementById("tab_week");
+
   if (!mgmtBtn || !mgmtTab) return;
 
   if (isBoss()) {
     mgmtBtn.style.display = "";
     if (dayBtn) dayBtn.style.display = "";
+    if (weekBtn) weekBtn.style.display = "";
   } else {
     mgmtBtn.style.display = "none";
     if (dayBtn) dayBtn.style.display = "none";
+    if (weekBtn) weekBtn.style.display = "none";
 
     if (dayTab && !dayTab.classList.contains("hidden")) {
       const kassBtn = document.querySelector(".tabsTop .tabTop");
       openTab("tab_pos", kassBtn);
       alert("Tagesabrechnung ist nur für den Chef verfügbar.");
+    }
+
+    if (weekTab && !weekTab.classList.contains("hidden")) {
+      const kassBtn = document.querySelector(".tabsTop .tabTop");
+      openTab("tab_pos", kassBtn);
+      alert("Wochenabrechnung ist nur für den Chef verfügbar.");
     }
     if (!mgmtTab.classList.contains("hidden")) {
       const kassBtn = document.querySelector(".tabsTop .tabTop");
@@ -116,6 +127,12 @@ function openTab(tabId, btn) {
     btn = document.querySelector(".tabsTop .tabTop") || btn;
   }
 
+  if (tabId === "tab_week" && !isBoss()) {
+    alert("Wochenabrechnung ist nur für den Chef verfügbar.");
+    tabId = "tab_pos";
+    btn = document.querySelector(".tabsTop .tabTop") || btn;
+  }
+
   document.querySelectorAll(".tabPage").forEach(p => p.classList.add("hidden"));
   document.getElementById(tabId)?.classList.remove("hidden");
 
@@ -126,6 +143,11 @@ function openTab(tabId, btn) {
   if (tabId === "tab_day") {
     initDayTab();
     loadDayReport();
+  }
+
+  if (tabId === "tab_week") {
+    initWeekTab();
+    loadWeekReport();
   }
 
   if (tabId === "tab_kitchen") {
@@ -992,6 +1014,100 @@ async function submitDayClose() {
 
   closeDayClose();
   await loadDayReport();
+}
+
+
+/* ========= Reporting: Week (Kalenderwoche) ========= */
+let weekTabInited = false;
+let currentWeekReport = null;
+
+function dateStrToISOWeek(dateStr) {
+  // dateStr: YYYY-MM-DD
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ""));
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]) - 1;
+  const d = Number(m[3]);
+  const date = new Date(y, mo, d);
+  if (Number.isNaN(date.getTime())) return null;
+
+  // ISO week algorithm (local date, using UTC math to be stable)
+  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = tmp.getUTCDay() || 7; // 1..7 (Mon..Sun)
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum); // nearest Thursday
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
+  const year = tmp.getUTCFullYear();
+  return `${year}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+function initWeekTab() {
+  if (weekTabInited) return;
+  weekTabInited = true;
+
+  const inp = document.getElementById("weekWeek");
+  if (inp) {
+    inp.value = dateStrToISOWeek(serverDay) || "";
+  }
+}
+
+function setWeekToCurrent() {
+  const inp = document.getElementById("weekWeek");
+  if (!inp) return;
+  inp.value = dateStrToISOWeek(serverDay) || inp.value;
+}
+
+function printWeekReport() {
+  if (!isBoss()) return;
+  document.body.classList.remove("printDay");
+  document.body.classList.add("printWeek");
+  window.print();
+  document.body.classList.remove("printWeek");
+}
+
+async function loadWeekReport() {
+  if (!isBoss()) return;
+
+  const week = document.getElementById("weekWeek")?.value || dateStrToISOWeek(serverDay);
+  if (!week) return alert("Bitte Kalenderwoche wählen.");
+
+  const res = await fetch(`/reports/week-employee?week=${encodeURIComponent(week)}`);
+  if (res.status === 401) {
+    me = null;
+    applyRoleVisibility();
+    return showLoginPage("Bitte einloggen.");
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Wochenabrechnung.");
+
+  currentWeekReport = data;
+
+  const rangeText = `${data.range?.start || "—"} bis ${data.range?.end || "—"}`;
+  const wkLabel = data.week || week;
+
+  document.getElementById("weekRange") && (document.getElementById("weekRange").innerText = `KW: ${wkLabel} · ${rangeText}`);
+  document.getElementById("weekPrintLabel") && (document.getElementById("weekPrintLabel").innerText = wkLabel);
+  document.getElementById("weekPrintRange") && (document.getElementById("weekPrintRange").innerText = rangeText);
+
+  const t = data.totals || {};
+  document.getElementById("weekRevenue") && (document.getElementById("weekRevenue").innerText = money(t.revenue));
+  document.getElementById("weekTips") && (document.getElementById("weekTips").innerText = money(t.tips));
+  document.getElementById("weekOrders") && (document.getElementById("weekOrders").innerText = String(t.orders ?? 0));
+  document.getElementById("weekAvg") && (document.getElementById("weekAvg").innerText = money(t.avg));
+
+  const be = document.getElementById("weekByEmployee");
+  if (be) {
+    be.innerHTML = (data.byEmployee || []).map(x => `
+      <tr>
+        <td>${esc(x.employee || x.employeeUsername)}</td>
+        <td style="text-align:right;">${money(x.revenue)}</td>
+        <td style="text-align:right;">${money(x.tips)}</td>
+        <td style="text-align:right;">${x.orders ?? 0}</td>
+        <td style="text-align:right;">${money(x.avg)}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="5" class="muted">Keine Daten.</td></tr>`;
+  }
 }
 
 function initDayTab() {

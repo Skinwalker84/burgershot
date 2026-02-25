@@ -1047,8 +1047,16 @@ button.ghost{
   .noPrint{ display:none !important; }
   .printOnly{ display:block !important; }
   .tabsTop, .tabBtns, #loginOverlay, #payOverlay, #pwOverlay, #dayCloseOverlay{ display:none !important; }
-  /* hide everything except day tab */
+
+  /* hide everything except the chosen report tab */
   .tabPage{ display:none !important; }
+
+  /* default: day */
   #tab_day{ display:block !important; }
-  #tab_day .panel{ border:none !important; box-shadow:none !important; }
+  body.printWeek #tab_day{ display:none !important; }
+  body.printWeek #tab_week{ display:block !important; }
+  body.printDay #tab_day{ display:block !important; }
+  body.printDay #tab_week{ display:none !important; }
+
+  #tab_day .panel, #tab_week .panel{ border:none !important; box-shadow:none !important; }
 }

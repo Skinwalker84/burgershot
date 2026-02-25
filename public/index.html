@@ -59,6 +59,7 @@
       <button class="tabTop active" onclick="openTab('tab_pos', this)">Kasse</button>
       <button class="tabTop" onclick="openTab('tab_kitchen', this)">Küche</button>
       <button class="tabTop" id="tabBtnDay" onclick="openTab('tab_day', this)">Tagesabrechnung</button>
+      <button class="tabTop" id="tabBtnWeek" onclick="openTab('tab_week', this)">Wochenabrechnung</button>
       <button class="tabTop" id="tabBtnMgmt" onclick="openTab('tab_mgmt', this)">Management</button>
     </div>
 
@@ -126,6 +127,71 @@
 
         <!-- IMPORTANT: class kitchenList for 2-column grid -->
         <div id="kitchenPending" class="kitchenList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+
+    <!-- ===== TAB: WEEK ===== -->
+    <div id="tab_week" class="tabPage hidden">
+      <div class="panel">
+        <div class="printOnly" style="margin-bottom:12px;">
+          <div style="font-weight:900; font-size:20px;">BurgerShot — Wochenabrechnung</div>
+          <div class="muted small">Woche: <span id="weekPrintLabel">—</span></div>
+          <div class="muted small">Zeitraum: <span id="weekPrintRange">—</span></div>
+        </div>
+
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Wochenabrechnung</div>
+            <div class="muted small">Chef only · Kalenderwoche (Mo–So)</div>
+            <div id="weekRange" class="muted small" style="margin-top:4px;">—</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <input id="weekWeek" class="input" type="week" style="width:180px;" />
+            <button class="ghost" onclick="setWeekToCurrent()">Diese KW</button>
+            <button class="primary noPrint" onclick="loadWeekReport()">Laden</button>
+            <button class="ghost noPrint" onclick="printWeekReport()">PDF</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Umsatz</div>
+            <div style="font-weight:900; font-size:22px;" id="weekRevenue">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Trinkgeld</div>
+            <div style="font-weight:900; font-size:22px;" id="weekTips">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Orders</div>
+            <div style="font-weight:900; font-size:22px;" id="weekOrders">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 200px;">
+            <div class="muted small">Ø Bon</div>
+            <div style="font-weight:900; font-size:22px;" id="weekAvg">—</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <div class="panel" style="width:100%;">
+            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Trinkgeld</th>
+                  <th style="text-align:right;">Orders</th>
+                  <th style="text-align:right;">Ø Bon</th>
+                </tr>
+              </thead>
+              <tbody id="weekByEmployee"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
 
