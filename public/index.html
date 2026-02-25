@@ -168,6 +168,7 @@
                 <tr>
                   <th>Mitarbeiter</th>
                   <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Trinkgeld</th>
                   <th style="text-align:right;">Orders</th>
                 </tr>
               </thead>
@@ -222,6 +223,7 @@
                 <tr>
                   <th>Mitarbeiter</th>
                   <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Trinkgeld</th>
                   <th style="text-align:right;">Orders</th>
                 </tr>
               </thead>
@@ -389,34 +391,5 @@
   </div>
 
   <script src="/app.js"></script>
-
-  <!-- ===== MENU BUILDER (Drink + Cheesy Fries) ===== -->
-  <div id="menuOverlay" class="overlay hidden">
-    <div class="overlayCard">
-      <div class="row" style="justify-content:space-between;">
-        <div style="font-weight:900;">Menü zusammenstellen</div>
-        <button class="ghost" onclick="closeMenuBuilder()">X</button>
-      </div>
-
-      <div class="muted small" style="margin-top:8px;">Menü: <b id="menuBaseName">—</b></div>
-      <div class="muted small" style="margin-top:6px;">Basispreis: <b id="menuBasePrice">$0</b></div>
-
-      <div style="margin-top:12px;">
-        <div class="muted small">Getränk</div>
-        <select id="menuDrinkSelect" class="input"></select>
-      </div>
-
-      <div style="margin-top:12px;">
-        <label style="display:flex; gap:10px; align-items:center; cursor:pointer;">
-          <input id="menuCheesy" type="checkbox" />
-          <span>Cheesy Fries statt Fries (+$2)</span>
-        </label>
-      </div>
-
-      <button class="primary" style="margin-top:12px; width:100%;" onclick="confirmMenuBuilder()">Zum Warenkorb</button>
-      <div class="muted small" style="margin-top:8px;">Menüpreis = Basispreis + optional +$2.</div>
-    </div>
-  </div>
-
 </body>
 </html>

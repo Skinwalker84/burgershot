@@ -537,9 +537,10 @@ async function loadDayReport(){
       <tr>
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    `).join("") || `<tr><td colspan="3" class="muted">Keine Daten.</td></tr>`;
+    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
@@ -617,9 +618,10 @@ async function loadWeekReport(){
       <tr>
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    `).join("") || `<tr><td colspan="3" class="muted">Keine Daten.</td></tr>`;
+    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
