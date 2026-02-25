@@ -9,32 +9,33 @@
 
 <body class="appBody">
 
+  <!-- ===== LOGIN PAGE (Startscreen) ===== -->
   <div id="loginPage" class="loginPage">
-    <div class="loginCard">
-      <div class="brandRow">
-        <div class="brandDot"></div>
-        <div>
-          <div class="brandName">Burger Shot</div>
-          <div class="muted small">Firmensoftware</div>
+    <div class="loginShell">
+      <div class="loginBrand">
+        <img src="/logo.png" alt="Burger Shot" class="loginLogo" onerror="this.style.display='none'" />
+        <div class="loginTitle">Burger Shot</div>
+        <div class="loginSub">POS-System</div>
+      </div>
+
+      <div class="loginCard loginCardWide">
+        <h2 style="margin:0 0 10px 0;">Login</h2>
+        <div class="muted small" id="loginMsg" style="margin-bottom:10px;">Bitte einloggen.</div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <input id="loginUser" class="input" placeholder="Username" autocomplete="username" />
+          <input id="loginPass" class="input" placeholder="Passwort" type="password" autocomplete="current-password" />
+          <button class="primary" onclick="login()">Einloggen</button>
+        </div>
+
+        <div class="muted small" style="margin-top:10px;">
+          Tipp: Desktop only ✅
         </div>
       </div>
-
-      <div class="muted small" id="loginMsg" style="margin-top:12px;">Bitte einloggen.</div>
-
-      <div style="margin-top:12px;">
-        <div class="muted small">Username</div>
-        <input id="loginUser" class="input" placeholder="z.B. chris.adams" />
-      </div>
-
-      <div style="margin-top:10px;">
-        <div class="muted small">Passwort</div>
-        <input id="loginPass" class="input" type="password" placeholder="••••••" />
-      </div>
-
-      <button class="primary" style="margin-top:12px; width:100%;" onclick="login()">Login</button>
     </div>
   </div>
 
+  <!-- ===== APP (Hidden until logged in) ===== -->
   <div id="appRoot" class="appRoot hidden">
 
     <div class="topBar">
@@ -53,12 +54,16 @@
       </div>
     </div>
 
+    <!-- Tabs -->
     <div class="tabsTop">
       <button class="tabTop active" onclick="openTab('tab_pos', this)">Kasse</button>
       <button class="tabTop" onclick="openTab('tab_kitchen', this)">Küche</button>
+      <button class="tabTop" id="tabBtnDay" onclick="openTab('tab_day', this)">Tagesabrechnung</button>
+      <button class="tabTop" id="tabBtnWeek" onclick="openTab('tab_week', this)">Wochenabrechnung</button>
       <button class="tabTop" id="tabBtnMgmt" onclick="openTab('tab_mgmt', this)">Management</button>
     </div>
 
+    <!-- ===== TAB: POS ===== -->
     <div id="tab_pos" class="tabPage">
       <div class="pos">
         <div class="panel posLeft">
@@ -106,6 +111,7 @@
       </div>
     </div>
 
+    <!-- ===== TAB: KITCHEN ===== -->
     <div id="tab_kitchen" class="tabPage hidden">
       <div class="panel">
         <div class="row" style="justify-content:space-between; align-items:center;">
@@ -120,6 +126,114 @@
       </div>
     </div>
 
+    <!-- ===== TAB: DAY REPORT ===== -->
+    <div id="tab_day" class="tabPage hidden">
+      <div class="panel">
+        <div class="printOnly" style="margin-bottom:12px;">
+          <div style="font-weight:900; font-size:20px;">BurgerShot — Tagesabrechnung</div>
+          <div class="muted small">Datum: <span id="dayPrintDate">—</span></div>
+          <div class="muted small" id="dayPrintClosed">—</div>
+        </div>
+
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Tagesabrechnung</div>
+            <div class="muted small">Chef only</div>
+            <div id="dayCloseStatus" class="muted small" style="margin-top:4px;">—</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <input id="dayDate" class="input" type="date" style="width:180px;" />
+            <button class="ghost" onclick="setDayToToday()">Heute</button>
+            <button class="primary noPrint" onclick="loadDayReport()">Laden</button>
+            <button class="ghost noPrint" onclick="printDayReport()">PDF</button>
+            <button id="dayCloseBtn" class="primary noPrint" onclick="openCloseDay()">Tagesabschluss</button>
+          </div>
+        </div>
+
+        <!-- Nur Gesamtbetrag -->
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Gesamtbetrag (Umsatz)</div>
+            <div style="font-weight:900; font-size:22px;" id="dayRevenue">—</div>
+          </div>
+        </div>
+
+        <!-- Nur Mitarbeiter -->
+        <div class="row" style="margin-top:14px;">
+          <div class="panel" style="width:100%;">
+            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Orders</th>
+                </tr>
+              </thead>
+              <tbody id="dayByEmployee"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB: WEEK REPORT (KW) ===== -->
+    <div id="tab_week" class="tabPage hidden">
+      <div class="panel">
+        <div class="printOnly" style="margin-bottom:12px;">
+          <div style="font-weight:900; font-size:20px;">BurgerShot — Wochenabrechnung</div>
+          <div class="muted small">KW: <span id="weekPrintKW">—</span></div>
+          <div class="muted small">Zeitraum: <span id="weekPrintRange">—</span></div>
+        </div>
+
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Wochenabrechnung</div>
+            <div class="muted small">Chef only · Kalenderwoche</div>
+            <div id="weekRange" class="muted small" style="margin-top:4px;">—</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <input id="weekKW" class="input" type="week" style="width:180px;" />
+            <button class="ghost" onclick="setWeekToThisKW()">Diese KW</button>
+            <button class="primary noPrint" onclick="loadWeekReport()">Laden</button>
+            <button class="ghost noPrint" onclick="printWeekReport()">PDF</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Gesamtbetrag (Umsatz)</div>
+            <div style="font-weight:900; font-size:22px;" id="weekRevenue">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Orders</div>
+            <div style="font-weight:900; font-size:22px;" id="weekOrders">—</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <div class="panel" style="width:100%;">
+            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Orders</th>
+                </tr>
+              </thead>
+              <tbody id="weekByEmployee"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB: MANAGEMENT ===== -->
     <div id="tab_mgmt" class="tabPage hidden">
       <div class="panel">
         <div class="row" style="justify-content:space-between; align-items:flex-start;">
@@ -133,28 +247,44 @@
           </div>
         </div>
 
+        <div id="bossPanel" class="panel" style="margin-top:14px;">
+          <div style="font-weight:900;">Statistiken (Heute)</div>
+          <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
+            <div class="panel" style="flex:1 1 240px;">
+              <div class="muted small">Umsatz</div>
+              <div style="font-weight:900; font-size:22px;" id="statRevenue">$0</div>
+            </div>
+            <div class="panel" style="flex:1 1 240px;">
+              <div class="muted small">Trinkgeld</div>
+              <div style="font-weight:900; font-size:22px;" id="statTips">$0</div>
+            </div>
+            <div class="panel" style="flex:1 1 240px;">
+              <div class="muted small">Orders</div>
+              <div style="font-weight:900; font-size:22px;" id="statOrders">0</div>
+            </div>
+          </div>
+        </div>
+
         <div class="panel" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center;">
             <div style="font-weight:900;">Mitarbeiter</div>
             <button class="primary" onclick="openAddUser()">+ Add</button>
           </div>
           <div id="usersList" style="margin-top:10px;"></div>
-        </div>
-
+        
         <div class="panel" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
             <div>
-              <div style="font-weight:900;">VK-Preise (Lebensmittel)</div>
-              <div class="muted small">Änderungen wirken sofort in der Kasse.</div>
+              <div style="font-weight:900;">VK-Preise (Items)</div>
+              <div class="muted small">Speichert im Browser (LocalStorage).</div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-              <button class="ghost" onclick="loadProducts()">Neu laden</button>
-              <button class="primary" onclick="saveProducts()">Speichern</button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="ghost" onclick="mgmtReloadProducts()">Neu laden</button>
+              <button class="ghost" onclick="mgmtResetProducts()">Reset</button>
+              <button class="primary" onclick="mgmtSaveProducts()">Speichern</button>
             </div>
           </div>
-
-          <div class="muted small" id="productsMsg" style="margin-top:10px;">—</div>
-
+          <div class="muted small" id="mgmtProductsMsg" style="margin-top:10px;">—</div>
           <div style="margin-top:10px; overflow:auto;">
             <table class="table">
               <thead>
@@ -164,16 +294,17 @@
                   <th style="text-align:right;">VK</th>
                 </tr>
               </thead>
-              <tbody id="productsEditor"></tbody>
+              <tbody id="mgmtProductsBody"></tbody>
             </table>
           </div>
         </div>
-
+</div>
       </div>
     </div>
 
   </div>
 
+  <!-- ===== PAY OVERLAY ===== -->
   <div id="payOverlay" class="overlay hidden">
     <div class="overlayCard">
       <div class="row" style="justify-content:space-between;">
@@ -196,6 +327,7 @@
     </div>
   </div>
 
+  <!-- ===== CHANGE PASSWORD OVERLAY ===== -->
   <div id="pwOverlay" class="overlay hidden">
     <div class="overlayCard">
       <div class="row" style="justify-content:space-between;">
@@ -205,22 +337,54 @@
 
       <div style="margin-top:10px;">
         <div class="muted small">Aktuelles Passwort</div>
-        <input id="pwOld" class="input" type="password" />
+        <input id="pwOld" class="input" type="password" autocomplete="current-password" />
       </div>
 
       <div style="margin-top:10px;">
         <div class="muted small">Neues Passwort</div>
-        <input id="pwNew1" class="input" type="password" />
+        <input id="pwNew1" class="input" type="password" autocomplete="new-password" />
       </div>
 
       <div style="margin-top:10px;">
         <div class="muted small">Neues Passwort (wiederholen)</div>
-        <input id="pwNew2" class="input" type="password" />
+        <input id="pwNew2" class="input" type="password" autocomplete="new-password" />
       </div>
 
       <div class="muted small" id="pwMsg" style="margin-top:10px;">—</div>
 
-      <button class="primary" style="margin-top:12px; width:100%;" onclick="submitPwChange()">Speichern</button>
+      <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
+        <button class="ghost" onclick="closePwChange()">Abbrechen</button>
+        <button class="primary" onclick="submitPwChange()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DAY CLOSE OVERLAY ===== -->
+  <div id="dayCloseOverlay" class="overlay hidden">
+    <div class="overlayCard">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Tagesabschluss</div>
+        <button class="ghost" onclick="closeDayClose()">X</button>
+      </div>
+
+      <div class="muted small" style="margin-top:8px;">Datum: <b id="dayCloseDateLabel">—</b></div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Kassenbestand Ist (optional)</div>
+        <input id="dayCashCount" class="input" placeholder="z.B. 5000" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="muted small">Notiz (optional)</div>
+        <input id="dayCloseNote" class="input" placeholder="z.B. Schicht 1 & 2 zusammen" />
+      </div>
+
+      <div class="muted small" id="dayCloseMsg" style="margin-top:10px;">—</div>
+
+      <div class="row" style="margin-top:12px; justify-content:flex-end; gap:10px;">
+        <button class="ghost" onclick="closeDayClose()">Abbrechen</button>
+        <button class="primary" onclick="submitDayClose()">Abschließen</button>
+      </div>
     </div>
   </div>
 
