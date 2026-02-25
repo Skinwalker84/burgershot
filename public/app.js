@@ -325,23 +325,53 @@ function renderProducts(){
 }
 
 /* Cart */
-function addToCart(p){ cart.push({ name:p.name, price:p.price, qty:1 }); renderCart(); }
-function clearCart(){ cart=[]; renderCart(); }
-function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
+async function addToCart(p){
+  // Special handling for Menüs: Drink auswählen + optional Cheesy Fries (+$2)
+  if(String(p?.cat||"") === "Menü" || String(p?.category||"") === "Menü"){
+    const drinks = (PRODUCTS||[]).filter(x => String(x.cat||x.category||"") === "Getränke");
+    if(!drinks.length){
+      alert("Keine Getränke vorhanden. Bitte Produkte neu laden.");
+      return;
+    }
 
-function renderCart(){
-  const box=document.getElementById("cart");
-  const tot=document.getElementById("cartTotal");
-  if(tot) tot.innerText=money(cartTotal());
-  if(!box) return;
-  if(cart.length===0){ box.innerHTML=`<div class="muted small">Leer.</div>`; return; }
-  box.innerHTML=cart.map((x,idx)=>`
-    <div class="cartRow">
-      <div style="font-weight:900;">${esc(x.name)}</div>
-      <div class="muted small">${money(x.price)}</div>
-      <button class="ghost" onclick="removeItem(${idx})">x</button>
-    </div>`).join("");
+    // Auswahl per Prompt (robust, keine extra HTML nötig)
+    const listText = drinks.map((d,i)=>`${i+1}) ${d.name} (${money(d.price)})`).join("
+");
+    const pick = prompt("Getränk auswählen:
+
+" + listText + "
+
+Nummer eingeben:", "1");
+    const idx = Number(String(pick||"").trim());
+    if(!Number.isFinite(idx) || idx < 1 || idx > drinks.length) return;
+
+    const drink = drinks[idx-1];
+
+    const cheesy = confirm("Cheesy Fries statt Fries? (+$2)");
+    const friesLabel = cheesy ? "Cheesy Fries (+$2)" : "Fries";
+
+    const extra = cheesy ? 2 : 0;
+    const finalPrice = Number(p.price||0) + extra;
+
+    const displayName = `${p.name} • Drink: ${drink.name} • ${friesLabel}`;
+
+    cart.push({
+      id: (p.id ? `${p.id}__${slugify(drink.name)}__${cheesy?"cheesy":"fries"}` : undefined),
+      name: displayName,
+      baseName: p.name,
+      price: finalPrice,
+      qty: 1,
+      meta: { menu:true, drink: drink.name, fries: friesLabel }
+    });
+    renderCart();
+    return;
+  }
+
+  // Normal products
+  cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+  renderCart();
 }
+
 function removeItem(idx){ cart.splice(idx,1); renderCart(); }
 
 /* Register */
