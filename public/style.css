@@ -40,10 +40,7 @@ html, body{
   color:var(--text);
 
   /* subtle fast-food / arcade vibe, still professional */
-  background:
-    radial-gradient(900px 420px at 12% 10%, rgba(255,204,0,.10) 0%, rgba(0,0,0,0) 60%),
-    radial-gradient(900px 420px at 88% 12%, rgba(255,59,48,.10) 0%, rgba(0,0,0,0) 62%),
-    linear-gradient(180deg, var(--bg2), var(--bg));
+  
 
   font-size:var(--fs-base);
   line-height:1.35;
@@ -396,10 +393,7 @@ button.danger{
 }
 
 body, .appBody{
-  background:
-    radial-gradient(1200px 700px at 20% 0%, rgba(30,88,140,.35), rgba(0,0,0,0) 55%),
-    radial-gradient(900px 600px at 85% 25%, rgba(150,30,50,.18), rgba(0,0,0,0) 60%),
-    linear-gradient(180deg, var(--bg2), var(--bg1)) !important;
+   !important;
   color:var(--text) !important;
   font-size:var(--fsBase) !important;
 }
@@ -454,7 +448,7 @@ button{
   font-weight:900 !important;
 }
 button.primary{
-  background:linear-gradient(180deg, var(--accent2), var(--accent)) !important;
+   !important;
   border:1px solid rgba(0,0,0,.25) !important;
   color:#fff !important;
   box-shadow:0 10px 24px rgba(201,16,26,.22) !important;
@@ -528,3 +522,25 @@ button.ghost:hover{ background:rgba(255,255,255,.06) !important; }
   background:transparent !important;
 }
 
+
+
+
+/* ===== FORCE FLAT BACKGROUND (NO GRADIENTS) ===== */
+
+html, body, .appBody {
+  background:#0b1622 !important;
+  background-image:none !important;
+}
+
+.loginPage, .loginShell {
+  background:#0b1622 !important;
+  background-image:none !important;
+}
+
+.topBar {
+  background:rgba(10,18,28,0.85) !important;
+}
+
+.panel {
+  background:rgba(20,30,45,0.85) !important;
+}
