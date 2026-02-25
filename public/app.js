@@ -1,6 +1,6 @@
 /* =========================
    Burger Shot – App JS
-   (Login-Seite + POS Pay Overlay improved)
+   (Login-Seite + POS Pay Overlay: nur Trinkgeld)
    ========================= */
 
 let currentRegister = 1;
@@ -74,7 +74,6 @@ function applyRoleVisibility() {
     mgmtBtn.style.display = "";
   } else {
     mgmtBtn.style.display = "none";
-
     if (!mgmtTab.classList.contains("hidden")) {
       const kassBtn = document.querySelector(".tabsTop .tabTop");
       openTab("tab_pos", kassBtn);
@@ -292,8 +291,13 @@ function summarizeCounts(obj) {
   return entries.map(([n, q]) => `${n} x${q}`).join(", ");
 }
 function sparAdd(type, name) {
-  if (type === "burger") { if (sparTotal(spar.burgers) >= 10) return; spar.burgers[name] = (spar.burgers[name] || 0) + 1; }
-  else { if (sparTotal(spar.drinks) >= 10) return; spar.drinks[name] = (spar.drinks[name] || 0) + 1; }
+  if (type === "burger") {
+    if (sparTotal(spar.burgers) >= 10) return;
+    spar.burgers[name] = (spar.burgers[name] || 0) + 1;
+  } else {
+    if (sparTotal(spar.drinks) >= 10) return;
+    spar.drinks[name] = (spar.drinks[name] || 0) + 1;
+  }
   renderSparLists();
 }
 function sparRemove(type, name) {
@@ -492,20 +496,17 @@ function incItem(name, bundleJson) { const item = findCartItem(name, bundleJson)
 function decItem(name, bundleJson) { const item = findCartItem(name, bundleJson); if (!item) return; item.qty--; if (item.qty <= 0) cart = cart.filter(i => i !== item); renderCart(); }
 function removeItem(name, bundleJson) { const item = findCartItem(name, bundleJson); if (!item) return; cart = cart.filter(i => i !== item); renderCart(); }
 
-/* ========= Payment Overlay (POS Style + Live Change/Tip) ========= */
+/* ========= Payment Overlay (nur Trinkgeld) ========= */
 let pendingSale = null;
 let payKeyHandlerBound = false;
+let payInputBound = false;
 
 function ensurePayUI() {
-  // Struktur im Pay-Overlay einmal upgraden (ohne index.html zu ändern)
   const card = document.querySelector("#payOverlay .loginCard");
   if (!card) return;
-
   if (card.dataset.enhanced === "1") return;
   card.dataset.enhanced = "1";
 
-  // Wir bauen den Inhalt neu zusammen, aber benutzen weiterhin die existierenden IDs:
-  // payDue, payAmount, payHint, confirmPay(), closePay()
   card.innerHTML = `
     <h2 style="margin:0 0 10px 0;">Zahlung</h2>
 
@@ -523,13 +524,9 @@ function ensurePayUI() {
         <input id="payAmount" class="input" placeholder="z.B. 30" inputmode="decimal" />
       </div>
 
-      <div class="payRow2">
-        <div class="payMini ok" id="payChangeBox">
-          <div class="label">Wechselgeld</div>
-          <div class="value" id="payChange">$0</div>
-        </div>
+      <div class="payRow2" style="grid-template-columns: 1fr;">
         <div class="payMini ok" id="payTipBox">
-          <div class="label">Trinkgeld</div>
+          <div class="label">Trinkgeld (Überschuss)</div>
           <div class="value" id="payTip">$0</div>
         </div>
       </div>
@@ -562,7 +559,6 @@ function ensurePayUI() {
 }
 
 function parseMoney(val) {
-  // Erlaubt "30", "30.5", "30,5"
   const s = String(val ?? "").trim().replace(",", ".");
   const n = Number(s);
   return Number.isFinite(n) ? n : NaN;
@@ -573,18 +569,14 @@ function updatePayLive() {
   const raw = document.getElementById("payAmount")?.value;
   const paid = parseMoney(raw);
 
-  const changeEl = document.getElementById("payChange");
   const tipEl = document.getElementById("payTip");
-  const changeBox = document.getElementById("payChangeBox");
   const tipBox = document.getElementById("payTipBox");
   const hint = document.getElementById("payHint");
 
-  if (!changeEl || !tipEl || !changeBox || !tipBox || !hint) return;
+  if (!tipEl || !tipBox || !hint) return;
 
   if (!Number.isFinite(paid)) {
-    changeEl.textContent = "$0";
     tipEl.textContent = "$0";
-    changeBox.classList.remove("bad"); changeBox.classList.add("ok");
     tipBox.classList.remove("bad"); tipBox.classList.add("ok");
     hint.textContent = "Gib ein, wie viel der Kunde bezahlt hat. Überschuss = Trinkgeld.";
     return;
@@ -592,30 +584,17 @@ function updatePayLive() {
 
   if (paid < due) {
     const missing = (due - paid);
-    changeEl.textContent = "$0";
     tipEl.textContent = "$0";
-    changeBox.classList.add("bad"); changeBox.classList.remove("ok");
     tipBox.classList.add("bad"); tipBox.classList.remove("ok");
     hint.textContent = `Fehlt noch: $${missing.toFixed(2).replace(".00","")}`;
     return;
   }
 
-  // Paid >= due
-  const extra = paid - due;
-  // Wir behandeln "extra" als Trinkgeld (wie du willst).
-  // Wechselgeld nur wenn du es irgendwann anders willst – aktuell bleibt es 0.
-  const tip = extra;
-  const change = 0;
-
-  changeEl.textContent = "$" + (change % 1 === 0 ? String(change) : change.toFixed(2));
+  const tip = paid - due;
   tipEl.textContent = "$" + (tip % 1 === 0 ? String(tip) : tip.toFixed(2));
-
-  changeBox.classList.remove("bad"); changeBox.classList.add("ok");
   tipBox.classList.remove("bad"); tipBox.classList.add("ok");
 
-  hint.textContent = extra > 0
-    ? "Überschuss wird als Trinkgeld verbucht."
-    : "Passend bezahlt.";
+  hint.textContent = tip > 0 ? "Überschuss wird als Trinkgeld verbucht." : "Passend bezahlt.";
 }
 
 function openPay() {
@@ -640,7 +619,10 @@ function openPay() {
   document.getElementById("payOverlay")?.classList.remove("hidden");
   setTimeout(() => input?.focus(), 50);
 
-  input?.addEventListener("input", updatePayLive, { passive: true });
+  if (input && !payInputBound) {
+    payInputBound = true;
+    input.addEventListener("input", updatePayLive, { passive: true });
+  }
   updatePayLive();
 }
 
@@ -734,19 +716,15 @@ function fmtAge(ms) {
   const r = s % 60;
   return `${m}:${String(r).padStart(2, "0")}`;
 }
-
 function ageClass(ms) {
   const min = ms / 60000;
   if (min >= 4) return "age-hot-blink";
   if (min >= 2) return "age-warn-blink";
   return "age-ok";
 }
-
 function itemLinesForKitchen(item) {
   if (!item.bundle) return [`${item.qty}× ${item.name}`];
-  if (item.bundle.type === "burgermenu") {
-    return [`${item.qty}× Burgermenü: ${item.bundle.burger} + ${item.bundle.fries} + ${item.bundle.drink}`];
-  }
+  if (item.bundle.type === "burgermenu") return [`${item.qty}× Burgermenü: ${item.bundle.burger} + ${item.bundle.fries} + ${item.bundle.drink}`];
   if (item.bundle.type === "spar1010") {
     return [
       `${item.qty}× Spar Paket 10/10`,
@@ -1084,7 +1062,6 @@ async function boot() {
   updateDayTimeUI();
   setInterval(updateDayTimeUI, 1000);
 
-  // Pay UI verbessern (auch wenn noch hidden)
   ensurePayUI();
 
   const res = await fetch("/auth/me");
