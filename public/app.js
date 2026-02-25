@@ -65,7 +65,7 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
-  initProducts();
+  await initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -85,7 +85,7 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
-  initProducts();
+  await initProducts();
   renderCart();
   updateDayInfo();
 }
@@ -127,7 +127,12 @@ const PRODUCTS_DEFAULT = [
 let PRODUCTS = [];
 
 
-function initProducts(){ hydrateProducts(); renderProducts(); }
+async function initProducts(){
+  await hydrateProducts();
+  renderProducts();
+  // if management editor exists in this build:
+  try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
+}
 
 const PRODUCTS_STORAGE_KEY = "bs_products_v1";
 
@@ -168,36 +173,35 @@ function resetProductsToDefault(){
   renderProductsEditor();
 }
 
-async 
 async function hydrateProducts(){
-  // 1. Try server
+  // 1) Server (auth required)
   try{
     const res = await fetch("/products");
     if(res.ok){
-      const data = await res.json();
-      if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({
+      const data = await res.json().catch(()=>({}));
+      const list = Array.isArray(data.products) ? data.products : null;
+      if(data.success && list && list.length){
+        PRODUCTS = list.map(p=>({
           name: p.name,
-          cat: p.cat,
-          price: p.price
+          cat: p.cat ?? p.category,
+          price: Number(p.price)||0
         }));
-        saveProductsToStorage(PRODUCTS); // sync local fallback
+        saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
     }
   }catch(e){}
 
-  // 2. Fallback: LocalStorage
+  // 2) LocalStorage fallback
   const stored = loadProductsFromStorage();
   if(stored){
     PRODUCTS = stored.map(p=>({ ...p }));
     return;
   }
 
-  // 3. Fallback: Defaults
+  // 3) Defaults
   PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p }));
 }
-
 
 function renderProductsEditor(){
   const body = document.getElementById("mgmtProductsBody");
@@ -216,14 +220,13 @@ function renderProductsEditor(){
   if(msg) msg.innerText = "—";
 }
 
-function mgmtReloadProducts(){
-  hydrateProducts();
+async function mgmtReloadProducts(){
+  await hydrateProducts();
   renderProducts();
-  renderProductsEditor();
+  try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
   const msg = document.getElementById("mgmtProductsMsg");
-  if(msg) msg.innerText = "Neu geladen ✅";
+  if(msg) msg.innerText = "—";
 }
-
 
 async function mgmtSaveProducts(){
   const msg = document.getElementById("mgmtProductsMsg");
@@ -240,31 +243,47 @@ async function mgmtSaveProducts(){
     list[i].price = Math.round(n);
   }
 
-  // Try server save first
+  // Server first
   try{
+    const payload = list.map(p=>({
+      id: (p.id ?? slugify(p.name)),
+      name: p.name,
+      cat: p.cat,
+      price: p.price
+    }));
     const res = await fetch("/products",{
       method:"PUT",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ products: list })
+      body: JSON.stringify({ products: payload })
     });
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
-      PRODUCTS = list;
-      saveProductsToStorage(PRODUCTS); // keep local backup
+      // re-hydrate from server response if present
+      if(Array.isArray(data.products) && data.products.length){
+        PRODUCTS = data.products.map(p=>({ name:p.name, cat:p.cat, price:Number(p.price)||0 }));
+      }else{
+        PRODUCTS = list;
+      }
+      saveProductsToStorage(PRODUCTS);
       renderProducts();
-      if(msg) msg.innerText="Gespeichert (Server) ✅";
+      try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
+      if(msg) msg.innerText = "Gespeichert (Server) ✅";
       return;
     }
   }catch(e){}
 
-  // Fallback: LocalStorage only
+  // Local fallback
   PRODUCTS = list;
-  if(saveProductsToStorage(PRODUCTS)){
-    renderProducts();
-    if(msg) msg.innerText="Gespeichert (Local) ⚠️";
-  }
+  saveProductsToStorage(PRODUCTS);
+  renderProducts();
+  try{ if(typeof renderProductsEditor === "function") renderProductsEditor(); }catch(e){}
+  if(msg) msg.innerText = "Gespeichert (Local) ⚠️";
 }
 
+function slugify(s){
+  return String(s||"").toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+    .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,40) || "item";
+}
 
 function mgmtResetProducts(){
   const ok = confirm("VK-Preise auf Standard zurücksetzen?");
