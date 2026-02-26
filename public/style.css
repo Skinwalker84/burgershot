@@ -136,8 +136,14 @@ body{
   text-shadow:0 1px 0 rgba(255,255,255,.55);
 }
 .regBtn.active{
-  border-color:rgba(255,255,255,.7);
-  background:linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.2));
+  border-color: rgba(255,255,255,.95);
+  background: linear-gradient(180deg, rgba(255,59,48,.95), rgba(255,149,0,.75));
+  box-shadow: 0 6px 18px rgba(0,0,0,.25), 0 0 0 3px rgba(255,255,255,.22) inset, 0 0 16px rgba(255,149,0,.45);
+  transform: translateY(-1px) scale(1.03);
+}
+.regBtn.active .regNo{
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
 
 .catBar{ display:flex; gap:8px; }
@@ -748,13 +754,4 @@ select.input{ appearance:none; -webkit-appearance:none; }
   .appRoot{ width:100% !important; height:auto !important; overflow:visible !important; }
   .panel{ box-shadow:none !important; border-color:#ccc !important; }
   .tabPage.hidden{ display:none !important; }
-}
-
-
-/* Active Register Highlight */
-.registerBtn.active {
-    background-color: #ffcc00 !important;
-    color: #000 !important;
-    box-shadow: 0 0 10px rgba(255, 204, 0, 0.8);
-    transform: scale(1.05);
 }
