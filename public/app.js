@@ -461,7 +461,7 @@ function updateDayInfo(){
   if(screenTitle) screenTitle.innerText = currentCategory || "—";
   if(counterTitle){
     const short = (me?.displayName || "").trim().split(/\s+/)[0] || "";
-    counterTitle.innerText = short ? `Counter ${short}.` : "Counter";
+    counterTitle.innerText = short ? `${short}.` : "Counter";
   }
 }
 setInterval(updateDayInfo, 1000);
