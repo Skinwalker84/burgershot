@@ -1,17 +1,15 @@
 /* style.css — Burger Shot UI */
 
 :root{
-  --bg:#0b0e14;
-  --panel:#111826;
-  --panel2:#0f1623;
-  --muted:#7f8aa3;
-  --text:#e9eefb;
-  --accent:#3b82f6;
-  --accent2:#22c55e;
-  --danger:#ef4444;
-  --border:rgba(255,255,255,.08);
+  --bg:#0f2e47;
+  --bg2:#123a5a;
+  --chrome1:#4f79b0;
+  --chrome2:#234a7a;
+  --chrome3:#16365b;
+  --text:#eef4ff;
+  --muted:#c9d7f0;
+  --border:#9ab1d6;
   --shadow:0 10px 30px rgba(0,0,0,.35);
-  --radius:16px;
   --sans:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
 }
 
@@ -20,12 +18,19 @@ html, body{ height:100%; }
 body{
   margin:0;
   font-family:var(--sans);
-  background:radial-gradient(1200px 600px at 10% 10%, #122044 0%, var(--bg) 55%);
+  background:linear-gradient(180deg, var(--bg2), var(--bg));
   color:var(--text);
 }
 
 .hidden{ display:none !important; }
-.appRoot{ padding:14px; max-width:1300px; margin:0 auto; }
+.appRoot{
+  padding:0;
+  width:min(1024px, 100vw);
+  height:min(768px, 100vh);
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+}
 
 .topBar{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -53,7 +58,262 @@ body{
 .tabTop:hover{ transform:translateY(-1px); }
 .tabTop.active{ background:rgba(59,130,246,.18); border-color:rgba(59,130,246,.35); }
 
-.tabPage{ margin-top:12px; }
+.tabPage{ margin-top:0; flex:1 1 auto; }
+
+/* =========================
+   RETRO POS (Vorlage Look)
+   ========================= */
+
+.retroTop{
+  height:76px;
+  padding:8px 10px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  background:linear-gradient(180deg, var(--chrome1), var(--chrome2));
+  border-bottom:2px solid rgba(255,255,255,.2);
+}
+
+.retroLeft{ display:flex; flex-direction:column; gap:8px; }
+
+.registerBar{ display:flex; gap:8px; align-items:center; }
+
+.regBtn{
+  width:82px;
+  height:40px;
+  position:relative;
+  border-radius:12px;
+  border:2px solid rgba(255,255,255,.35);
+  background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  cursor:pointer;
+}
+.regBtn img{ position:absolute; left:12px; top:8px; width:28px; height:24px; object-fit:contain; filter:drop-shadow(0 1px 0 rgba(0,0,0,.2)); }
+.regNo{
+  position:absolute;
+  right:12px;
+  top:7px;
+  font-weight:900;
+  color:#0b1f33;
+  text-shadow:0 1px 0 rgba(255,255,255,.55);
+}
+.regBtn.active{
+  border-color:rgba(255,255,255,.7);
+  background:linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.2));
+}
+
+.catBar{ display:flex; gap:8px; }
+.catBtn{
+  height:34px;
+  padding:0 16px;
+  border-radius:14px;
+  border:2px solid rgba(255,255,255,.35);
+  background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  color:#0b1f33;
+  font-weight:900;
+  letter-spacing:.4px;
+  cursor:pointer;
+}
+.catBtn.active{
+  background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.25));
+}
+
+.retroRight{ display:flex; gap:10px; align-items:flex-end; }
+.iconBtn{
+  width:78px;
+  height:52px;
+  border-radius:14px;
+  border:2px solid rgba(255,255,255,.35);
+  background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  color:#0b1f33;
+  font-weight:900;
+}
+.iconBtn img{ width:26px; height:26px; object-fit:contain; }
+.iconBtn span{ font-size:12px; line-height:12px; }
+
+.logoutBtn{
+  height:52px;
+  padding:0 18px;
+  border-radius:16px;
+  border:2px solid rgba(255,255,255,.35);
+  background:linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  cursor:pointer;
+  color:#0b1f33;
+  font-weight:900;
+}
+
+.posRetro{
+  flex:1 1 auto;
+  display:flex;
+  gap:12px;
+  padding:12px;
+}
+
+.counterPanel{
+  width:300px;
+  background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
+  border:2px solid rgba(255,255,255,.25);
+  border-radius:14px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.counterHead{
+  height:46px;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:linear-gradient(180deg, #3f6fae, #1e4e85);
+  border-bottom:2px solid rgba(255,255,255,.25);
+}
+.counterTitle{ font-weight:900; }
+.counterIcon{
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  background:rgba(255,255,255,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.counterBody{
+  flex:1 1 auto;
+  background:#ffffff;
+  color:#1b1b1b;
+  padding:10px;
+}
+.cartRetro{ display:flex; flex-direction:column; gap:8px; }
+.cartItem{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:14px;
+}
+.cartItem .name{ font-weight:700; }
+.cartItem .price{ font-variant-numeric:tabular-nums; }
+.cartEmpty{ color:#666; font-size:13px; }
+
+.counterTotal{
+  height:90px;
+  background:#ffffff;
+  color:#1b1b1b;
+  border-top:2px solid rgba(0,0,0,.12);
+  padding:10px;
+}
+.totalLabel{ font-weight:900; margin-bottom:4px; }
+.totalValue{ font-weight:900; font-size:26px; }
+
+.screenPanel{
+  flex:1 1 auto;
+  background:transparent;
+  border-radius:14px;
+  border:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.screenHead{
+  height:34px;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:linear-gradient(180deg, #6b8fc5, #3f6fae);
+  border-radius:14px 14px 0 0;
+  border:2px solid rgba(255,255,255,.25);
+  border-bottom:0;
+}
+.screenTitle{ font-weight:900; }
+.screenClock{ font-weight:900; }
+
+.screenBody{
+  flex:1 1 auto;
+  border:2px solid rgba(255,255,255,.25);
+  border-top:0;
+  border-bottom:0;
+  background:rgba(0,0,0,.12);
+  padding:20px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+
+.productsRetro{
+  width:100%;
+  max-width:520px;
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:26px 26px;
+  justify-items:center;
+}
+
+.disp{
+  width:110px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+.dispImg{
+  width:96px;
+  height:66px;
+  background:#fff;
+  border:6px solid #111;
+  border-radius:4px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.dispImg img{ width:100%; height:100%; object-fit:contain; }
+.pushBtn{
+  width:62px;
+  height:22px;
+  border-radius:4px;
+  border:2px solid #111;
+  background:#e9e9e9;
+  color:#111;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.screenFoot{
+  height:86px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-end;
+  padding:0 14px 10px 14px;
+  border-radius:0 0 14px 14px;
+  border:2px solid rgba(255,255,255,.25);
+  border-top:0;
+}
+.payBtn{
+  width:170px;
+  height:62px;
+  border-radius:14px;
+  border:2px solid rgba(255,255,255,.35);
+  background:linear-gradient(180deg, #9ad66d, #3c8f2d);
+  color:white;
+  font-weight:900;
+  letter-spacing:.3px;
+  font-size:18px;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+/* Hide the modern UI chrome (still used by other tabs/overlays) */
+.topBar, .tabsTop{ display:none !important; }
 
 .panel{
   border:1px solid var(--border); background:rgba(255,255,255,.03);

@@ -27,7 +27,8 @@ function showApp(){
 
 function applyRoleVisibility(){
   const show = isBoss();
-  const ids = ["tabBtnDay","tabBtnWeek","tabBtnMgmt"];
+  // modern tab buttons removed; keep boss-only visibility via top icon buttons
+  const ids = ["iconBtnShop","iconBtnDay","iconBtnWeek","iconBtnMonth","iconBtnMgmt"];
   ids.forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = show ? "" : "none";
@@ -38,14 +39,15 @@ function openTab(tabId, btn){
   if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week") && !isBoss()){
     alert("Nur Chef.");
     tabId="tab_pos";
-    btn=document.querySelector(".tabsTop .tabTop");
+    btn=null;
   }
 
   document.querySelectorAll(".tabPage").forEach(p=>p.classList.add("hidden"));
   document.getElementById(tabId)?.classList.remove("hidden");
 
+  // legacy tab highlighting (no longer visible)
   document.querySelectorAll(".tabTop").forEach(b=>b.classList.remove("active"));
-  btn?.classList.add("active");
+  btn?.classList?.add("active");
 
   if(tabId==="tab_kitchen") loadKitchen();
   if(tabId==="tab_day") { initDayTab(); loadDayReport(); }
@@ -93,12 +95,26 @@ async function loadMe(){
 }
 
 function updateDayInfo(){
-  const dayInfo = document.getElementById("dayInfo");
-  const who = document.getElementById("whoami");
-  if(dayInfo) dayInfo.innerText = `Tag: ${serverDay||"—"} · Uhrzeit: ${new Date().toLocaleTimeString("de-DE")}`;
-  if(who) who.innerText = me ? `${me.displayName} (${me.role})` : "Nicht eingeloggt";
+  const clock = document.getElementById("clockDisplay");
+  const screenTitle = document.getElementById("screenTitle");
+  const counterTitle = document.getElementById("counterTitle");
+
+  // Vorlage nutzt ein 12h-ähnliches Format ("11:25 AM")
+  if(clock){
+    clock.innerText = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  }
+  if(screenTitle) screenTitle.innerText = currentCategory || "—";
+  if(counterTitle){
+    const short = (me?.displayName || "").trim().split(/\s+/)[0] || "";
+    counterTitle.innerText = short ? `Counter ${short}.` : "Counter";
+  }
 }
 setInterval(updateDayInfo, 1000);
+
+function activateRegBtn(btn){
+  document.querySelectorAll('.regBtn').forEach(b=>b.classList.remove('active'));
+  btn?.classList?.add('active');
+}
 
 /* Products */
 const PRODUCTS_DEFAULT = [
@@ -290,21 +306,80 @@ function mgmtResetProducts(){
 
 function setCategory(cat, btn){
   currentCategory=cat;
-  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+  document.querySelectorAll(".catBtn").forEach(b=>b.classList.remove("active"));
+  if(btn){
+    btn.classList.add("active");
+  }else{
+    // best-effort: activate matching category button
+    const match = Array.from(document.querySelectorAll('.catBtn')).find(b=> (b?.textContent||'').toLowerCase().includes(cat.toLowerCase().slice(0,3)));
+    match?.classList?.add('active');
+  }
+  const title = document.getElementById('screenTitle');
+  if(title) title.innerText = cat;
   renderProducts();
 }
+
+const PRODUCT_ICON = {
+  "The Bleeder": "burgershot_the_bleeder.png",
+  "The Heartstopper": "burgershot_heartstopper.png",
+  "The Chicken": "burgershot_the_chicken.png",
+  "Vegan Burger": "burger_the_vegan.png",
+  "The Chozzo": "burgershot_the_chozzo.png",
+  "The German": "burgershot_the_german.png",
+  "Coleslaw": "coleslaw.png",
+  "Fries": "burgershot_fries.png",
+  "Cheesy Fries": "burgershot_cheese_fries.png",
+  "Chicken Nuggets": "burgershot_nuggets.png",
+  "Onion Rings": "burgershot_onion_rings.png",
+  "ECola": "ECola.PNG",
+  "Sprung": "sprunk.jpeg",
+  "Blueberry Slush": "blueberry_slush.png",
+  "Strawberry Slush": "strawberry_slush.png",
+  "Choco Milchshake": "choco_milkshake.png",
+  "Vanille Milchshake": "vanille_milkshake.png",
+  "Strawberry Milchshake": "strawberry_milkshake.png",
+  "Glazed Donut": "burgershot_donut.png",
+  "Sprinke Donut": "burgershot_donut.png",
+  "Caramel Sundae": "burgershot_sunday_caramel.png",
+  "Chocolate Sundae": "burgershot_sunday_chocolate.png",
+  "Strawberry Sundae": "burgershot_sunday_strawberry.png",
+};
 
 function renderProducts(){
   const box=document.getElementById("products");
   if(!box) return;
   box.innerHTML="";
-  PRODUCTS.filter(p=>p.cat===currentCategory).forEach(p=>{
-    const el=document.createElement("button");
-    el.className="productBtn";
-    el.innerHTML=`<div style="font-weight:900;">${esc(p.name)}</div><div class="muted small">${money(p.price)}</div>`;
-    el.onclick=()=>addToCart(p);
-    box.appendChild(el);
+  const list = PRODUCTS.filter(p=>p.cat===currentCategory);
+  list.forEach(p=>{
+    const wrap=document.createElement("div");
+    wrap.className="disp";
+
+    const imgWrap=document.createElement("div");
+    imgWrap.className="dispImg";
+    const img=document.createElement("img");
+    const icon = PRODUCT_ICON[p.name];
+    img.src = icon ? `/icons/${icon}` : "";
+    img.alt = p.name;
+    if(!icon){
+      img.style.display='none';
+      imgWrap.textContent = p.name;
+      imgWrap.style.fontSize='11px';
+      imgWrap.style.fontWeight='900';
+      imgWrap.style.padding='6px';
+      imgWrap.style.textAlign='center';
+      imgWrap.style.lineHeight='12px';
+    }else{
+      imgWrap.appendChild(img);
+    }
+
+    const push=document.createElement("button");
+    push.className="pushBtn";
+    push.textContent="PUSH";
+    push.onclick=()=>addToCart(p);
+
+    wrap.appendChild(imgWrap);
+    wrap.appendChild(push);
+    box.appendChild(wrap);
   });
 }
 
@@ -325,12 +400,14 @@ function renderCart(){
   const tot=document.getElementById("cartTotal");
   if(tot) tot.innerText=money(cartTotal());
   if(!box) return;
-  if(cart.length===0){ box.innerHTML=`<div class="muted small">Leer.</div>`; return; }
+  if(cart.length===0){ box.innerHTML=`<div class="cartEmpty">Leer.</div>`; return; }
   box.innerHTML=cart.map((x,idx)=>`
-    <div class="cartRow">
-      <div style="font-weight:900;">${esc(x.name)}</div>
-      <div class="muted small">${money(x.price)}</div>
-      <button class="ghost" onclick="removeItem(${idx})">x</button>
+    <div class="cartItem">
+      <div class="name">${esc(x.name)}</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="price">${money(x.price)}</div>
+        <button class="pushBtn" style="width:26px; height:22px;" onclick="removeItem(${idx})">x</button>
+      </div>
     </div>`).join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); }

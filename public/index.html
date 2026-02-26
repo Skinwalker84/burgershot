@@ -38,74 +38,95 @@
   <!-- ===== APP (Hidden until logged in) ===== -->
   <div id="appRoot" class="appRoot hidden">
 
-    <div class="topBar">
-      <div class="brandLeft">
-        <div class="brandDot"></div>
-        <div class="brandText">
-          <div class="brandName">Burger Shot</div>
-          <div class="muted small" id="dayInfo">Tag: — · Uhrzeit: —</div>
+    <!-- ===== RETRO TOP BAR (matches Vorlage) ===== -->
+    <div class="retroTop">
+      <div class="retroLeft">
+        <div class="registerBar" aria-label="Kassen">
+          <button class="regBtn active" onclick="setRegister(1); activateRegBtn(this)">
+            <img src="/icons/kasse.png" alt="Kasse" />
+            <span class="regNo">1</span>
+          </button>
+          <button class="regBtn" onclick="setRegister(2); activateRegBtn(this)">
+            <img src="/icons/kasse.png" alt="Kasse" />
+            <span class="regNo">2</span>
+          </button>
+          <button class="regBtn" onclick="setRegister(3); activateRegBtn(this)">
+            <img src="/icons/kasse.png" alt="Kasse" />
+            <span class="regNo">3</span>
+          </button>
+          <button class="regBtn" onclick="setRegister(4); activateRegBtn(this)">
+            <img src="/icons/kasse.png" alt="Kasse" />
+            <span class="regNo">4</span>
+          </button>
+        </div>
+
+        <div class="catBar" aria-label="Kategorien">
+          <button class="catBtn active" onclick="setCategory('Burger', this)">BURGER</button>
+          <button class="catBtn" onclick="setCategory('Beilagen', this)">SIDES</button>
+          <button class="catBtn" onclick="setCategory('Süßes', this)">DESSERT</button>
+          <button class="catBtn" onclick="setCategory('Getränke', this)">DRINKS</button>
+          <button class="catBtn" onclick="setCategory('Menü', this)">MENÜ</button>
         </div>
       </div>
 
-      <div class="topRight">
-        <div class="muted small" id="whoami">Nicht eingeloggt</div>
-        <button class="ghost" onclick="openPwChange()">Passwort ändern</button>
-        <button class="ghost" onclick="logout()">Logout</button>
-      </div>
-    </div>
+      <div class="retroRight">
+        <button class="iconBtn" onclick="openTab('tab_mgmt', null)" id="iconBtnShop" title="Einkauf">
+          <img src="/icons/einkauf.png" alt="Einkauf" />
+          <span>Einkauf</span>
+        </button>
 
-    <!-- Tabs -->
-    <div class="tabsTop">
-      <button class="tabTop active" onclick="openTab('tab_pos', this)">Kasse</button>
-      <button class="tabTop" onclick="openTab('tab_kitchen', this)">Küche</button>
-      <button class="tabTop" id="tabBtnDay" onclick="openTab('tab_day', this)">Tagesabrechnung</button>
-      <button class="tabTop" id="tabBtnWeek" onclick="openTab('tab_week', this)">Wochenabrechnung</button>
-      <button class="tabTop" id="tabBtnMgmt" onclick="openTab('tab_mgmt', this)">Management</button>
+        <button class="iconBtn" onclick="openTab('tab_day', null)" id="iconBtnDay" title="Tag">
+          <img src="/icons/tagesabrechnung.png" alt="Tag" />
+          <span>Tag</span>
+        </button>
+
+        <button class="iconBtn" onclick="openTab('tab_week', null)" id="iconBtnWeek" title="Woche">
+          <img src="/icons/wochenabrechnung.png" alt="Woche" />
+          <span>Woche</span>
+        </button>
+
+        <button class="iconBtn" onclick="openTab('tab_week', null)" id="iconBtnMonth" title="Monat">
+          <img src="/icons/monatsabrechnung.png" alt="Monat" />
+          <span>Monat</span>
+        </button>
+
+        <button class="iconBtn" onclick="openTab('tab_mgmt', null)" id="iconBtnMgmt" title="Management">
+          <img src="/icons/managment.png" alt="Management" />
+        </button>
+
+        <button class="logoutBtn" onclick="logout()">LOGOUT</button>
+      </div>
     </div>
 
     <!-- ===== TAB: POS ===== -->
     <div id="tab_pos" class="tabPage">
-      <div class="pos">
-        <div class="panel posLeft">
-          <div class="row">
-            <div class="muted small">Register</div>
-            <div class="muted small" id="registerDisplay">Kasse 1</div>
+      <div class="posRetro">
+        <!-- LEFT: CART / COUNTER -->
+        <div class="counterPanel">
+          <div class="counterHead">
+            <div class="counterTitle" id="counterTitle">Counter</div>
+            <div class="counterIcon" aria-hidden="true">🍴</div>
           </div>
-
-          <div class="row" style="gap:10px; justify-content:flex-start; flex-wrap:wrap;">
-            <button class="ghost" onclick="setRegister(1)">Kasse 1</button>
-            <button class="ghost" onclick="setRegister(2)">Kasse 2</button>
-            <button class="ghost" onclick="setRegister(3)">Kasse 3</button>
+          <div class="counterBody">
+            <div id="cart" class="cartRetro"></div>
           </div>
-
-          <div class="row" style="margin-top:12px;">
-            <button class="tab active" onclick="setCategory('Burger', this)">Burger</button>
-            <button class="tab" onclick="setCategory('Beilagen', this)">Beilagen</button>
-            <button class="tab" onclick="setCategory('Getränke', this)">Getränke</button>
-            <button class="tab" onclick="setCategory('Süßes', this)">Süßes</button>
-            <button class="tab" onclick="setCategory('Menü', this)">Menü</button>
+          <div class="counterTotal">
+            <div class="totalLabel">Total</div>
+            <div class="totalValue" id="cartTotal">$0</div>
           </div>
-
-          <div id="products" class="products" style="margin-top:12px;"></div>
         </div>
 
-        <div class="panel posRight">
-          <div class="row" style="justify-content:space-between;">
-            <div style="font-weight:900;">Warenkorb</div>
-            <button class="ghost" onclick="clearCart()">Leeren</button>
+        <!-- RIGHT: PRODUCTS -->
+        <div class="screenPanel">
+          <div class="screenHead">
+            <div class="screenTitle" id="screenTitle">Getränke</div>
+            <div class="screenClock" id="clockDisplay">—</div>
           </div>
-
-          <div id="cart" class="cart" style="margin-top:12px;"></div>
-
-          <div class="row" style="margin-top:12px;">
-            <div class="muted small">Total</div>
-            <div style="font-weight:900; font-size:22px;" id="cartTotal">$0</div>
+          <div class="screenBody">
+            <div id="products" class="productsRetro"></div>
           </div>
-
-          <button class="primary" style="margin-top:12px; width:100%;" onclick="openPay()">Bezahlen</button>
-
-          <div class="muted small" style="margin-top:10px;">
-            Tipp: Trinkgeld = bezahlter Betrag − Total.
+          <div class="screenFoot">
+            <button class="payBtn" onclick="openPay()">BEZAHLEN</button>
           </div>
         </div>
       </div>
