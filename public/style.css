@@ -31,6 +31,8 @@ body{
   margin:0 auto;
   display:flex;
   flex-direction:column;
+  /* IMPORTANT (mobile): don't let flexbox shrink the top bars when content grows */
+  overflow:hidden;
 }
 
 /* brand header above the retro top bar */
@@ -40,6 +42,7 @@ body{
   justify-content:center;
   gap:12px;
   padding:10px 12px 6px 12px;
+  flex:0 0 auto;
 }
 .brandLogo{ height:34px; width:auto; object-fit:contain; filter:drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
 .brandText{
@@ -75,7 +78,14 @@ body{
 .tabTop:hover{ transform:translateY(-1px); }
 .tabTop.active{ background:rgba(59,130,246,.18); border-color:rgba(59,130,246,.35); }
 
-.tabPage{ margin-top:0; flex:1 1 auto; }
+/* Let the main page scroll instead of shrinking header rows */
+.tabPage{
+  margin-top:0;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
 
 /* =========================
    RETRO POS (Vorlage Look)
@@ -96,6 +106,7 @@ body{
   row-gap:8px;
   background:linear-gradient(180deg, var(--chrome1), var(--chrome2));
   border-bottom:1px solid rgba(255,255,255,.25);
+  flex:0 0 auto;
 }
 .registerBar{ grid-area:regs; }
 .catBar{ grid-area:cats; }
@@ -567,8 +578,8 @@ select.input{ appearance:none; -webkit-appearance:none; }
   .loginCard, .loginCardWide{ width:min(420px, 92vw) !important; margin-left:auto; margin-right:auto; }
 
   /* Mobile should feel like an app: compact sticky header + horizontal scrollers */
-  /* Make the whole app scroll on mobile so sticky headers behave correctly */
-  .appRoot{ overflow:auto; }
+  /* On mobile: keep headers fixed height; scroll happens inside the active page (tabPage) */
+  .appRoot{ overflow:hidden; height:100dvh; }
   .posRetro{ overflow:visible; }
 
   .brandHeader{
@@ -582,22 +593,26 @@ select.input{ appearance:none; -webkit-appearance:none; }
   }
   .brandText{ font-size:18px; }
 
+  /*
+    IMPORTANT:
+    Some mobile browsers (esp. Chrome/Android) can temporarily "compress" grid
+    rows during layout reflow when large content below changes height (e.g. when
+    products render). Switching the mobile topbar layout to a simple flex-column
+    eliminates that squish/overlap.
+  */
   .retroTop{
     position:sticky;
-    /* stick under the brand header to avoid overlapping */
     top:var(--mobileBrandH);
     z-index:25;
-    display:grid;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "regs"
-      "actions"
-      "cats";
+    display:flex;
+    flex-direction:column;
     align-items:stretch;
-    row-gap:8px;
+    gap:8px;
     padding:8px 10px;
     overflow:visible;
-    background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+    /* solid-ish chrome so rows don't visually blend */
+    background:linear-gradient(180deg, var(--chrome1), var(--chrome2));
+    border-bottom:1px solid rgba(255,255,255,.25);
   }
 
   /* Make each row take full width so horizontal scrolling can work */
@@ -605,7 +620,7 @@ select.input{ appearance:none; -webkit-appearance:none; }
   .retroRight,
   .catBar{
     width:100%;
-    justify-self:stretch;
+    flex:0 0 auto;
   }
   /* On mobile we want the action row to start on the left and scroll horizontally */
   .retroRight{ justify-content:flex-start; }
@@ -677,7 +692,8 @@ select.input{ appearance:none; -webkit-appearance:none; }
     flex-direction:column;
     gap:10px;
     padding:10px;
-    overflow:auto;
+    overflow:visible;
+    min-height:0;
   }
 
   .counterPanel{ width:100%; }
