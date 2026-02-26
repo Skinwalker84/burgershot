@@ -207,6 +207,9 @@ function makeFreshDB() {
     // Lagerbestand (Chef)
     inventory: [],
 
+    // Einkäufe (Chef) – Bewegungslog / Historie
+    purchases: [],
+
     salesByDay: { [today]: [] },
     kitchenByDay: { [today]: { pending: [], done: [] } },
     closedDays: {}
@@ -286,9 +289,13 @@ function normalizeDB(db) {
   if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
 
   if (!Array.isArray(db.inventory)) db.inventory = [];
+  if (!Array.isArray(db.purchases)) db.purchases = [];
 
   db.products = normalizeProducts(db.products);
   db.inventory = normalizeInventory(db.inventory);
+
+  // purchases: keep simple array of objects
+  db.purchases = (Array.isArray(db.purchases) ? db.purchases : []).filter(x => x && typeof x === "object");
 
   const day = db.meta.currentDay;
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
@@ -542,6 +549,132 @@ app.delete("/inventory/:id", requireAuth, requireBoss, (req, res) => {
   saveDB(db);
   if(db.inventory.length === before) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
   res.json({ success:true, items: db.inventory });
+});
+
+/* =========================
+   EINKAUF -> LAGER (Chef)
+   ========================= */
+
+function makePurchaseId(){
+  return crypto.randomBytes(10).toString("hex");
+}
+
+app.get("/purchases", requireAuth, requireBoss, (req, res) => {
+  const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+  const list = (db.purchases || []).slice().reverse().slice(0, limit);
+  res.json({ success:true, items: list });
+});
+
+// Body:
+//   Single: { inventoryId, qty, price?, note?, date? (YYYY-MM-DD) }
+//   Batch:  { items: [{ inventoryId, qty, price?, note? }...], note?, date? (YYYY-MM-DD) }
+app.post("/purchases", requireAuth, requireBoss, (req, res) => {
+  const body = req.body || {};
+
+  const nowIso = new Date().toISOString();
+  const by = req.user?.username || null;
+
+  let date = String(body.date || "").trim();
+  if(date){
+    const dt = parseDateYYYYMMDD(date);
+    if(!dt) return res.status(400).json({ success:false, message:"Ungültiges Datum." });
+    date = getDayKeyLocal(dt);
+  } else {
+    date = getDayKeyLocal(new Date());
+  }
+
+  const globalNote = String(body.note || "").trim();
+  const added = [];
+
+  // Batch mode
+  if(Array.isArray(body.items)){
+    const items = body.items.filter(x => x && typeof x === "object");
+    if(items.length === 0) return res.status(400).json({ success:false, message:"Keine Positionen." });
+
+    for(const row of items){
+      const inventoryId = String(row.inventoryId || row.id || "").trim();
+      let qty = Number(row.qty);
+      if(!inventoryId) continue;
+      if(!Number.isFinite(qty) || qty <= 0) continue;
+      qty = Math.round(qty * 100) / 100;
+
+      const it = (db.inventory || []).find(x => x.id === inventoryId);
+      if(!it) continue;
+
+      let price = Number(row.price);
+      if(!Number.isFinite(price) || price < 0) price = null;
+      else price = Math.round(price * 100) / 100;
+
+      const note = String(row.note || globalNote || "").trim();
+
+      const next = Math.max(0, (Number(it.stock) || 0) + qty);
+      it.stock = Math.round(next * 100) / 100;
+      it.updatedAt = nowIso;
+
+      const p = {
+        id: makePurchaseId(),
+        ts: nowIso,
+        date,
+        inventoryId: it.id,
+        name: it.name,
+        unit: it.unit,
+        qty,
+        price,
+        note,
+        by
+      };
+      added.push(p);
+    }
+
+    if(added.length === 0) return res.status(400).json({ success:false, message:"Keine gültigen Positionen." });
+
+    db.inventory = normalizeInventory(db.inventory);
+    if(!Array.isArray(db.purchases)) db.purchases = [];
+    db.purchases.push(...added);
+    if(db.purchases.length > 5000) db.purchases = db.purchases.slice(-5000);
+
+    saveDB(db);
+    return res.json({ success:true, added: added.length, items: db.inventory });
+  }
+
+  // Single mode (legacy)
+  const inventoryId = String(body.inventoryId || body.id || "").trim();
+  let qty = Number(body.qty);
+  if(!inventoryId) return res.status(400).json({ success:false, message:"Artikel fehlt." });
+  if(!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ success:false, message:"Menge muss > 0 sein." });
+  qty = Math.round(qty * 100) / 100;
+
+  const it = (db.inventory || []).find(x => x.id === inventoryId);
+  if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
+
+  let price = Number(body.price);
+  if(!Number.isFinite(price) || price < 0) price = null;
+  else price = Math.round(price * 100) / 100;
+  const note = String(body.note || "").trim();
+
+  const next = Math.max(0, (Number(it.stock) || 0) + qty);
+  it.stock = Math.round(next * 100) / 100;
+  it.updatedAt = nowIso;
+  db.inventory = normalizeInventory(db.inventory);
+
+  const p = {
+    id: makePurchaseId(),
+    ts: nowIso,
+    date,
+    inventoryId: it.id,
+    name: it.name,
+    unit: it.unit,
+    qty,
+    price,
+    note,
+    by
+  };
+  if(!Array.isArray(db.purchases)) db.purchases = [];
+  db.purchases.push(p);
+  if(db.purchases.length > 5000) db.purchases = db.purchases.slice(-5000);
+
+  saveDB(db);
+  res.json({ success:true, purchase: p, items: db.inventory });
 });
 
 /* =========================

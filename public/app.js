@@ -40,7 +40,7 @@ function applyRoleVisibility(){
 }
 
 function openTab(tabId, btn){
-  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month"||tabId==="tab_stock") && !isBoss()){
+  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month"||tabId==="tab_stock"||tabId==="tab_shop") && !isBoss()){
     alert("Nur Chef.");
     tabId="tab_pos";
     btn=null;
@@ -59,7 +59,94 @@ function openTab(tabId, btn){
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
-  if(tabId==="tab_mgmt") refreshStats();
+  if(tabId==="tab_shop") { loadShopTab(); }
+  if(tabId==="tab_mgmt") { refreshStats(); initPurchaseUI(); }
+}
+
+/* =========================
+   EINKAUF TAB (Batch)
+   ========================= */
+
+async function loadShopTab(){
+  if(!isBoss()) return;
+  const d = document.getElementById("shopDate");
+  if(d && !d.value) d.value = new Date().toISOString().slice(0,10);
+
+  await ensureInventoryLoadedForPurchase();
+  renderShopTable();
+}
+
+function renderShopTable(){
+  const body = document.getElementById("shopBody");
+  const msg = document.getElementById("shopMsg");
+  if(msg) msg.innerText = "—";
+  if(!body) return;
+
+  if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
+    body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Lager-Artikel. Lege sie im Lagerbestand an.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = inventoryItems.map(it=>{
+    const isLow = Number(it.stock) <= Number(it.minStock);
+    return `
+      <tr class="${isLow ? "lowRow" : ""}">
+        <td><b>${esc(it.name)}</b></td>
+        <td>${esc(it.unit||"Stk")}</td>
+        <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
+        <td style="text-align:right;">${num(it.minStock)}</td>
+        <td style="text-align:right;">
+          <input class="input shopQty" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0" style="width:140px; text-align:right;" />
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function bookShopPurchases(){
+  if(!isBoss()) return alert("Nur Chef.");
+  const msg = document.getElementById("shopMsg");
+  const date = document.getElementById("shopDate")?.value || "";
+
+  const inputs = Array.from(document.querySelectorAll(".shopQty"));
+  const items = inputs.map(inp=>{
+    const id = inp.getAttribute("data-id") || "";
+    const qty = Number(inp.value);
+    if(!id) return null;
+    if(!Number.isFinite(qty) || qty<=0) return null;
+    return { inventoryId: id, qty };
+  }).filter(Boolean);
+
+  if(items.length===0){
+    if(msg) msg.innerText = "Bitte mindestens eine Menge eintragen.";
+    return;
+  }
+
+  if(msg) msg.innerText = "Buche Einkauf…";
+  const payload = { date: date || undefined, items };
+  const res = await fetch("/purchases", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  }).catch(()=>null);
+  const data = res ? await res.json().catch(()=>({})) : {};
+  if(!res || !res.ok || !data.success){
+    if(msg) msg.innerText = data.message || "Fehler beim Buchen.";
+    return;
+  }
+
+  inventoryItems = Array.isArray(data.items) ? data.items : inventoryItems;
+  // Clear inputs
+  inputs.forEach(i=>{ i.value = ""; });
+  renderShopTable();
+
+  // Keep Lager tab in sync if open
+  if(!document.getElementById("tab_stock")?.classList.contains("hidden")){
+    renderInventory();
+  }
+
+  const added = Number(data.added) || items.length;
+  if(msg) msg.innerText = `Gebucht ✅ ${added} Position${added===1?"":"en"} ins Lager übernommen.`;
 }
 
 /* =========================
@@ -80,10 +167,133 @@ async function loadInventory(){
   renderInventory();
 }
 
+/* =========================
+   EINKAUF -> LAGER (Chef)
+   ========================= */
+
+async function initPurchaseUI(){
+  if(!isBoss()) return;
+  const d = document.getElementById("purchaseDate");
+  if(d && !d.value){
+    d.value = new Date().toISOString().slice(0,10);
+  }
+  await ensureInventoryLoadedForPurchase();
+  renderPurchaseSelect();
+  await loadPurchases();
+}
+
+async function ensureInventoryLoadedForPurchase(){
+  if(Array.isArray(inventoryItems) && inventoryItems.length) return;
+  const res = await fetch("/inventory").catch(()=>null);
+  const data = res ? await res.json().catch(()=>({})) : {};
+  if(res && res.ok && data.success){
+    inventoryItems = Array.isArray(data.items) ? data.items : [];
+  }
+}
+
+function renderPurchaseSelect(){
+  const sel = document.getElementById("purchaseItem");
+  if(!sel) return;
+  if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
+    sel.innerHTML = `<option value="">(keine Lager-Artikel angelegt)</option>`;
+    return;
+  }
+  const cur = sel.value;
+  sel.innerHTML = inventoryItems.map(it=>`<option value="${escAttr(it.id)}">${esc(it.name)} (${num(it.stock)} ${esc(it.unit||"")})</option>`).join("");
+  if(cur && inventoryItems.some(x=>x.id===cur)) sel.value = cur;
+}
+
+async function loadPurchases(){
+  const body = document.getElementById("purchasesBody");
+  if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Lade…</td></tr>`;
+  const res = await fetch("/purchases?limit=25").catch(()=>null);
+  const data = res ? await res.json().catch(()=>({})) : {};
+  if(!res || !res.ok || !data.success){
+    if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Fehler beim Laden.</td></tr>`;
+    return;
+  }
+  const items = Array.isArray(data.items) ? data.items : [];
+  renderPurchases(items);
+}
+
+function renderPurchases(items){
+  const body = document.getElementById("purchasesBody");
+  if(!body) return;
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Einkäufe gebucht.</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(p=>{
+    const price = (p.price===null || p.price===undefined) ? "—" : num(p.price);
+    return `
+      <tr>
+        <td>${esc(p.date || "")}</td>
+        <td><b>${esc(p.name || "")}</b><div class="muted small">${esc(p.unit || "")}</div></td>
+        <td style="text-align:right; font-weight:900;">${num(p.qty)}</td>
+        <td style="text-align:right;">${price}</td>
+        <td>${esc(p.note || "")}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function bookPurchase(){
+  if(!isBoss()) return alert("Nur Chef.");
+  const msg = document.getElementById("purchaseMsg");
+  const date = document.getElementById("purchaseDate")?.value || "";
+  const inventoryId = document.getElementById("purchaseItem")?.value || "";
+  const qty = Number(document.getElementById("purchaseQty")?.value);
+  const priceRaw = document.getElementById("purchasePrice")?.value;
+  const note = document.getElementById("purchaseNote")?.value || "";
+
+  if(!inventoryId) { if(msg) msg.innerText="Bitte Artikel wählen."; return; }
+  if(!Number.isFinite(qty) || qty<=0){ if(msg) msg.innerText="Menge muss > 0 sein."; return; }
+
+  const payload = {
+    inventoryId,
+    qty,
+    date: date || undefined,
+    note: note || undefined
+  };
+  const price = Number(priceRaw);
+  if(Number.isFinite(price) && price>=0) payload.price = price;
+
+  if(msg) msg.innerText = "Buche…";
+  const res = await fetch("/purchases", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  }).catch(()=>null);
+  const data = res ? await res.json().catch(()=>({})) : {};
+  if(!res || !res.ok || !data.success){
+    if(msg) msg.innerText = data.message || "Fehler beim Buchen.";
+    return;
+  }
+
+  inventoryItems = Array.isArray(data.items) ? data.items : inventoryItems;
+  renderPurchaseSelect();
+  // if stock tab is currently visible, refresh table too
+  if(!document.getElementById("tab_stock")?.classList.contains("hidden")){
+    renderInventory();
+  }
+  // clear inputs
+  const qEl = document.getElementById("purchaseQty");
+  const pEl = document.getElementById("purchasePrice");
+  const nEl = document.getElementById("purchaseNote");
+  if(qEl) qEl.value = "";
+  if(pEl) pEl.value = "";
+  if(nEl) nEl.value = "";
+  if(msg) msg.innerText = "Gebucht ✅ Lagerbestand erhöht.";
+  await loadPurchases();
+}
+
 function renderInventory(){
   const body = document.getElementById("inventoryBody");
   const lowBox = document.getElementById("inventoryLowList");
   if(!body) return;
+
+  // keep Einkauf-Dropdown in sync (if present)
+  try { renderPurchaseSelect(); } catch {}
 
   if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
     body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Artikel. Klicke auf „+ Artikel“.</td></tr>`;

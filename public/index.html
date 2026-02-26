@@ -78,7 +78,7 @@
           <span>Küche</span>
         </button>
 
-        <button class="iconBtn" onclick="openTab('tab_mgmt', null)" id="iconBtnShop" title="Einkauf">
+        <button class="iconBtn" onclick="openTab('tab_shop', null)" id="iconBtnShop" title="Einkauf">
           <img src="/icons/einkauf.png" alt="Einkauf" />
           <span>Einkauf</span>
         </button>
@@ -374,6 +374,48 @@
       </div>
     </div>
 
+    <!-- ===== TAB: EINKAUF ===== -->
+    <div id="tab_shop" class="tabPage hidden">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Einkaufen</div>
+            <div class="muted small">Chef only · Mengen eintragen und als Einkauf buchen</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="ghost" onclick="loadShopTab()">Refresh</button>
+            <button class="primary" onclick="bookShopPurchases()">Einkauf buchen</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div class="muted small">Datum</div>
+            <input id="shopDate" class="input" type="date" style="width:180px;" />
+          </div>
+          <div class="muted small" id="shopMsg" style="margin-left:auto;">—</div>
+        </div>
+
+        <div class="panel" style="margin-top:14px; overflow:auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Artikel</th>
+                <th>Einheit</th>
+                <th style="text-align:right;">Bestand</th>
+                <th style="text-align:right;">Mindest</th>
+                <th style="text-align:right; width:160px;">Menge einkaufen</th>
+              </tr>
+            </thead>
+            <tbody id="shopBody"></tbody>
+          </table>
+        </div>
+
+        <div class="muted small" style="margin-top:10px;">Tipp: Trage nur Mengen ein, die du wirklich gekauft hast. Leere Felder werden ignoriert.</div>
+      </div>
+    </div>
+
     <!-- ===== TAB: MANAGEMENT ===== -->
     <div id="tab_mgmt" class="tabPage hidden">
       <div class="panel">
@@ -385,6 +427,62 @@
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="ghost" onclick="refreshStats()">Refresh</button>
             <button class="ghost" onclick="resetToday()">Reset heute</button>
+          </div>
+        </div>
+
+        <!-- Einkauf -> Lager (Buchung) -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:900;">Einkauf buchen</div>
+              <div class="muted small">Erhöht automatisch den Lagerbestand.</div>
+            </div>
+            <div class="muted small" id="purchaseMsg">—</div>
+          </div>
+
+          <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div class="muted small">Datum</div>
+              <input id="purchaseDate" class="input" type="date" style="width:180px;" />
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px; min-width:240px; flex:1 1 240px;">
+              <div class="muted small">Artikel</div>
+              <select id="purchaseItem" class="input"></select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px; width:140px;">
+              <div class="muted small">Menge</div>
+              <input id="purchaseQty" class="input" type="number" step="0.01" min="0" placeholder="z.B. 10" />
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px; width:160px;">
+              <div class="muted small">Preis (optional)</div>
+              <input id="purchasePrice" class="input" type="number" step="0.01" min="0" placeholder="z.B. 49.99" />
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px; min-width:220px; flex:1 1 220px;">
+              <div class="muted small">Notiz (optional)</div>
+              <input id="purchaseNote" class="input" placeholder="z.B. Metro Rechnung" />
+            </div>
+
+            <button class="primary" onclick="bookPurchase()">Buchen</button>
+          </div>
+
+          <div class="panel" style="margin-top:12px; overflow:auto;">
+            <div style="font-weight:900; margin-bottom:8px;">Letzte Einkäufe</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Artikel</th>
+                  <th style="text-align:right;">Menge</th>
+                  <th style="text-align:right;">Preis</th>
+                  <th>Notiz</th>
+                </tr>
+              </thead>
+              <tbody id="purchasesBody"></tbody>
+            </table>
           </div>
         </div>
 
