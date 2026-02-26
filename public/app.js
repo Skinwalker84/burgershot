@@ -5,7 +5,17 @@ let currentCategory = "Burger";
 let me = null;
 let serverDay = null;
 
-let cart = [];
+
+// Warenkorb pro Kasse
+let cartsByRegister = { 1: [], 2: [], 3: [], 4: [] };
+let cart = cartsByRegister[currentRegister]; // Alias auf aktuell aktive Kasse
+
+function switchCartToRegister(n){
+  const key = Number(n);
+  if(!cartsByRegister[key]) cartsByRegister[key] = [];
+  cart = cartsByRegister[key];
+}
+
 let currentDayReport = null;
 let currentWeekReport = null;
 let currentMonthReport = null;
@@ -425,6 +435,7 @@ async function login(){
   showApp();
   applyRoleVisibility();
   await initProducts();
+  switchCartToRegister(currentRegister);
   renderCart();
   updateDayInfo();
 }
@@ -445,6 +456,7 @@ async function loadMe(){
   showApp();
   applyRoleVisibility();
   await initProducts();
+  switchCartToRegister(currentRegister);
   renderCart();
   updateDayInfo();
 }
@@ -508,6 +520,37 @@ function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
 const PRODUCTS_STORAGE_KEY = "bs_products_v2";
+
+/* Persist carts per register (local, optional) */
+const CARTS_STORAGE_KEY = "bs_carts_by_register_v1";
+
+function loadCartsFromStorage(){
+  try{
+    const raw = localStorage.getItem(CARTS_STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed!=="object") return;
+    for(const k of Object.keys(parsed)){
+      const n = Number(k);
+      if(!Number.isFinite(n)) continue;
+      const list = parsed[k];
+      if(Array.isArray(list)){
+        // sanitize
+        cartsByRegister[n] = list.filter(x=>x && typeof x==="object").map(x=>({
+          name: String(x.name||""),
+          price: Number(x.price)||0,
+          qty: Number(x.qty)||1
+        }));
+      }
+    }
+  }catch{}
+}
+function saveCartsToStorage(){
+  try{
+    localStorage.setItem(CARTS_STORAGE_KEY, JSON.stringify(cartsByRegister));
+  }catch{}
+}
+
 
 function loadProductsFromStorage(){
   try{
@@ -866,8 +909,9 @@ function addToCart(p){
   }
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
+  saveCartsToStorage();
 }
-function clearCart(){ cart=[]; renderCart(); }
+function clearCart(){ cartsByRegister[currentRegister] = []; switchCartToRegister(currentRegister); renderCart(); saveCartsToStorage(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
 function renderCart(){
@@ -884,8 +928,9 @@ function renderCart(){
         <button class="pushBtn" style="width:26px; height:22px;" onclick="removeItem(${idx})">x</button>
       </div>
     </div>`).join("");
+  saveCartsToStorage();
 }
-function removeItem(idx){ cart.splice(idx,1); renderCart(); }
+function removeItem(idx){ cart.splice(idx,1); renderCart(); saveCartsToStorage(); }
 
 // Mobile UX: collapse/expand cart panel
 function toggleCart(){
@@ -895,7 +940,14 @@ function toggleCart(){
 }
 
 /* Register */
-function setRegister(n){ currentRegister=n; const d=document.getElementById("registerDisplay"); if(d) d.innerText=`Kasse ${n}`; }
+function setRegister(n){
+  currentRegister = Number(n)||1;
+  const d=document.getElementById("registerDisplay");
+  if(d) d.innerText=`Kasse ${currentRegister}`;
+  switchCartToRegister(currentRegister);
+  renderCart();
+  saveCartsToStorage();
+}`; }
 
 /* Pay overlay */
 
@@ -952,6 +1004,7 @@ function confirmMenuBuilder(){
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
   renderCart();
+  saveCartsToStorage();
 }
 
 function openPay(){
@@ -979,7 +1032,7 @@ async function submitPay(){
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Speichern.");
   closePay();
   alert(`Order #${data.orderId} gespeichert. Trinkgeld: ${money(data.tip||0)}`);
-  cart=[]; renderCart();
+  cartsByRegister[currentRegister] = []; switchCartToRegister(currentRegister); renderCart(); saveCartsToStorage();
 }
 
 function slugify(s){
@@ -1437,4 +1490,6 @@ function currentISOYMString(d){
 }
 
 /* Boot */
+loadCartsFromStorage();
+switchCartToRegister(currentRegister);
 loadMe();
