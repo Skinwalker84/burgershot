@@ -60,7 +60,11 @@ function openTab(tabId, btn){
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_shop") { loadShopTab(); }
-  if(tabId==="tab_mgmt") { refreshStats(); initPurchaseUI(); }
+  if(tabId==="tab_mgmt") {
+    // Management: only Mitarbeiter + VK-Preise
+    loadUsers();
+    mgmtReloadProducts();
+  }
 }
 
 /* =========================
