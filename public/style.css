@@ -749,3 +749,12 @@ select.input{ appearance:none; -webkit-appearance:none; }
   .panel{ box-shadow:none !important; border-color:#ccc !important; }
   .tabPage.hidden{ display:none !important; }
 }
+
+
+/* Active Register Highlight */
+.registerBtn.active {
+    background-color: #ffcc00 !important;
+    color: #000 !important;
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.8);
+    transform: scale(1.05);
+}
