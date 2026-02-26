@@ -204,23 +204,13 @@ function renderShopTable(){
   if(!body) return;
 
   if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
-    body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Lager-Artikel. Lege sie im Lagerbestand an.</td></tr>`;
+    body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Noch keine Lager-Artikel. Lege sie im Lagerbestand an.</td></tr>";
     return;
   }
 
   body.innerHTML = inventoryItems.map(it=>{
     const isLow = Number(it.stock) <= Number(it.minStock);
-    return `
-      <tr class="${isLow ? "lowRow" : ""}">
-        <td><b>${esc(it.name)}</b></td>
-        <td>${esc(it.unit||"Stk")}</td>
-        <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
-        <td style="text-align:right;">${num(it.minStock)}</td>
-        <td style="text-align:right;">
-          <input class="input shopQty" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0" style="width:140px; text-align:right;" />
-        </td>
-      </tr>
-    `;
+    return "\n      <tr class=\"" + (isLow ? "lowRow" : "") + "\">\n        <td><b>" + (esc(it.name)) + "</b></td>\n        <td>" + (esc(it.unit||"Stk")) + "</td>\n        <td style=\"text-align:right; font-weight:900;\">" + (num(it.stock)) + "</td>\n        <td style=\"text-align:right;\">" + (num(it.minStock)) + "</td>\n        <td style=\"text-align:right;\">\n          <input class=\"input shopQty\" data-id=\"" + (escAttr(it.id)) + "\" type=\"number\" step=\"0.01\" min=\"0\" placeholder=\"0\" style=\"width:140px; text-align:right;\" />\n        </td>\n      </tr>\n    ";
   }).join("");
 }
 
@@ -276,12 +266,12 @@ async function bookShopPurchases(){
 async function loadInventory(){
   if(!isBoss()) return;
   const body = document.getElementById("inventoryBody");
-  if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Lade…</td></tr>`;
+  if(body) body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Lade…</td></tr>";
 
   const res = await fetch("/inventory").catch(()=>null);
   const data = res ? await res.json().catch(()=>({})) : {};
   if(!res || !res.ok || !data.success){
-    if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Fehler beim Laden.</td></tr>`;
+    if(body) body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Fehler beim Laden.</td></tr>";
     return;
   }
   inventoryItems = Array.isArray(data.items) ? data.items : [];
@@ -316,21 +306,21 @@ function renderPurchaseSelect(){
   const sel = document.getElementById("purchaseItem");
   if(!sel) return;
   if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
-    sel.innerHTML = `<option value="">(keine Lager-Artikel angelegt)</option>`;
+    sel.innerHTML = "<option value=\"\">(keine Lager-Artikel angelegt)</option>";
     return;
   }
   const cur = sel.value;
-  sel.innerHTML = inventoryItems.map(it=>`<option value="${escAttr(it.id)}">${esc(it.name)} (${num(it.stock)} ${esc(it.unit||"")})</option>`).join("");
+  sel.innerHTML = inventoryItems.map(it=>"<option value=\"" + (escAttr(it.id)) + "\">" + (esc(it.name)) + " (" + (num(it.stock)) + " " + (esc(it.unit||"")) + ")</option>").join("");
   if(cur && inventoryItems.some(x=>x.id===cur)) sel.value = cur;
 }
 
 async function loadPurchases(){
   const body = document.getElementById("purchasesBody");
-  if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Lade…</td></tr>`;
+  if(body) body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Lade…</td></tr>";
   const res = await fetch("/purchases?limit=25").catch(()=>null);
   const data = res ? await res.json().catch(()=>({})) : {};
   if(!res || !res.ok || !data.success){
-    if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Fehler beim Laden.</td></tr>`;
+    if(body) body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Fehler beim Laden.</td></tr>";
     return;
   }
   const items = Array.isArray(data.items) ? data.items : [];
@@ -341,20 +331,12 @@ function renderPurchases(items){
   const body = document.getElementById("purchasesBody");
   if(!body) return;
   if(!items.length){
-    body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Einkäufe gebucht.</td></tr>`;
+    body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Noch keine Einkäufe gebucht.</td></tr>";
     return;
   }
   body.innerHTML = items.map(p=>{
     const price = (p.price===null || p.price===undefined) ? "—" : num(p.price);
-    return `
-      <tr>
-        <td>${esc(p.date || "")}</td>
-        <td><b>${esc(p.name || "")}</b><div class="muted small">${esc(p.unit || "")}</div></td>
-        <td style="text-align:right; font-weight:900;">${num(p.qty)}</td>
-        <td style="text-align:right;">${price}</td>
-        <td>${esc(p.note || "")}</td>
-      </tr>
-    `;
+    return "\n      <tr>\n        <td>" + (esc(p.date || "")) + "</td>\n        <td><b>" + (esc(p.name || "")) + "</b><div class=\"muted small\">" + (esc(p.unit || "")) + "</div></td>\n        <td style=\"text-align:right; font-weight:900;\">" + (num(p.qty)) + "</td>\n        <td style=\"text-align:right;\">" + (price) + "</td>\n        <td>" + (esc(p.note || "")) + "</td>\n      </tr>\n    ";
   }).join("");
 }
 
@@ -417,7 +399,7 @@ function renderInventory(){
   try { renderPurchaseSelect(); } catch {}
 
   if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
-    body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Artikel. Klicke auf „+ Artikel“.</td></tr>`;
+    body.innerHTML = "<tr><td colspan=\"5\" class=\"muted small\">Noch keine Artikel. Klicke auf „+ Artikel“.</td></tr>";
     if(lowBox) lowBox.innerText = "—";
     return;
   }
@@ -425,27 +407,13 @@ function renderInventory(){
   const low = inventoryItems.filter(it => Number(it.stock) <= Number(it.minStock));
   if(lowBox){
     lowBox.innerHTML = low.length
-      ? low.map(it => `• <b>${esc(it.name)}</b> (${num(it.stock)} / ${num(it.minStock)} ${esc(it.unit||"")})`).join("<br>")
+      ? low.map(it => "• <b>" + (esc(it.name)) + "</b> (" + (num(it.stock)) + " / " + (num(it.minStock)) + " " + (esc(it.unit||"")) + ")").join("<br>")
       : "Alles ok ✅";
   }
 
   body.innerHTML = inventoryItems.map(it=>{
     const isLow = Number(it.stock) <= Number(it.minStock);
-    return `
-      <tr class="${isLow ? "lowRow" : ""}">
-        <td><b>${esc(it.name)}</b><div class="muted small">${it.updatedAt ? esc(new Date(it.updatedAt).toLocaleString('de-DE')) : ""}</div></td>
-        <td>${esc(it.unit||"Stk")}</td>
-        <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
-        <td style="text-align:right;">${num(it.minStock)}</td>
-        <td class="noPrint" style="text-align:right; white-space:nowrap;">
-          <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', -1)">-1</button>
-          <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', 1)">+1</button>
-          <button class="ghost" onclick="adjustInventoryPrompt('${escAttr(it.id)}')">±</button>
-          <button class="primary" onclick="openInventoryEditor('${escAttr(it.id)}')">Bearbeiten</button>
-          <button class="ghost" onclick="deleteInventoryItem('${escAttr(it.id)}')">Löschen</button>
-        </td>
-      </tr>
-    `;
+    return "\n      <tr class=\"" + (isLow ? "lowRow" : "") + "\">\n        <td><b>" + (esc(it.name)) + "</b><div class=\"muted small\">" + (it.updatedAt ? esc(new Date(it.updatedAt).toLocaleString('de-DE')) : "") + "</div></td>\n        <td>" + (esc(it.unit||"Stk")) + "</td>\n        <td style=\"text-align:right; font-weight:900;\">" + (num(it.stock)) + "</td>\n        <td style=\"text-align:right;\">" + (num(it.minStock)) + "</td>\n        <td class=\"noPrint\" style=\"text-align:right; white-space:nowrap;\">\n          <button class=\"ghost\" onclick=\"adjustInventory('" + (escAttr(it.id)) + "', -1)\">-1</button>\n          <button class=\"ghost\" onclick=\"adjustInventory('" + (escAttr(it.id)) + "', 1)\">+1</button>\n          <button class=\"ghost\" onclick=\"adjustInventoryPrompt('" + (escAttr(it.id)) + "')\">±</button>\n          <button class=\"primary\" onclick=\"openInventoryEditor('" + (escAttr(it.id)) + "')\">Bearbeiten</button>\n          <button class=\"ghost\" onclick=\"deleteInventoryItem('" + (escAttr(it.id)) + "')\">Löschen</button>\n        </td>\n      </tr>\n    ";
   }).join("");
 }
 
@@ -707,15 +675,7 @@ function renderProductsEditor(){
   const msg = document.getElementById("mgmtProductsMsg");
   if(!body) return; // panel might not exist
   const list = (PRODUCTS||[]).slice().sort((a,b)=>(a.cat||"").localeCompare(b.cat||"") || (a.name||"").localeCompare(b.name||""));
-  body.innerHTML = list.map((p, idx)=>`
-    <tr>
-      <td>${esc(p.name)}</td>
-      <td>${esc(p.cat)}</td>
-      <td style="text-align:right;">
-        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-key="${escAttr(slugKey(p))}" value="${escAttr(p.price)}" />
-      </td>
-    </tr>
-  `).join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
+  body.innerHTML = list.map((p, idx)=>"\n    <tr>\n      <td>" + (esc(p.name)) + "</td>\n      <td>" + (esc(p.cat)) + "</td>\n      <td style=\"text-align:right;\">\n        <input class=\"input\" style=\"width:110px; text-align:right; padding:8px 10px;\" data-price-key=\"" + (escAttr(slugKey(p))) + "\" value=\"" + (escAttr(p.price)) + "\" />\n      </td>\n    </tr>\n  ").join("") || "<tr><td colspan=\"3\" class=\"muted small\">Keine Produkte.</td></tr>";
   if(msg) msg.innerText = "—";
 }
 
@@ -1009,15 +969,8 @@ function renderCart(){
   const tot=document.getElementById("cartTotal");
   if(tot) tot.innerText=money(cartTotal());
   if(!box) return;
-  if(cart.length===0){ box.innerHTML=`<div class="cartEmpty">Leer.</div>`; return; }
-  box.innerHTML=cart.map((x,idx)=>`
-    <div class="cartItem">
-      <div class="name">${esc(x.name)}</div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <div class="price">${money(x.price)}</div>
-        <button class="pushBtn" style="width:26px; height:22px;" onclick="removeItem(${idx})">x</button>
-      </div>
-    </div>`).join("");
+  if(cart.length===0){ box.innerHTML="<div class=\"cartEmpty\">Leer.</div>"; return; }
+  box.innerHTML=cart.map((x,idx)=>"\n    <div class=\"cartItem\">\n      <div class=\"name\">" + (esc(x.name)) + "</div>\n      <div style=\"display:flex; gap:8px; align-items:center;\">\n        <div class=\"price\">" + (money(x.price)) + "</div>\n        <button class=\"pushBtn\" style=\"width:26px; height:22px;\" onclick=\"removeItem(" + (idx) + ")\">x</button>\n      </div>\n    </div>").join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); onCartChanged(); }
 
@@ -1029,169 +982,7 @@ function toggleCart(){
 }
 
 /* Register */
-function setRegister(n){ currentRegister=Number(n)||1; const d=document.getElementById("registerDisplay"); if(d) d.innerText="Kasse " + (currentRegister); switchCartToRegister(currentRegister); renderCart(); onCartChanged(); }`;
-  switchCartToRegister(currentRegister);
-  renderCart();
-  saveCartsToStorage();
-  scheduleSaveCartsToServer();
-}
-
-/* Pay overlay */
-
-function openMenuBuilder(menuProduct){
-  const drinks = (PRODUCTS||[]).filter(x => String(x.cat||x.category||"") === "Getränke");
-  if(!drinks.length){
-    alert("Keine Getränke vorhanden. Bitte Produkte neu laden.");
-    return;
-  }
-  menuBuilderState = { base:{...menuProduct}, drinks };
-
-  const nameEl=document.getElementById("menuBaseName");
-  const priceEl=document.getElementById("menuBasePrice");
-  const sel=document.getElementById("menuDrinkSelect");
-  const chk=document.getElementById("menuCheesy");
-
-  if(nameEl) nameEl.innerText = menuProduct.name;
-  if(priceEl) priceEl.innerText = money(menuProduct.price);
-
-  if(sel){
-    sel.innerHTML="";
-    drinks.forEach(d=>{
-      const opt=document.createElement("option");
-      opt.value=d.name;
-      opt.textContent = d.name + " (" + money(d.price) + ")";
-      sel.appendChild(opt);
-    });
-  }
-  if(chk) chk.checked=false;
-
-  document.getElementById("menuOverlay")?.classList.remove("hidden");
-}
-
-function closeMenuBuilder(){
-  document.getElementById("menuOverlay")?.classList.add("hidden");
-  menuBuilderState=null;
-}
-
-function confirmMenuBuilder(){
-  if(!menuBuilderState) return;
-  const sel=document.getElementById("menuDrinkSelect");
-  const chk=document.getElementById("menuCheesy");
-  const drinkName = sel?.value || "";
-  const cheesy = !!chk?.checked;
-
-  const extra = cheesy ? 2 : 0;
-  const friesLabel = cheesy ? "Cheesy Fries (+$2)" : "Fries";
-
-  const base = menuBuilderState.base;
-  const finalPrice = Math.round(Number(base.price||0) + extra);
-
-  const displayName = String(base.name||"") + " • Drink: " + String(drinkName||"") + " • " + String(friesLabel||"");
-
-  cart.push({ name: displayName, price: finalPrice, qty:1 });
-  closeMenuBuilder();
-  renderCart();
-  onCartChanged();
-  saveCartsToStorage();
-  scheduleSaveCartsToServer();
-}
-
-function openPay(){
-  if(cart.length===0) return alert("Warenkorb ist leer.");
-  document.getElementById("payTotal").innerText=money(cartTotal());
-  document.getElementById("payAmount").value="";
-  document.getElementById("payOverlay").classList.remove("hidden");
-}
-function closePay(){ document.getElementById("payOverlay").classList.add("hidden"); }
-function parseMoney(val){ const s=String(val||"").replace(/[^\d.-]/g,""); const n=Number(s); return Number.isFinite(n)?n:NaN; }
-
-async function submitPay(){
-  const total=cartTotal();
-  const paid=parseMoney(document.getElementById("payAmount").value);
-  if(!Number.isFinite(paid) || paid<total) return alert("Bezahlt muss >= Total sein.");
-  const payload={
-    register: currentRegister,
-    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty })),
-    total,
-    paidAmount: paid,
-    time: new Date().toISOString()
-  };
-  const res=await fetch("/sale",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler beim Speichern.");
-  closePay();
-  alert("Order #" + String(data.orderId||"") + " gespeichert. Trinkgeld: " + money(data.tip||0));
-  cartsByRegister[currentRegister] = [];
-  switchCartToRegister(currentRegister);
-  renderCart();
-  saveCartsToStorage();
-  scheduleSaveCartsToServer();
-}
-
-function slugify(s){
-  return String(s||"")
-    .toLowerCase()
-    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
-    .replace(/[^a-z0-9]+/g,"_")
-    .replace(/^_+|_+$/g,"")
-    .slice(0,60) || "item";
-}
-function slugKey(p){
-  return slugify(p.cat||p.category||"") + "__" + slugify(p.name||"");
-}
-
-/* Kitchen */
-
-function formatElapsed(sec){
-  sec = Math.max(0, Math.floor(sec||0));
-  const m = Math.floor(sec/60);
-  const s = sec%60;
-  return String(m) + ":" + String(s).padStart(2,"0");
-}
-
-function stopKitchenTimers(){
-  if(kitchenTimerInterval){
-    clearInterval(kitchenTimerInterval);
-    kitchenTimerInterval = null;
-  }
-}
-
-function updateKitchenTimers(){
-  const now = Date.now();
-  document.querySelectorAll(".kCard[data-order-time]").forEach(card=>{
-    const iso = card.getAttribute("data-order-time");
-    const t = Date.parse(iso||"");
-    if(!Number.isFinite(t)) return;
-    const elapsedSec = (now - t)/1000;
-    const el = card.querySelector(".kElapsed");
-    if(el) el.textContent = formatElapsed(elapsedSec);
-
-    card.classList.remove("kWarn","kCrit");
-    if(elapsedSec >= 300) card.classList.add("kCrit");
-    else if(elapsedSec >= 180) card.classList.add("kWarn");
-  });
-}
-
-function startKitchenTimers(){
-  stopKitchenTimers();
-  kitchenTimerInterval = setInterval(updateKitchenTimers, 1000);
-  updateKitchenTimers();
-}
-
-async function loadKitchen(){
-  const res=await fetch("/kitchen/orders");
-  if(res.status===401) return showLoginPage("Bitte einloggen.");
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return;
-  serverDay=data.currentDay||serverDay;
-
-  const box=document.getElementById("kitchenOrders");
-  if(!box) return;
-  const orders=(data.pending||[]).slice().sort((a,b)=> (Date.parse(a.time||"")||0) - (Date.parse(b.time||"")||0));
-  if(orders.length===0){ box.innerHTML=`<div class="muted small">Keine offenen Bestellungen.</div>`; return; }
-  box.innerHTML=orders.map(o=>{
-    const items=(o.items||[]).map(i=>(i.qty||1) + "× " + (i.name)).join(", ");
-    return `
+function setRegister(n){ currentRegister=Number(n)||1; const d=document.getElementById("registerDisplay"); if(d) d.innerText="Kasse " + (currentRegister); switchCartToRegister(currentRegister); renderCart(); onCartChanged(); }";\n  switchCartToRegister(currentRegister);\n  renderCart();\n  saveCartsToStorage();\n  scheduleSaveCartsToServer();\n}\n\n/* Pay overlay */\n\nfunction openMenuBuilder(menuProduct){\n  const drinks = (PRODUCTS||[]).filter(x => String(x.cat||x.category||\"\") === \"Getränke\");\n  if(!drinks.length){\n    alert(\"Keine Getränke vorhanden. Bitte Produkte neu laden.\");\n    return;\n  }\n  menuBuilderState = { base:{...menuProduct}, drinks };\n\n  const nameEl=document.getElementById(\"menuBaseName\");\n  const priceEl=document.getElementById(\"menuBasePrice\");\n  const sel=document.getElementById(\"menuDrinkSelect\");\n  const chk=document.getElementById(\"menuCheesy\");\n\n  if(nameEl) nameEl.innerText = menuProduct.name;\n  if(priceEl) priceEl.innerText = money(menuProduct.price);\n\n  if(sel){\n    sel.innerHTML=\"\";\n    drinks.forEach(d=>{\n      const opt=document.createElement(\"option\");\n      opt.value=d.name;\n      opt.textContent = d.name + \" (\" + money(d.price) + \")\";\n      sel.appendChild(opt);\n    });\n  }\n  if(chk) chk.checked=false;\n\n  document.getElementById(\"menuOverlay\")?.classList.remove(\"hidden\");\n}\n\nfunction closeMenuBuilder(){\n  document.getElementById(\"menuOverlay\")?.classList.add(\"hidden\");\n  menuBuilderState=null;\n}\n\nfunction confirmMenuBuilder(){\n  if(!menuBuilderState) return;\n  const sel=document.getElementById(\"menuDrinkSelect\");\n  const chk=document.getElementById(\"menuCheesy\");\n  const drinkName = sel?.value || \"\";\n  const cheesy = !!chk?.checked;\n\n  const extra = cheesy ? 2 : 0;\n  const friesLabel = cheesy ? \"Cheesy Fries (+$2)\" : \"Fries\";\n\n  const base = menuBuilderState.base;\n  const finalPrice = Math.round(Number(base.price||0) + extra);\n\n  const displayName = String(base.name||\"\") + \" • Drink: \" + String(drinkName||\"\") + \" • \" + String(friesLabel||\"\");\n\n  cart.push({ name: displayName, price: finalPrice, qty:1 });\n  closeMenuBuilder();\n  renderCart();\n  onCartChanged();\n  saveCartsToStorage();\n  scheduleSaveCartsToServer();\n}\n\nfunction openPay(){\n  if(cart.length===0) return alert(\"Warenkorb ist leer.\");\n  document.getElementById(\"payTotal\").innerText=money(cartTotal());\n  document.getElementById(\"payAmount\").value=\"\";\n  document.getElementById(\"payOverlay\").classList.remove(\"hidden\");\n}\nfunction closePay(){ document.getElementById(\"payOverlay\").classList.add(\"hidden\"); }\nfunction parseMoney(val){ const s=String(val||\"\").replace(/[^\\d.-]/g,\"\"); const n=Number(s); return Number.isFinite(n)?n:NaN; }\n\nasync function submitPay(){\n  const total=cartTotal();\n  const paid=parseMoney(document.getElementById(\"payAmount\").value);\n  if(!Number.isFinite(paid) || paid<total) return alert(\"Bezahlt muss >= Total sein.\");\n  const payload={\n    register: currentRegister,\n    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty })),\n    total,\n    paidAmount: paid,\n    time: new Date().toISOString()\n  };\n  const res=await fetch(\"/sale\",{ method:\"POST\", headers:{ \"Content-Type\":\"application/json\" }, body: JSON.stringify(payload) });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler beim Speichern.\");\n  closePay();\n  alert(\"Order #\" + String(data.orderId||\"\") + \" gespeichert. Trinkgeld: \" + money(data.tip||0));\n  cartsByRegister[currentRegister] = [];\n  switchCartToRegister(currentRegister);\n  renderCart();\n  saveCartsToStorage();\n  scheduleSaveCartsToServer();\n}\n\nfunction slugify(s){\n  return String(s||\"\")\n    .toLowerCase()\n    .replace(/ä/g,\"ae\").replace(/ö/g,\"oe\").replace(/ü/g,\"ue\").replace(/ß/g,\"ss\")\n    .replace(/[^a-z0-9]+/g,\"_\")\n    .replace(/^_+|_+$/g,\"\")\n    .slice(0,60) || \"item\";\n}\nfunction slugKey(p){\n  return slugify(p.cat||p.category||\"\") + \"__\" + slugify(p.name||\"\");\n}\n\n/* Kitchen */\n\nfunction formatElapsed(sec){\n  sec = Math.max(0, Math.floor(sec||0));\n  const m = Math.floor(sec/60);\n  const s = sec%60;\n  return String(m) + \":\" + String(s).padStart(2,\"0\");\n}\n\nfunction stopKitchenTimers(){\n  if(kitchenTimerInterval){\n    clearInterval(kitchenTimerInterval);\n    kitchenTimerInterval = null;\n  }\n}\n\nfunction updateKitchenTimers(){\n  const now = Date.now();\n  document.querySelectorAll(\".kCard[data-order-time]\").forEach(card=>{\n    const iso = card.getAttribute(\"data-order-time\");\n    const t = Date.parse(iso||\"\");\n    if(!Number.isFinite(t)) return;\n    const elapsedSec = (now - t)/1000;\n    const el = card.querySelector(\".kElapsed\");\n    if(el) el.textContent = formatElapsed(elapsedSec);\n\n    card.classList.remove(\"kWarn\",\"kCrit\");\n    if(elapsedSec >= 300) card.classList.add(\"kCrit\");\n    else if(elapsedSec >= 180) card.classList.add(\"kWarn\");\n  });\n}\n\nfunction startKitchenTimers(){\n  stopKitchenTimers();\n  kitchenTimerInterval = setInterval(updateKitchenTimers, 1000);\n  updateKitchenTimers();\n}\n\nasync function loadKitchen(){\n  const res=await fetch(\"/kitchen/orders\");\n  if(res.status===401) return showLoginPage(\"Bitte einloggen.\");\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return;\n  serverDay=data.currentDay||serverDay;\n\n  const box=document.getElementById(\"kitchenOrders\");\n  if(!box) return;\n  const orders=(data.pending||[]).slice().sort((a,b)=> (Date.parse(a.time||\"\")||0) - (Date.parse(b.time||\"\")||0));\n  if(orders.length===0){ box.innerHTML="<div class="muted small">Keine offenen Bestellungen.</div>"; return; }\n  box.innerHTML=orders.map(o=>{\n    const items=(o.items||[]).map(i=>(i.qty||1) + \"× \" + (i.name)).join(\", \");\n    return "
       <div class="kCard" data-order-time="${escAttr(o.time||"")}">
         <div class="row" style="justify-content:space-between; align-items:flex-start;">
           <div style="font-weight:900;">#${o.id} · Kasse ${o.register}</div>
@@ -1206,261 +997,28 @@ async function loadKitchen(){
           <div class="muted small">${money(o.total)}</div>
           <button class="primary" onclick="kitchenDone(${o.id})">Fertig</button>
         </div>
-      </div>`;
-  }).join("");
-  updateKitchenTimers();
-}
-
-async function kitchenDone(id){
-  const res=await fetch("/kitchen/done",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ id }) });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler.");
-  loadKitchen();
-}
-
-async function resetKitchen(){
-  if(!isBoss()) return alert("Nur Chef.");
-  if(!confirm("Küche für heute resetten?")) return;
-  const res=await fetch("/kitchen/reset",{ method:"POST" });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler.");
-  loadKitchen();
-}
-
-/* Day report (simplified) */
-let dayTabInited=false;
-function initDayTab(){
-  if(dayTabInited) return;
-  dayTabInited=true;
-  const inp=document.getElementById("dayDate");
-  if(inp) inp.value=serverDay||"";
-}
-function setDayToToday(){
-  const inp=document.getElementById("dayDate");
-  if(inp) inp.value=serverDay||inp.value;
-}
-function printDayReport(){
-  document.body.classList.remove("printWeek");
-  document.body.classList.add("printDay");
-  window.print();
-  document.body.classList.remove("printDay");
-}
-
-async function loadDayReport(){
-  if(!isBoss()) return;
-  const date=document.getElementById("dayDate")?.value || serverDay;
-  if(!date) return;
-
-  const res=await fetch("/reports/day-details?date=" + (encodeURIComponent(date)));
-  if(res.status===401) return showLoginPage("Bitte einloggen.");
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Tagesabrechnung.");
-
-  currentDayReport=data;
-  document.getElementById("dayPrintDate").innerText=date;
-
-  const closed=data.closed;
-  const st=document.getElementById("dayCloseStatus");
-  const stPrint=document.getElementById("dayPrintClosed");
-  const closeBtn=document.getElementById("dayCloseBtn");
-  if(closed){
-    const txt="Abgeschlossen: " + (fmtDateTime(closed.closedAt)) + " — " + (closed.closedByName||closed.closedBy||"") +
-      (closed.note ? " — " + (closed.note) : "");
-    if(st) st.innerText=txt;
-    if(stPrint) stPrint.innerText=txt;
-    if(closeBtn) closeBtn.disabled=true;
-  }else{
-    if(st) st.innerText="Status: Offen";
-    if(stPrint) stPrint.innerText="Status: Offen";
-    if(closeBtn) closeBtn.disabled=false;
-  }
-
-  document.getElementById("dayRevenue").innerText=money(data.totals?.revenue||0);
-
-  const tbody=document.getElementById("dayByEmployee");
-  if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
+      </div>";\n  }).join(\"\");\n  updateKitchenTimers();\n}\n\nasync function kitchenDone(id){\n  const res=await fetch(\"/kitchen/done\",{ method:\"POST\", headers:{ \"Content-Type\":\"application/json\" }, body: JSON.stringify({ id }) });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler.\");\n  loadKitchen();\n}\n\nasync function resetKitchen(){\n  if(!isBoss()) return alert(\"Nur Chef.\");\n  if(!confirm(\"Küche für heute resetten?\")) return;\n  const res=await fetch(\"/kitchen/reset\",{ method:\"POST\" });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler.\");\n  loadKitchen();\n}\n\n/* Day report (simplified) */\nlet dayTabInited=false;\nfunction initDayTab(){\n  if(dayTabInited) return;\n  dayTabInited=true;\n  const inp=document.getElementById(\"dayDate\");\n  if(inp) inp.value=serverDay||\"\";\n}\nfunction setDayToToday(){\n  const inp=document.getElementById(\"dayDate\");\n  if(inp) inp.value=serverDay||inp.value;\n}\nfunction printDayReport(){\n  document.body.classList.remove(\"printWeek\");\n  document.body.classList.add(\"printDay\");\n  window.print();\n  document.body.classList.remove(\"printDay\");\n}\n\nasync function loadDayReport(){\n  if(!isBoss()) return;\n  const date=document.getElementById(\"dayDate\")?.value || serverDay;\n  if(!date) return;\n\n  const res=await fetch(\"/reports/day-details?date=\" + (encodeURIComponent(date)));\n  if(res.status===401) return showLoginPage(\"Bitte einloggen.\");\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler beim Laden der Tagesabrechnung.\");\n\n  currentDayReport=data;\n  document.getElementById(\"dayPrintDate\").innerText=date;\n\n  const closed=data.closed;\n  const st=document.getElementById(\"dayCloseStatus\");\n  const stPrint=document.getElementById(\"dayPrintClosed\");\n  const closeBtn=document.getElementById(\"dayCloseBtn\");\n  if(closed){\n    const txt=\"Abgeschlossen: \" + (fmtDateTime(closed.closedAt)) + \" — \" + (closed.closedByName||closed.closedBy||\"\") +\n      (closed.note ? \" — \" + (closed.note) : \"\");\n    if(st) st.innerText=txt;\n    if(stPrint) stPrint.innerText=txt;\n    if(closeBtn) closeBtn.disabled=true;\n  }else{\n    if(st) st.innerText=\"Status: Offen\";\n    if(stPrint) stPrint.innerText=\"Status: Offen\";\n    if(closeBtn) closeBtn.disabled=false;\n  }\n\n  document.getElementById(\"dayRevenue\").innerText=money(data.totals?.revenue||0);\n\n  const tbody=document.getElementById(\"dayByEmployee\");\n  if(tbody){\n    tbody.innerHTML=(data.byEmployee||[]).map(x=>"
       <tr>
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
         <td style="text-align:right;">${money(x.tips||0)}</td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
-  }
-}
-
-/* Day close */
-function openCloseDay(){
-  if(!isBoss()) return;
-  const date=document.getElementById("dayDate")?.value || serverDay;
-  if(!date) return;
-  if(currentDayReport?.closed) return alert("Dieser Tag ist bereits abgeschlossen.");
-  window.__dayCloseDate=date;
-  document.getElementById("dayCloseDateLabel").innerText=date;
-  document.getElementById("dayCashCount").value="";
-  document.getElementById("dayCloseNote").value="";
-  document.getElementById("dayCloseMsg").innerText="—";
-  document.getElementById("dayCloseOverlay").classList.remove("hidden");
-}
-function closeDayClose(){ document.getElementById("dayCloseOverlay").classList.add("hidden"); }
-
-async function submitDayClose(){
-  const date=window.__dayCloseDate || (document.getElementById("dayDate")?.value || serverDay);
-  const cashCount=document.getElementById("dayCashCount")?.value;
-  const note=document.getElementById("dayCloseNote")?.value || "";
-  const msg=document.getElementById("dayCloseMsg");
-  const res=await fetch("/reports/close-day",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ date, cashCount, note }) });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success){ if(msg) msg.innerText=data.message||"Fehler."; return; }
-  closeDayClose();
-  loadDayReport();
-}
-
-/* Week report (KW, employees only) */
-let weekTabInited=false;
-function initWeekTab(){
-  if(weekTabInited) return;
-  weekTabInited=true;
-  const w=document.getElementById("weekKW");
-  if(w) w.value = currentISOWeekString(new Date());
-}
-
-function setWeekToThisKW(){
-  const w=document.getElementById("weekKW");
-  if(w) w.value = currentISOWeekString(new Date());
-}
-
-function printWeekReport(){
-  document.body.classList.remove("printDay");
-  document.body.classList.add("printWeek");
-  window.print();
-  document.body.classList.remove("printWeek");
-}
-
-async function loadWeekReport(){
-  if(!isBoss()) return;
-  const kw=document.getElementById("weekKW")?.value;
-  if(!kw) return;
-  // kw format: YYYY-Www
-  const res=await fetch("/reports/week-employee?week=" + (encodeURIComponent(kw)));
-  if(res.status===401) return showLoginPage("Bitte einloggen.");
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Wochenabrechnung.");
-
-  currentWeekReport=data;
-  document.getElementById("weekPrintKW").innerText=kw;
-
-  const range=(data.range?.start||"—") + " bis " + (data.range?.end||"—");
-  document.getElementById("weekRange").innerText=range;
-  document.getElementById("weekPrintRange").innerText=range;
-
-  document.getElementById("weekRevenue").innerText=money(data.totals?.revenue||0);
-  document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
-
-  const tbody=document.getElementById("weekByEmployee");
-  if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
+    ").join(\"\") || "<tr><td colspan="4" class="muted">Keine Daten.</td></tr>";\n  }\n}\n\n/* Day close */\nfunction openCloseDay(){\n  if(!isBoss()) return;\n  const date=document.getElementById(\"dayDate\")?.value || serverDay;\n  if(!date) return;\n  if(currentDayReport?.closed) return alert(\"Dieser Tag ist bereits abgeschlossen.\");\n  window.__dayCloseDate=date;\n  document.getElementById(\"dayCloseDateLabel\").innerText=date;\n  document.getElementById(\"dayCashCount\").value=\"\";\n  document.getElementById(\"dayCloseNote\").value=\"\";\n  document.getElementById(\"dayCloseMsg\").innerText=\"—\";\n  document.getElementById(\"dayCloseOverlay\").classList.remove(\"hidden\");\n}\nfunction closeDayClose(){ document.getElementById(\"dayCloseOverlay\").classList.add(\"hidden\"); }\n\nasync function submitDayClose(){\n  const date=window.__dayCloseDate || (document.getElementById(\"dayDate\")?.value || serverDay);\n  const cashCount=document.getElementById(\"dayCashCount\")?.value;\n  const note=document.getElementById(\"dayCloseNote\")?.value || \"\";\n  const msg=document.getElementById(\"dayCloseMsg\");\n  const res=await fetch(\"/reports/close-day\",{ method:\"POST\", headers:{ \"Content-Type\":\"application/json\" }, body: JSON.stringify({ date, cashCount, note }) });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success){ if(msg) msg.innerText=data.message||\"Fehler.\"; return; }\n  closeDayClose();\n  loadDayReport();\n}\n\n/* Week report (KW, employees only) */\nlet weekTabInited=false;\nfunction initWeekTab(){\n  if(weekTabInited) return;\n  weekTabInited=true;\n  const w=document.getElementById(\"weekKW\");\n  if(w) w.value = currentISOWeekString(new Date());\n}\n\nfunction setWeekToThisKW(){\n  const w=document.getElementById(\"weekKW\");\n  if(w) w.value = currentISOWeekString(new Date());\n}\n\nfunction printWeekReport(){\n  document.body.classList.remove(\"printDay\");\n  document.body.classList.add(\"printWeek\");\n  window.print();\n  document.body.classList.remove(\"printWeek\");\n}\n\nasync function loadWeekReport(){\n  if(!isBoss()) return;\n  const kw=document.getElementById(\"weekKW\")?.value;\n  if(!kw) return;\n  // kw format: YYYY-Www\n  const res=await fetch(\"/reports/week-employee?week=\" + (encodeURIComponent(kw)));\n  if(res.status===401) return showLoginPage(\"Bitte einloggen.\");\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler beim Laden der Wochenabrechnung.\");\n\n  currentWeekReport=data;\n  document.getElementById(\"weekPrintKW\").innerText=kw;\n\n  const range=(data.range?.start||\"—\") + \" bis \" + (data.range?.end||\"—\");\n  document.getElementById(\"weekRange\").innerText=range;\n  document.getElementById(\"weekPrintRange\").innerText=range;\n\n  document.getElementById(\"weekRevenue\").innerText=money(data.totals?.revenue||0);\n  document.getElementById(\"weekOrders\").innerText=String(data.totals?.orders||0);\n\n  const tbody=document.getElementById(\"weekByEmployee\");\n  if(tbody){\n    tbody.innerHTML=(data.byEmployee||[]).map(x=>"
       <tr>
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
         <td style="text-align:right;">${money(x.tips||0)}</td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
-  }
-}
-
-/* Month report (Summe aus Wochen) */
-let monthTabInited=false;
-function initMonthTab(){
-  if(monthTabInited) return;
-  monthTabInited=true;
-  const m=document.getElementById("monthYM");
-  if(m) m.value = currentISOYMString(new Date());
-}
-
-function setMonthToThisMonth(){
-  const m=document.getElementById("monthYM");
-  if(m) m.value = currentISOYMString(new Date());
-}
-
-function printMonthReport(){
-  document.body.classList.remove("printDay");
-  document.body.classList.remove("printWeek");
-  document.body.classList.add("printMonth");
-  window.print();
-  document.body.classList.remove("printMonth");
-}
-
-async function loadMonthReport(){
-  if(!isBoss()) return;
-  const ym=document.getElementById("monthYM")?.value;
-  if(!ym) return;
-
-  const res=await fetch("/reports/month-employee?month=" + (encodeURIComponent(ym)));
-  if(res.status===401) return showLoginPage("Bitte einloggen.");
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Monatsabrechnung.");
-
-  currentMonthReport=data;
-
-  const weeksText=(data.weeks||[]).join(", ") || "—";
-  document.getElementById("monthPrintYM").innerText=ym;
-  document.getElementById("monthPrintWeeks").innerText=weeksText;
-  const hint=document.getElementById("monthWeeksHint");
-  if(hint) hint.innerText = "Enthaltene KW: " + (weeksText) + (data.note ? " — " + (data.note) : "");
-
-  document.getElementById("monthRevenue").innerText=money(data.totals?.revenue||0);
-  document.getElementById("monthOrders").innerText=String(data.totals?.orders||0);
-
-  const tbody=document.getElementById("monthByEmployee");
-  if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
+    ").join(\"\") || "<tr><td colspan="4" class="muted">Keine Daten.</td></tr>";\n  }\n}\n\n/* Month report (Summe aus Wochen) */\nlet monthTabInited=false;\nfunction initMonthTab(){\n  if(monthTabInited) return;\n  monthTabInited=true;\n  const m=document.getElementById(\"monthYM\");\n  if(m) m.value = currentISOYMString(new Date());\n}\n\nfunction setMonthToThisMonth(){\n  const m=document.getElementById(\"monthYM\");\n  if(m) m.value = currentISOYMString(new Date());\n}\n\nfunction printMonthReport(){\n  document.body.classList.remove(\"printDay\");\n  document.body.classList.remove(\"printWeek\");\n  document.body.classList.add(\"printMonth\");\n  window.print();\n  document.body.classList.remove(\"printMonth\");\n}\n\nasync function loadMonthReport(){\n  if(!isBoss()) return;\n  const ym=document.getElementById(\"monthYM\")?.value;\n  if(!ym) return;\n\n  const res=await fetch(\"/reports/month-employee?month=\" + (encodeURIComponent(ym)));\n  if(res.status===401) return showLoginPage(\"Bitte einloggen.\");\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler beim Laden der Monatsabrechnung.\");\n\n  currentMonthReport=data;\n\n  const weeksText=(data.weeks||[]).join(\", \") || \"—\";\n  document.getElementById(\"monthPrintYM\").innerText=ym;\n  document.getElementById(\"monthPrintWeeks\").innerText=weeksText;\n  const hint=document.getElementById(\"monthWeeksHint\");\n  if(hint) hint.innerText = \"Enthaltene KW: \" + (weeksText) + (data.note ? \" — \" + (data.note) : \"\");\n\n  document.getElementById(\"monthRevenue\").innerText=money(data.totals?.revenue||0);\n  document.getElementById(\"monthOrders\").innerText=String(data.totals?.orders||0);\n\n  const tbody=document.getElementById(\"monthByEmployee\");\n  if(tbody){\n    tbody.innerHTML=(data.byEmployee||[]).map(x=>"
       <tr>
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
         <td style="text-align:right;">${money(x.tips||0)}</td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
-  }
-}
-
-/* Management */
-async function refreshStats(){
-  if(!isBoss()) return;
-  if(!serverDay) return;
-  const res=await fetch("/reports/day-details?date=" + (encodeURIComponent(serverDay)));
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return;
-
-  document.getElementById("statRevenue").innerText=money(data.totals?.revenue||0);
-  document.getElementById("statTips").innerText=money(data.totals?.tips||0);
-  document.getElementById("statOrders").innerText=String(data.totals?.orders||0);
-
-  loadUsers();
-}
-
-async function resetToday(){
-  if(!isBoss()) return alert("Nur Chef.");
-  if(!confirm("ACHTUNG: Alle heutigen Verkäufe + Küche löschen?")) return;
-  const res=await fetch("/reset/today",{ method:"POST" });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler.");
-  alert("Heute zurückgesetzt.");
-  refreshStats();
-}
-
-/* Users */
-async function loadUsers(){
-  const res=await fetch("/users");
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return;
-  const box=document.getElementById("usersList");
-  if(!box) return;
-  const users=data.users||data.staff||[];
-  box.innerHTML=users.map(u=>`
+    ").join(\"\") || "<tr><td colspan="4" class="muted">Keine Daten.</td></tr>";\n  }\n}\n\n/* Management */\nasync function refreshStats(){\n  if(!isBoss()) return;\n  if(!serverDay) return;\n  const res=await fetch(\"/reports/day-details?date=\" + (encodeURIComponent(serverDay)));\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return;\n\n  document.getElementById(\"statRevenue\").innerText=money(data.totals?.revenue||0);\n  document.getElementById(\"statTips\").innerText=money(data.totals?.tips||0);\n  document.getElementById(\"statOrders\").innerText=String(data.totals?.orders||0);\n\n  loadUsers();\n}\n\nasync function resetToday(){\n  if(!isBoss()) return alert(\"Nur Chef.\");\n  if(!confirm(\"ACHTUNG: Alle heutigen Verkäufe + Küche löschen?\")) return;\n  const res=await fetch(\"/reset/today\",{ method:\"POST\" });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler.\");\n  alert(\"Heute zurückgesetzt.\");\n  refreshStats();\n}\n\n/* Users */\nasync function loadUsers(){\n  const res=await fetch(\"/users\");\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return;\n  const box=document.getElementById(\"usersList\");\n  if(!box) return;\n  const users=data.users||data.staff||[];\n  box.innerHTML=users.map(u=>"
     <div class="userRow">
       <div>
         <div style="font-weight:900;">${esc(u.displayName)}</div>
@@ -1468,100 +1026,7 @@ async function loadUsers(){
       </div>
       <button class="ghost" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
     </div>
-  `).join("");
-}
-
-function openAddUser(){
-  const uEl=document.getElementById("addUserUsername");
-  const dEl=document.getElementById("addUserDisplayName");
-  const rEl=document.getElementById("addUserRole");
-  const pEl=document.getElementById("addUserPassword");
-  const msg=document.getElementById("addUserMsg");
-
-  if(uEl) uEl.value="";
-  if(dEl) dEl.value="";
-  if(rEl) rEl.value="staff";
-  if(pEl) pEl.value="admin";
-  if(msg) msg.innerText="—";
-
-  document.getElementById("addUserOverlay").classList.remove("hidden");
-  setTimeout(()=>{ try{ uEl && uEl.focus(); }catch(e){} }, 0);
-}
-
-function closeAddUser(){ document.getElementById("addUserOverlay").classList.add("hidden"); }
-
-async function submitAddUser(){
-  const u=(document.getElementById("addUserUsername").value||"").trim().toLowerCase();
-  const d=(document.getElementById("addUserDisplayName").value||"").trim() || u;
-  const role=String(document.getElementById("addUserRole").value||"staff");
-  const pw=(document.getElementById("addUserPassword").value||"admin");
-  const msg=document.getElementById("addUserMsg");
-
-  if(!u){ if(msg) msg.innerText="Username fehlt."; return; }
-  if(!["boss","staff"].includes(role)){ if(msg) msg.innerText="Ungültige Rolle."; return; }
-
-  // optional: prevent spaces
-  if(/\s/.test(u)){ if(msg) msg.innerText="Username darf keine Leerzeichen enthalten."; return; }
-
-  if(msg) msg.innerText="Speichern…";
-  const res=await fetch("/users",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username:u, displayName:d, role, password:pw || "admin" }) });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success){ if(msg) msg.innerText=(data.message || "Fehler."); return; }
-
-  if(msg) msg.innerText="Erstellt ✅";
-  closeAddUser();
-  loadUsers();
-}
-
-async function addUser(username, displayName, role, password){
-  const res=await fetch("/users",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username, displayName, role, password }) });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler.");
-  loadUsers();
-}
-async function delUser(username){
-  if(!confirm("User " + (username) + " löschen?")) return;
-  const res=await fetch("/users/" + (encodeURIComponent(username)),{ method:"DELETE" });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return alert(data.message || "Fehler.");
-  loadUsers();
-}
-
-/* Password change */
-function openPwChange(){
-  document.getElementById("pwOld").value="";
-  document.getElementById("pwNew1").value="";
-  document.getElementById("pwNew2").value="";
-  document.getElementById("pwMsg").innerText="—";
-  document.getElementById("pwOverlay").classList.remove("hidden");
-}
-function closePwChange(){ document.getElementById("pwOverlay").classList.add("hidden"); }
-
-async function submitPwChange(){
-  const oldPw=document.getElementById("pwOld").value||"";
-  const n1=document.getElementById("pwNew1").value||"";
-  const n2=document.getElementById("pwNew2").value||"";
-  const msg=document.getElementById("pwMsg");
-  if(n1!==n2){ if(msg) msg.innerText="Neue Passwörter stimmen nicht überein."; return; }
-  const res=await fetch("/auth/change-password",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ oldPw, newPw:n1 }) });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || !data.success){ if(msg) msg.innerText=data.message || "Fehler."; return; }
-  if(msg) msg.innerText="Passwort geändert ✅";
-  setTimeout(closePwChange, 600);
-}
-
-/* Helpers */
-function money(n){ const x=Number(n||0); return "$"+(Number.isFinite(x)?x:0); }
-function num(n){
-  const x = Number(n);
-  if(!Number.isFinite(x)) return "0";
-  // keep simple: no trailing zeros clutter
-  return (Math.round(x*100)/100).toString().replace(".", ",");
-}
-function esc(s){
-  return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-function escAttr(s){ return esc(s).replaceAll("`","&#096;"); }
+  ").join(\"\");\n}\n\nfunction openAddUser(){\n  const uEl=document.getElementById(\"addUserUsername\");\n  const dEl=document.getElementById(\"addUserDisplayName\");\n  const rEl=document.getElementById(\"addUserRole\");\n  const pEl=document.getElementById(\"addUserPassword\");\n  const msg=document.getElementById(\"addUserMsg\");\n\n  if(uEl) uEl.value=\"\";\n  if(dEl) dEl.value=\"\";\n  if(rEl) rEl.value=\"staff\";\n  if(pEl) pEl.value=\"admin\";\n  if(msg) msg.innerText=\"—\";\n\n  document.getElementById(\"addUserOverlay\").classList.remove(\"hidden\");\n  setTimeout(()=>{ try{ uEl && uEl.focus(); }catch(e){} }, 0);\n}\n\nfunction closeAddUser(){ document.getElementById(\"addUserOverlay\").classList.add(\"hidden\"); }\n\nasync function submitAddUser(){\n  const u=(document.getElementById(\"addUserUsername\").value||\"\").trim().toLowerCase();\n  const d=(document.getElementById(\"addUserDisplayName\").value||\"\").trim() || u;\n  const role=String(document.getElementById(\"addUserRole\").value||\"staff\");\n  const pw=(document.getElementById(\"addUserPassword\").value||\"admin\");\n  const msg=document.getElementById(\"addUserMsg\");\n\n  if(!u){ if(msg) msg.innerText=\"Username fehlt.\"; return; }\n  if(![\"boss\",\"staff\"].includes(role)){ if(msg) msg.innerText=\"Ungültige Rolle.\"; return; }\n\n  // optional: prevent spaces\n  if(/\\s/.test(u)){ if(msg) msg.innerText=\"Username darf keine Leerzeichen enthalten.\"; return; }\n\n  if(msg) msg.innerText=\"Speichern…\";\n  const res=await fetch(\"/users\",{ method:\"POST\", headers:{ \"Content-Type\":\"application/json\" }, body: JSON.stringify({ username:u, displayName:d, role, password:pw || \"admin\" }) });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success){ if(msg) msg.innerText=(data.message || \"Fehler.\"); return; }\n\n  if(msg) msg.innerText=\"Erstellt ✅\";\n  closeAddUser();\n  loadUsers();\n}\n\nasync function addUser(username, displayName, role, password){\n  const res=await fetch(\"/users\",{ method:\"POST\", headers:{ \"Content-Type\":\"application/json\" }, body: JSON.stringify({ username, displayName, role, password }) });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler.\");\n  loadUsers();\n}\nasync function delUser(username){\n  if(!confirm(\"User \" + (username) + \" löschen?\")) return;\n  const res=await fetch(\"/users/\" + (encodeURIComponent(username)),{ method:\"DELETE\" });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success) return alert(data.message || \"Fehler.\");\n  loadUsers();\n}\n\n/* Password change */\nfunction openPwChange(){\n  document.getElementById(\"pwOld\").value=\"\";\n  document.getElementById(\"pwNew1\").value=\"\";\n  document.getElementById(\"pwNew2\").value=\"\";\n  document.getElementById(\"pwMsg\").innerText=\"—\";\n  document.getElementById(\"pwOverlay\").classList.remove(\"hidden\");\n}\nfunction closePwChange(){ document.getElementById(\"pwOverlay\").classList.add(\"hidden\"); }\n\nasync function submitPwChange(){\n  const oldPw=document.getElementById(\"pwOld\").value||\"\";\n  const n1=document.getElementById(\"pwNew1\").value||\"\";\n  const n2=document.getElementById(\"pwNew2\").value||\"\";\n  const msg=document.getElementById(\"pwMsg\");\n  if(n1!==n2){ if(msg) msg.innerText=\"Neue Passwörter stimmen nicht überein.\"; return; }\n  const res=await fetch(\"/auth/change-password\",{ method:\"POST\", headers:{ \"Content-Type\":\"application/json\" }, body: JSON.stringify({ oldPw, newPw:n1 }) });\n  const data=await res.json().catch(()=>({}));\n  if(!res.ok || !data.success){ if(msg) msg.innerText=data.message || \"Fehler.\"; return; }\n  if(msg) msg.innerText=\"Passwort geändert ✅\";\n  setTimeout(closePwChange, 600);\n}\n\n/* Helpers */\nfunction money(n){ const x=Number(n||0); return \"$\"+(Number.isFinite(x)?x:0); }\nfunction num(n){\n  const x = Number(n);\n  if(!Number.isFinite(x)) return \"0\";\n  // keep simple: no trailing zeros clutter\n  return (Math.round(x*100)/100).toString().replace(\".\", \",\");\n}\nfunction esc(s){\n  return String(s??\"\").replaceAll(\"&\",\"&amp;\").replaceAll(\"<\",\"&lt;\").replaceAll(\">\",\"&gt;\").replaceAll('\"',\"&quot;\").replaceAll(\"'\",\"&#039;\");\n}\nfunction escAttr(s){ return esc(s).replaceAll(\""","&#096;"); }
 function fmtDateTime(iso){ try{ return new Date(iso).toLocaleString("de-DE"); }catch{ return String(iso||""); } }
 
 // ISO week string for <input type="week">: YYYY-Www
