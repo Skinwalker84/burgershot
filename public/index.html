@@ -98,6 +98,11 @@
           <span>Monat</span>
         </button>
 
+        <button class="iconBtn" onclick="openTab('tab_stock', null)" id="iconBtnStock" title="Lagerbestand">
+          <img src="/icons/lager.png" alt="Lager" />
+          <span>Lager</span>
+        </button>
+
         <button class="iconBtn" onclick="openTab('tab_mgmt', null)" id="iconBtnMgmt" title="Management">
           <img src="/icons/managment.png" alt="Management" />
         </button>
@@ -324,6 +329,48 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ===== TAB: STOCK / LAGER ===== -->
+    <div id="tab_stock" class="tabPage hidden">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Lagerbestand</div>
+            <div class="muted small">Chef only · Bestände & Mindestbestand</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="ghost" onclick="loadInventory()">Refresh</button>
+            <button class="primary" onclick="openInventoryEditor(null)">+ Artikel</button>
+            <button class="ghost noPrint" onclick="printInventory()">PDF</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 360px;">
+            <div class="muted small">Einkaufsliste (unter Mindestbestand)</div>
+            <div id="inventoryLowList" style="margin-top:8px;" class="muted small">—</div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px; overflow:auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Artikel</th>
+                <th>Einheit</th>
+                <th style="text-align:right;">Bestand</th>
+                <th style="text-align:right;">Mindest</th>
+                <th class="noPrint" style="text-align:right;">Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryBody"></tbody>
+          </table>
+        </div>
+
+        <div class="muted small" style="margin-top:10px;">Tipp: Klick auf „Bearbeiten“ um Namen/Einheit/Mindestbestand zu ändern.</div>
       </div>
     </div>
 

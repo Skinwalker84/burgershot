@@ -489,6 +489,9 @@ button{ font-family:inherit; }
 .table th, .table td{ border-bottom:1px solid var(--border); padding:8px 6px; }
 .table th{ text-align:left; color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.2px; }
 
+/* Lager: unter Mindestbestand markieren */
+.lowRow{ background:rgba(255, 64, 64, .10); }
+
 .overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.55);
   display:flex; align-items:center; justify-content:center; padding:16px; z-index:30;

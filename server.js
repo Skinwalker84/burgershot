@@ -204,10 +204,43 @@ function makeFreshDB() {
 
     products: DEFAULT_PRODUCTS,
 
+    // Lagerbestand (Chef)
+    inventory: [],
+
     salesByDay: { [today]: [] },
     kitchenByDay: { [today]: { pending: [], done: [] } },
     closedDays: {}
   };
+}
+
+function makeInvId(){
+  return crypto.randomBytes(8).toString("hex");
+}
+
+function normalizeInventory(list){
+  const arr = Array.isArray(list) ? list : [];
+  const out = [];
+  const seen = new Set();
+  for(const it of arr){
+    if(!it || typeof it !== "object") continue;
+    const id = String(it.id || "").trim() || makeInvId();
+    if(seen.has(id)) continue;
+    seen.add(id);
+    const name = String(it.name || "").trim();
+    if(!name) continue;
+    const unit = String(it.unit || "Stk").trim() || "Stk";
+    let stock = Number(it.stock);
+    let minStock = Number(it.minStock);
+    if(!Number.isFinite(stock)) stock = 0;
+    if(!Number.isFinite(minStock)) minStock = 0;
+    stock = Math.max(0, Math.round(stock * 100) / 100);
+    minStock = Math.max(0, Math.round(minStock * 100) / 100);
+    const updatedAt = String(it.updatedAt || new Date().toISOString());
+    out.push({ id, name, unit, stock, minStock, updatedAt });
+  }
+  // sort stable
+  out.sort((a,b)=>String(a.name).localeCompare(String(b.name), "de"));
+  return out;
 }
 
 function normalizeProducts(list) {
@@ -252,7 +285,10 @@ function normalizeDB(db) {
   if (!db.kitchenByDay || typeof db.kitchenByDay !== "object") db.kitchenByDay = {};
   if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
 
+  if (!Array.isArray(db.inventory)) db.inventory = [];
+
   db.products = normalizeProducts(db.products);
+  db.inventory = normalizeInventory(db.inventory);
 
   const day = db.meta.currentDay;
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
@@ -440,6 +476,72 @@ app.put("/products", requireAuth, requireBoss, (req, res) => {
   db.products = normalized;
   saveDB(db);
   res.json({ success: true, products: db.products });
+});
+
+/* =========================
+   INVENTORY / LAGER
+   ========================= */
+app.get("/inventory", requireAuth, requireBoss, (req, res) => {
+  res.json({ success: true, items: db.inventory || [] });
+});
+
+app.post("/inventory", requireAuth, requireBoss, (req, res) => {
+  const body = req.body || {};
+  const id = String(body.id || "").trim();
+  const name = String(body.name || "").trim();
+  const unit = String(body.unit || "Stk").trim() || "Stk";
+  let stock = Number(body.stock);
+  let minStock = Number(body.minStock);
+  if(!name) return res.status(400).json({ success:false, message:"Name fehlt." });
+  if(!Number.isFinite(stock)) stock = 0;
+  if(!Number.isFinite(minStock)) minStock = 0;
+  stock = Math.max(0, Math.round(stock * 100) / 100);
+  minStock = Math.max(0, Math.round(minStock * 100) / 100);
+
+  if(!Array.isArray(db.inventory)) db.inventory = [];
+
+  if(id){
+    const it = db.inventory.find(x => x.id === id);
+    if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
+    it.name = name;
+    it.unit = unit;
+    it.stock = stock;
+    it.minStock = minStock;
+    it.updatedAt = new Date().toISOString();
+  } else {
+    db.inventory.push({ id: makeInvId(), name, unit, stock, minStock, updatedAt: new Date().toISOString() });
+  }
+
+  db.inventory = normalizeInventory(db.inventory);
+  saveDB(db);
+  res.json({ success:true, items: db.inventory });
+});
+
+app.post("/inventory/adjust", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.body?.id || "").trim();
+  const delta = Number(req.body?.delta);
+  if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
+  if(!Number.isFinite(delta) || delta === 0) return res.status(400).json({ success:false, message:"Delta ungültig." });
+
+  const it = (db.inventory || []).find(x => x.id === id);
+  if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
+  const next = Math.max(0, (Number(it.stock) || 0) + delta);
+  it.stock = Math.round(next * 100) / 100;
+  it.updatedAt = new Date().toISOString();
+  db.inventory = normalizeInventory(db.inventory);
+  saveDB(db);
+  res.json({ success:true, item: it, items: db.inventory });
+});
+
+app.delete("/inventory/:id", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
+  const before = (db.inventory || []).length;
+  db.inventory = (db.inventory || []).filter(x => x.id !== id);
+  db.inventory = normalizeInventory(db.inventory);
+  saveDB(db);
+  if(db.inventory.length === before) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
+  res.json({ success:true, items: db.inventory });
 });
 
 /* =========================

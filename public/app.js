@@ -9,6 +9,7 @@ let cart = [];
 let currentDayReport = null;
 let currentWeekReport = null;
 let currentMonthReport = null;
+let inventoryItems = [];
 
 let menuBuilderState = null;
 
@@ -31,7 +32,7 @@ function showApp(){
 function applyRoleVisibility(){
   const show = isBoss();
   // modern tab buttons removed; keep boss-only visibility via top icon buttons
-  const ids = ["iconBtnShop","iconBtnDay","iconBtnWeek","iconBtnMonth","iconBtnMgmt"];
+  const ids = ["iconBtnShop","iconBtnDay","iconBtnWeek","iconBtnMonth","iconBtnStock","iconBtnMgmt"];
   ids.forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = show ? "" : "none";
@@ -39,7 +40,7 @@ function applyRoleVisibility(){
 }
 
 function openTab(tabId, btn){
-  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month") && !isBoss()){
+  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month"||tabId==="tab_stock") && !isBoss()){
     alert("Nur Chef.");
     tabId="tab_pos";
     btn=null;
@@ -57,7 +58,142 @@ function openTab(tabId, btn){
   if(tabId==="tab_day") { initDayTab(); loadDayReport(); }
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
+  if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_mgmt") refreshStats();
+}
+
+/* =========================
+   INVENTORY / LAGER
+   ========================= */
+async function loadInventory(){
+  if(!isBoss()) return;
+  const body = document.getElementById("inventoryBody");
+  if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Lade…</td></tr>`;
+
+  const res = await fetch("/inventory").catch(()=>null);
+  const data = res ? await res.json().catch(()=>({})) : {};
+  if(!res || !res.ok || !data.success){
+    if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Fehler beim Laden.</td></tr>`;
+    return;
+  }
+  inventoryItems = Array.isArray(data.items) ? data.items : [];
+  renderInventory();
+}
+
+function renderInventory(){
+  const body = document.getElementById("inventoryBody");
+  const lowBox = document.getElementById("inventoryLowList");
+  if(!body) return;
+
+  if(!Array.isArray(inventoryItems) || inventoryItems.length===0){
+    body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Artikel. Klicke auf „+ Artikel“.</td></tr>`;
+    if(lowBox) lowBox.innerText = "—";
+    return;
+  }
+
+  const low = inventoryItems.filter(it => Number(it.stock) <= Number(it.minStock));
+  if(lowBox){
+    lowBox.innerHTML = low.length
+      ? low.map(it => `• <b>${esc(it.name)}</b> (${num(it.stock)} / ${num(it.minStock)} ${esc(it.unit||"")})`).join("<br>")
+      : "Alles ok ✅";
+  }
+
+  body.innerHTML = inventoryItems.map(it=>{
+    const isLow = Number(it.stock) <= Number(it.minStock);
+    return `
+      <tr class="${isLow ? "lowRow" : ""}">
+        <td><b>${esc(it.name)}</b><div class="muted small">${it.updatedAt ? esc(new Date(it.updatedAt).toLocaleString('de-DE')) : ""}</div></td>
+        <td>${esc(it.unit||"Stk")}</td>
+        <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
+        <td style="text-align:right;">${num(it.minStock)}</td>
+        <td class="noPrint" style="text-align:right; white-space:nowrap;">
+          <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', -1)">-1</button>
+          <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', 1)">+1</button>
+          <button class="ghost" onclick="adjustInventoryPrompt('${escAttr(it.id)}')">±</button>
+          <button class="primary" onclick="openInventoryEditor('${escAttr(it.id)}')">Bearbeiten</button>
+          <button class="ghost" onclick="deleteInventoryItem('${escAttr(it.id)}')">Löschen</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function openInventoryEditor(id){
+  if(!isBoss()) return;
+  const existing = id ? inventoryItems.find(x=>x.id===id) : null;
+  const name = prompt("Artikelname:", existing?.name || "");
+  if(name===null) return;
+  const unit = prompt("Einheit (z.B. Stk, l, kg):", existing?.unit || "Stk");
+  if(unit===null) return;
+  const stockStr = prompt("Aktueller Bestand:", String(existing?.stock ?? 0));
+  if(stockStr===null) return;
+  const minStr = prompt("Mindestbestand (Warnung ab diesem Wert):", String(existing?.minStock ?? 0));
+  if(minStr===null) return;
+
+  const stock = Number(String(stockStr).replace(",","."));
+  const minStock = Number(String(minStr).replace(",","."));
+
+  saveInventory({
+    id: existing?.id,
+    name: String(name).trim(),
+    unit: String(unit).trim() || "Stk",
+    stock: Number.isFinite(stock) ? stock : 0,
+    minStock: Number.isFinite(minStock) ? minStock : 0
+  });
+}
+
+async function saveInventory(item){
+  const res = await fetch("/inventory",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(item)
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){
+    alert(data.message || "Konnte nicht speichern.");
+    return;
+  }
+  inventoryItems = Array.isArray(data.items) ? data.items : [];
+  renderInventory();
+}
+
+async function adjustInventory(id, delta){
+  const res = await fetch("/inventory/adjust",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ id, delta })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){
+    alert(data.message || "Konnte Bestand nicht ändern.");
+    return;
+  }
+  inventoryItems = Array.isArray(data.items) ? data.items : inventoryItems;
+  renderInventory();
+}
+
+function adjustInventoryPrompt(id){
+  const s = prompt("Bestand ändern (z.B. +12 oder -3):", "+1");
+  if(s===null) return;
+  const delta = Number(String(s).replace(",","."));
+  if(!Number.isFinite(delta) || delta===0) return alert("Ungültiger Wert.");
+  adjustInventory(id, delta);
+}
+
+async function deleteInventoryItem(id){
+  if(!confirm("Artikel wirklich löschen?")) return;
+  const res = await fetch(`/inventory/${encodeURIComponent(id)}`,{ method:"DELETE" });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){
+    alert(data.message || "Konnte nicht löschen.");
+    return;
+  }
+  inventoryItems = Array.isArray(data.items) ? data.items : [];
+  renderInventory();
+}
+
+function printInventory(){
+  window.print();
 }
 
 async function login(){
@@ -1056,6 +1192,12 @@ async function submitPwChange(){
 
 /* Helpers */
 function money(n){ const x=Number(n||0); return "$"+(Number.isFinite(x)?x:0); }
+function num(n){
+  const x = Number(n);
+  if(!Number.isFinite(x)) return "0";
+  // keep simple: no trailing zeros clutter
+  return (Math.round(x*100)/100).toString().replace(".", ",");
+}
 function esc(s){
   return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
