@@ -93,7 +93,7 @@
           <span>Woche</span>
         </button>
 
-        <button class="iconBtn" onclick="openTab('tab_week', null)" id="iconBtnMonth" title="Monat">
+        <button class="iconBtn" onclick="openTab('tab_month', null)" id="iconBtnMonth" title="Monat">
           <img src="/icons/monatsabrechnung.png" alt="Monat" />
           <span>Monat</span>
         </button>
@@ -265,6 +265,61 @@
                 </tr>
               </thead>
               <tbody id="weekByEmployee"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB: MONTH REPORT (Summe aus Wochen) ===== -->
+    <div id="tab_month" class="tabPage hidden">
+      <div class="panel">
+        <div class="printOnly" style="margin-bottom:12px;">
+          <div style="font-weight:900; font-size:20px;">BurgerShot — Monatsabrechnung</div>
+          <div class="muted small">Monat: <span id="monthPrintYM">—</span></div>
+          <div class="muted small">Enthaltene KW: <span id="monthPrintWeeks">—</span></div>
+        </div>
+
+        <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">Monatsabrechnung</div>
+            <div class="muted small">Chef only · Summe aus Wochenabrechnungen</div>
+            <div id="monthWeeksHint" class="muted small" style="margin-top:4px;">—</div>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+            <input id="monthYM" class="input" type="month" style="width:180px;" />
+            <button class="ghost" onclick="setMonthToThisMonth()">Dieser Monat</button>
+            <button class="primary noPrint" onclick="loadMonthReport()">Laden</button>
+            <button class="ghost noPrint" onclick="printMonthReport()">PDF</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Gesamtbetrag (Umsatz)</div>
+            <div style="font-weight:900; font-size:22px;" id="monthRevenue">—</div>
+          </div>
+          <div class="panel" style="flex:1 1 240px;">
+            <div class="muted small">Orders</div>
+            <div style="font-weight:900; font-size:22px;" id="monthOrders">—</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <div class="panel" style="width:100%;">
+            <div style="font-weight:900; margin-bottom:8px;">Mitarbeiter</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Umsatz</th>
+                  <th style="text-align:right;">Trinkgeld</th>
+                  <th style="text-align:right;">Orders</th>
+                </tr>
+              </thead>
+              <tbody id="monthByEmployee"></tbody>
             </table>
           </div>
         </div>

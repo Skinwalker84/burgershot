@@ -95,6 +95,26 @@ function startOfWeekMonday(dateObj) {
   return d;
 }
 
+function isoWeekYearWeek(dateObj){
+  // ISO-8601 week number + week-year
+  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+  const dayNum = d.getUTCDay() || 7; // 1..7 (Mon..Sun)
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // nearest Thu decides week-year
+  const weekYear = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(weekYear, 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { year: weekYear, week };
+}
+
+function parseMonthYYYY_MM(s){
+  const m = /^(\d{4})-(\d{2})$/.exec(String(s||""));
+  if(!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  if(!Number.isFinite(y) || !Number.isFinite(mo) || mo < 1 || mo > 12) return null;
+  return { year: y, month: mo };
+}
+
 function toHM(iso) {
   try {
     const d = new Date(iso);
@@ -640,6 +660,69 @@ app.get("/reports/week-employee", requireAuth, requireBoss, (req, res) => {
     success: true,
     week: `${parsed.year}-W${String(parsed.week).padStart(2, "0")}`,
     range: { start: dayKeys[0], end: dayKeys[6] },
+    totals,
+    byEmployee
+  });
+});
+
+// Month report by summing whole ISO weeks that intersect the month
+// GET /reports/month-employee?month=YYYY-MM
+app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
+  rotateDayIfNeeded();
+
+  const monthStr = String(req.query?.month || "");
+  const parsed = parseMonthYYYY_MM(monthStr);
+  if(!parsed) return res.status(400).json({ success:false, message:"Ungültiger Monat. Format: YYYY-MM (z.B. 2026-02)" });
+
+  const start = new Date(parsed.year, parsed.month - 1, 1);
+  start.setHours(0,0,0,0);
+  const end = new Date(parsed.year, parsed.month, 0); // last day of month
+  end.setHours(0,0,0,0);
+
+  // collect unique ISO weeks that intersect this month (based on days in month)
+  const weekSet = new Set();
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+    const w = isoWeekYearWeek(d);
+    weekSet.add(`${w.year}-W${String(w.week).padStart(2,"0")}`);
+  }
+  const weeks = Array.from(weekSet.values()).sort();
+
+  const salesAll = [];
+  for(const wStr of weeks){
+    const wParsed = parseWeekYYYY_Www(wStr);
+    if(!wParsed) continue;
+    const wStart = isoWeekStartDate(wParsed.year, wParsed.week);
+    for(let i=0;i<7;i++){
+      const key = getDayKeyLocal(addDays(wStart, i));
+      const sales = Array.isArray(db.salesByDay[key]) ? db.salesByDay[key] : [];
+      salesAll.push(...sales);
+    }
+  }
+
+  const totals = {
+    revenue: salesAll.reduce((s,x)=> s + Number(x.total||0), 0),
+    tips: salesAll.reduce((s,x)=> s + Number(x.tip||0), 0),
+    orders: salesAll.length
+  };
+  totals.avg = totals.orders>0 ? totals.revenue / totals.orders : 0;
+
+  const byEmployeeMap = {};
+  for(const s of salesAll){
+    const empKey = String(s.employeeUsername || s.employee || "—");
+    if(!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue:0, tips:0, orders:0, avg:0 };
+    byEmployeeMap[empKey].revenue += Number(s.total||0);
+    byEmployeeMap[empKey].tips += Number(s.tip||0);
+    byEmployeeMap[empKey].orders += 1;
+  }
+  const byEmployee = Object.values(byEmployeeMap)
+    .map(x => ({ ...x, avg: x.orders>0 ? x.revenue/x.orders : 0 }))
+    .sort((a,b)=> b.revenue - a.revenue);
+
+  return res.json({
+    success:true,
+    month: monthStr,
+    weeks,
+    note: "Monatsabrechnung = Summe ganzer KW (inkl. Tage außerhalb des Monats, wenn KW überlappt).",
     totals,
     byEmployee
   });

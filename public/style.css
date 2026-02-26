@@ -734,3 +734,15 @@ select.input{ appearance:none; -webkit-appearance:none; }
 /* Collapsible cart on mobile */
 .counterCollapsed .counterBody{ display:none; }
 .counterCollapsed .counterTotal{ display:none; }
+
+/* Print helpers */
+.printOnly{ display:none; }
+@media print{
+  .noPrint{ display:none !important; }
+  .printOnly{ display:block !important; }
+  body{ background:#fff !important; color:#000 !important; }
+  .brandHeader, .retroTop{ display:none !important; }
+  .appRoot{ width:100% !important; height:auto !important; overflow:visible !important; }
+  .panel{ box-shadow:none !important; border-color:#ccc !important; }
+  .tabPage.hidden{ display:none !important; }
+}

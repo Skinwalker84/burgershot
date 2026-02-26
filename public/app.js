@@ -8,6 +8,7 @@ let serverDay = null;
 let cart = [];
 let currentDayReport = null;
 let currentWeekReport = null;
+let currentMonthReport = null;
 
 let menuBuilderState = null;
 
@@ -38,7 +39,7 @@ function applyRoleVisibility(){
 }
 
 function openTab(tabId, btn){
-  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week") && !isBoss()){
+  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month") && !isBoss()){
     alert("Nur Chef.");
     tabId="tab_pos";
     btn=null;
@@ -55,6 +56,7 @@ function openTab(tabId, btn){
   else { stopKitchenTimers(); }
   if(tabId==="tab_day") { initDayTab(); loadDayReport(); }
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
+  if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_mgmt") refreshStats();
 }
 
@@ -873,6 +875,62 @@ async function loadWeekReport(){
   }
 }
 
+/* Month report (Summe aus Wochen) */
+let monthTabInited=false;
+function initMonthTab(){
+  if(monthTabInited) return;
+  monthTabInited=true;
+  const m=document.getElementById("monthYM");
+  if(m) m.value = currentISOYMString(new Date());
+}
+
+function setMonthToThisMonth(){
+  const m=document.getElementById("monthYM");
+  if(m) m.value = currentISOYMString(new Date());
+}
+
+function printMonthReport(){
+  document.body.classList.remove("printDay");
+  document.body.classList.remove("printWeek");
+  document.body.classList.add("printMonth");
+  window.print();
+  document.body.classList.remove("printMonth");
+}
+
+async function loadMonthReport(){
+  if(!isBoss()) return;
+  const ym=document.getElementById("monthYM")?.value;
+  if(!ym) return;
+
+  const res=await fetch(`/reports/month-employee?month=${encodeURIComponent(ym)}`);
+  if(res.status===401) return showLoginPage("Bitte einloggen.");
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Monatsabrechnung.");
+
+  currentMonthReport=data;
+
+  const weeksText=(data.weeks||[]).join(", ") || "—";
+  document.getElementById("monthPrintYM").innerText=ym;
+  document.getElementById("monthPrintWeeks").innerText=weeksText;
+  const hint=document.getElementById("monthWeeksHint");
+  if(hint) hint.innerText = `Enthaltene KW: ${weeksText}` + (data.note ? ` — ${data.note}` : "");
+
+  document.getElementById("monthRevenue").innerText=money(data.totals?.revenue||0);
+  document.getElementById("monthOrders").innerText=String(data.totals?.orders||0);
+
+  const tbody=document.getElementById("monthByEmployee");
+  if(tbody){
+    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
+      <tr>
+        <td>${esc(x.employee||x.employeeUsername||"")}</td>
+        <td style="text-align:right;">${money(x.revenue||0)}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
+        <td style="text-align:right;">${x.orders||0}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
+  }
+}
+
 /* Management */
 async function refreshStats(){
   if(!isBoss()) return;
@@ -1013,6 +1071,13 @@ function currentISOWeekString(d){
   const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
   const y = date.getUTCFullYear();
   return `${y}-W${String(weekNo).padStart(2,"0")}`;
+}
+
+// YYYY-MM for <input type="month">
+function currentISOYMString(d){
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,"0");
+  return `${y}-${m}`;
 }
 
 /* Boot */
