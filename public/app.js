@@ -535,6 +535,13 @@ function renderCart(){
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); }
 
+// Mobile UX: collapse/expand cart panel
+function toggleCart(){
+  const panel = document.querySelector('.counterPanel');
+  if(!panel) return;
+  panel.classList.toggle('counterCollapsed');
+}
+
 /* Register */
 function setRegister(n){ currentRegister=n; const d=document.getElementById("registerDisplay"); if(d) d.innerText=`Kasse ${n}`; }
 
