@@ -399,3 +399,19 @@ html, body, .appBody{
   min-height:200px;
   text-align:center;
 }
+
+/* ===== POS item icons ===== */
+.posItemImg{
+  width:120px;
+  height:120px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 auto 10px auto;
+}
+.posItemIcon{
+  width:110px;
+  height:110px;
+  object-fit:contain;
+  display:block;
+}

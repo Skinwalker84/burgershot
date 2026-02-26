@@ -317,15 +317,14 @@ function renderProducts(){
   PRODUCTS.filter(p=>p.cat===currentCategory).forEach(p=>{
     const el=document.createElement("button");
     el.className="posItem";
-    const iconPath = `/icons/${encodeURIComponent(String(p.id||""))}.png`;
-    el.innerHTML = `
+        el.innerHTML = `
       <div class="posItemImg">
-        <img src="${iconPath}" alt="" onerror="this.style.display='none'"/>
+        <img class="posItemIcon" alt="">
       </div>
-      <div class="posItemName"><img src="${resolveProductIcon(p)}" class="posIcon" onerror="this.style.display=\'none\'">
-${esc(p.name)}</div>
+      <div class="posItemName">${esc(p.name)}</div>
       <div class="posItemPrice">${money(p.price)}</div>
     `;
+    applyIconWithFallback(el.querySelector("img.posItemIcon"), getIconCandidates(p));
     el.onclick=()=>addToCart(p);
     box.appendChild(el);
   });
@@ -760,6 +759,7 @@ async function submitPwChange(){
 /* Helpers */
 function money(n){ const x=Number(n||0); return "$"+(Number.isFinite(x)?x:0); }
 
+
 function slugifyName(name){
   return String(name||"")
     .toLowerCase()
@@ -767,11 +767,46 @@ function slugifyName(name){
     .replace(/^_+|_+$/g,"");
 }
 
-function resolveProductIcon(product){
+function getIconCandidates(product){
+  const id = String(product.id||"").toLowerCase();
   const slug = slugifyName(product.name);
-  return "/icons/burgershot_" + slug + ".png";
+  // Order matters: try the most specific first
+  return [
+    `/icons/burgershot_${slug}.png`,
+    `/icons/burgershot_${id}.png`,
+    `/icons/${id}.png`,
+    `/icons/${slug}.png`,
+    `/icons/burgershot_${slug}.webp`,
+    `/icons/burgershot_${id}.webp`,
+    `/icons/${id}.webp`,
+    `/icons/${slug}.webp`,
+    `/icons/${id}.jpg`,
+    `/icons/${slug}.jpg`,
+    `/icons/${id}.jpeg`,
+    `/icons/${slug}.jpeg`
+  ];
 }
 
+function applyIconWithFallback(imgEl, candidates){
+  if(!imgEl) return;
+  imgEl.dataset.iconCandidates = JSON.stringify(candidates || []);
+  imgEl.dataset.iconIndex = "0";
+  imgEl.src = candidates?.[0] || "";
+  imgEl.onerror = () => {
+    try{
+      const list = JSON.parse(imgEl.dataset.iconCandidates || "[]");
+      let i = Number(imgEl.dataset.iconIndex || "0") + 1;
+      imgEl.dataset.iconIndex = String(i);
+      if(i < list.length){
+        imgEl.src = list[i];
+      }else{
+        imgEl.style.display = "none";
+      }
+    }catch(e){
+      imgEl.style.display = "none";
+    }
+  };
+}
 function esc(s){
   return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
