@@ -556,10 +556,11 @@ select.input{ appearance:none; -webkit-appearance:none; }
 
 @media (max-width: 820px){
   /* Login centering on mobile */
-  .loginPage{ min-height:100dvh; }
-  .loginShell{ width:100%; max-width:520px; margin:0 auto; }
-  .loginBrand, .loginCard{ margin-left:auto; margin-right:auto; }
-  .loginCardWide{ width:min(420px, 92vw) !important; }
+  .loginPage{ min-height:100dvh; padding:18px 14px; display:flex; align-items:center; justify-content:center; }
+  .loginShell{ width:100%; max-width:520px; margin:0 auto; display:flex; flex-direction:column; align-items:center; }
+  .loginBrand{ width:100%; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .loginLogo{ margin-left:auto; margin-right:auto; }
+  .loginCard, .loginCardWide{ width:min(420px, 92vw) !important; margin-left:auto; margin-right:auto; }
 
   /* Mobile should feel like an app: compact sticky header + horizontal scrollers */
   /* Make the whole app scroll on mobile so sticky headers behave correctly */
@@ -590,6 +591,7 @@ select.input{ appearance:none; -webkit-appearance:none; }
     align-items:stretch;
     row-gap:8px;
     padding:8px 10px;
+    overflow:visible;
   }
 
   .retroLeft{ gap:8px; }
@@ -599,12 +601,16 @@ select.input{ appearance:none; -webkit-appearance:none; }
     display:flex;
     gap:8px;
     flex-wrap:nowrap;
-    overflow-x:auto;
+    overflow-x:scroll;
     -webkit-overflow-scrolling:touch;
+    touch-action:pan-x;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
     padding-bottom:2px;
   }
   .registerBar::-webkit-scrollbar{ display:none; }
   .regBtn{ flex:0 0 92px; width:92px; height:46px; }
+  .regBtn{ scroll-snap-align:start; }
   .regBtn img{ left:10px; top:9px; width:34px; height:28px; }
   .regNo{ right:10px; top:9px; font-size:16px; }
 
@@ -613,26 +619,38 @@ select.input{ appearance:none; -webkit-appearance:none; }
     display:flex;
     gap:8px;
     flex-wrap:nowrap;
-    overflow-x:auto;
+    overflow-x:scroll;
     -webkit-overflow-scrolling:touch;
+    touch-action:pan-x;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
     padding-bottom:2px;
   }
   .catBar::-webkit-scrollbar{ display:none; }
   .catBtn{ flex:0 0 auto; height:40px; padding:0 16px; border-radius:16px; white-space:nowrap; }
+  .catBtn{ scroll-snap-align:start; }
 
   /* Action icons: single row, swipeable. Logout becomes compact. */
   .retroRight{
     display:flex;
     gap:10px;
     flex-wrap:nowrap;
-    overflow-x:auto;
+    overflow-x:scroll;
     -webkit-overflow-scrolling:touch;
+    touch-action:pan-x;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
     padding-bottom:2px;
   }
   .retroRight::-webkit-scrollbar{ display:none; }
   .iconBtn{ flex:0 0 88px; width:88px; height:72px; }
   .iconBtn img{ width:40px; height:40px; }
   .logoutBtn{ flex:0 0 auto; height:72px; padding:0 14px; }
+  .iconBtn, .logoutBtn{ scroll-snap-align:start; }
+
+  /* Prevent any visual overlap between action row and category row */
+  .retroRight{ position:relative; z-index:2; }
+  .catBar{ position:relative; z-index:1; }
 
   /* Main area becomes a clean vertical stack */
   .posRetro{
