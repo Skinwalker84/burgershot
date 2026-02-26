@@ -11,6 +11,8 @@ let currentWeekReport = null;
 
 let menuBuilderState = null;
 
+let kitchenTimerInterval = null;
+
 function isBoss(){ return me?.role === "boss"; }
 
 function showLoginPage(msg="Bitte einloggen."){
@@ -49,7 +51,8 @@ function openTab(tabId, btn){
   document.querySelectorAll(".tabTop").forEach(b=>b.classList.remove("active"));
   btn?.classList?.add("active");
 
-  if(tabId==="tab_kitchen") loadKitchen();
+  if(tabId==="tab_kitchen") { loadKitchen(); startKitchenTimers(); }
+  else { stopKitchenTimers(); }
   if(tabId==="tab_day") { initDayTab(); loadDayReport(); }
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
   if(tabId==="tab_mgmt") refreshStats();
@@ -560,6 +563,43 @@ function slugKey(p){
 }
 
 /* Kitchen */
+
+function formatElapsed(sec){
+  sec = Math.max(0, Math.floor(sec||0));
+  const m = Math.floor(sec/60);
+  const s = sec%60;
+  return `${m}:${String(s).padStart(2,"0")}`;
+}
+
+function stopKitchenTimers(){
+  if(kitchenTimerInterval){
+    clearInterval(kitchenTimerInterval);
+    kitchenTimerInterval = null;
+  }
+}
+
+function updateKitchenTimers(){
+  const now = Date.now();
+  document.querySelectorAll(".kCard[data-order-time]").forEach(card=>{
+    const iso = card.getAttribute("data-order-time");
+    const t = Date.parse(iso||"");
+    if(!Number.isFinite(t)) return;
+    const elapsedSec = (now - t)/1000;
+    const el = card.querySelector(".kElapsed");
+    if(el) el.textContent = formatElapsed(elapsedSec);
+
+    card.classList.remove("kWarn","kCrit");
+    if(elapsedSec >= 300) card.classList.add("kCrit");
+    else if(elapsedSec >= 180) card.classList.add("kWarn");
+  });
+}
+
+function startKitchenTimers(){
+  stopKitchenTimers();
+  kitchenTimerInterval = setInterval(updateKitchenTimers, 1000);
+  updateKitchenTimers();
+}
+
 async function loadKitchen(){
   const res=await fetch("/kitchen/orders");
   if(res.status===401) return showLoginPage("Bitte einloggen.");
@@ -569,15 +609,18 @@ async function loadKitchen(){
 
   const box=document.getElementById("kitchenOrders");
   if(!box) return;
-  const orders=data.pending||[];
+  const orders=(data.pending||[]).slice().sort((a,b)=> (Date.parse(a.time||"")||0) - (Date.parse(b.time||"")||0));
   if(orders.length===0){ box.innerHTML=`<div class="muted small">Keine offenen Bestellungen.</div>`; return; }
   box.innerHTML=orders.map(o=>{
     const items=(o.items||[]).map(i=>`${i.qty||1}× ${i.name}`).join(", ");
     return `
-      <div class="kCard">
+      <div class="kCard" data-order-time="${escAttr(o.time||"")}">
         <div class="row" style="justify-content:space-between; align-items:flex-start;">
           <div style="font-weight:900;">#${o.id} · Kasse ${o.register}</div>
-          <div class="muted small">${esc(o.timeHM||"")}</div>
+          <div style="text-align:right;">
+            <div class="muted small">${esc(o.timeHM||"")}</div>
+            <div class="kElapsed">0:00</div>
+          </div>
         </div>
         <div class="muted small">${esc(o.employee||"")}</div>
         <div style="margin-top:8px;">${esc(items)}</div>
@@ -587,6 +630,7 @@ async function loadKitchen(){
         </div>
       </div>`;
   }).join("");
+  updateKitchenTimers();
 }
 
 async function kitchenDone(id){

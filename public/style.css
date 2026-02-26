@@ -441,3 +441,26 @@ button{ font-family:inherit; }
 
 
 select.input{ appearance:none; -webkit-appearance:none; }
+
+
+/* Kitchen timer + blinking states */
+.kElapsed{
+  font-weight:900;
+  font-size:14px;
+  color:#fff;
+  margin-top:2px;
+}
+@keyframes kBlinkWarn{
+  0%, 100% { background: rgba(255, 193, 7, .18); border-color: rgba(255,193,7,.65); }
+  50% { background: rgba(255, 152, 0, .32); border-color: rgba(255,152,0,.9); }
+}
+@keyframes kBlinkCrit{
+  0%, 100% { background: rgba(244, 67, 54, .18); border-color: rgba(244,67,54,.65); }
+  50% { background: rgba(244, 67, 54, .42); border-color: rgba(244,67,54,.95); }
+}
+.kCard.kWarn{
+  animation: kBlinkWarn 1s infinite;
+}
+.kCard.kCrit{
+  animation: kBlinkCrit .8s infinite;
+}
