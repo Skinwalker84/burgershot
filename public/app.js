@@ -460,8 +460,9 @@ function updateDayInfo(){
   }
   if(screenTitle) screenTitle.innerText = currentCategory || "—";
   if(counterTitle){
-    const short = (me?.displayName || "").trim().split(/\s+/)[0] || "";
-    counterTitle.innerText = short ? `Counter ${short}.` : "Counter";
+    // Oben links: nur der Anzeigename (ohne "Counter"-Prefix)
+    const fullName = (me?.displayName || me?.name || "").trim();
+    counterTitle.innerText = fullName || "—";
   }
 }
 setInterval(updateDayInfo, 1000);
