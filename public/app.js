@@ -1086,7 +1086,7 @@ function confirmMenuBuilder(){
   const base = menuBuilderState.base;
   const finalPrice = Math.round(Number(base.price||0) + extra);
 
-  const displayName = `${base.name} • Drink: ${drinkName} • ${friesLabel}`;
+  const displayName = String(base.name||"") + " • Drink: " + String(drinkName||"") + " • " + String(friesLabel||"");
 
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
