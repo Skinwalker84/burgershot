@@ -297,6 +297,51 @@ body{
 }
 .dispImg img{ width:100%; height:100%; object-fit:contain; }
 
+/* Click-to-add UX */
+.dispClickable{ cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:manipulation; -webkit-tap-highlight-color: transparent; }
+.dispClickable:focus{ outline:2px solid rgba(255,255,255,.65); outline-offset:3px; }
+.dispClickable:hover{ box-shadow:0 0 0 3px rgba(255,255,255,.35), 0 10px 18px rgba(0,0,0,.35); transform:translateY(-1px) scale(1.02); }
+.dispClickable:active{ transform:translateY(0) scale(.98); box-shadow:0 0 0 3px rgba(255,255,255,.18), 0 6px 12px rgba(0,0,0,.25); }
+.dispImg{ transition:transform .12s ease, box-shadow .18s ease; }
+
+/* +1 popup */
+.plusOne{
+  position:fixed;
+  transform:translate(-50%, -50%) translateY(10px) scale(.9);
+  opacity:0;
+  z-index:9999;
+  pointer-events:none;
+  color:#fff;
+  font-weight:900;
+  font-size:20px;
+  text-shadow:0 2px 6px rgba(0,0,0,.55);
+}
+.plusOne.show{ animation:plusOneFloat .8s ease-out forwards; }
+@keyframes plusOneFloat{
+  0%{ opacity:0; transform:translate(-50%, -50%) translateY(10px) scale(.9); }
+  20%{ opacity:1; }
+  100%{ opacity:0; transform:translate(-50%, -50%) translateY(-34px) scale(1.15); }
+}
+
+/* Flying product image to cart */
+.flyImg{
+  position:fixed;
+  z-index:9998;
+  pointer-events:none;
+  border-radius:6px;
+  transition:transform .55s cubic-bezier(.2,.8,.2,1), opacity .55s ease;
+  will-change:transform, opacity;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.45));
+}
+
+/* Cart pulse when item added */
+.cartPulse{ animation:cartPulse .28s ease-out; }
+@keyframes cartPulse{
+  0%{ transform:scale(1); }
+  40%{ transform:scale(1.02); }
+  100%{ transform:scale(1); }
+}
+
 .dispMeta{
   width:100%;
   text-align:center;
