@@ -210,17 +210,17 @@ function renderShopTable(){
 
   body.innerHTML = inventoryItems.map(it=>{
     const isLow = Number(it.stock) <= Number(it.minStock);
-    return "
-      <tr class=\"${isLow ? \"lowRow\" : \"\"}\">
+    return `
+      <tr class="${isLow ? "lowRow" : ""}">
         <td><b>${esc(it.name)}</b></td>
-        <td>${esc(it.unit||\"Stk\")}</td>
-        <td style=\"text-align:right; font-weight:900;\">${num(it.stock)}</td>
-        <td style=\"text-align:right;\">${num(it.minStock)}</td>
-        <td style=\"text-align:right;\">
-          <input class=\"input shopQty\" data-id=\"${escAttr(it.id)}\" type=\"number\" step=\"0.01\" min=\"0\" placeholder=\"0\" style=\"width:140px; text-align:right;\" />
+        <td>${esc(it.unit||"Stk")}</td>
+        <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
+        <td style="text-align:right;">${num(it.minStock)}</td>
+        <td style="text-align:right;">
+          <input class="input shopQty" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0" style="width:140px; text-align:right;" />
         </td>
       </tr>
-    ";
+    `;
   }).join("");
 }
 
@@ -267,7 +267,7 @@ async function bookShopPurchases(){
   }
 
   const added = Number(data.added) || items.length;
-  if(msg) msg.innerText = "Gebucht ✅ ${added} Position${added===1?\"\":\"en\"} ins Lager übernommen.";
+  if(msg) msg.innerText = `Gebucht ✅ ${added} Position${added===1?"":"en"} ins Lager übernommen.`;
 }
 
 /* =========================
@@ -320,7 +320,7 @@ function renderPurchaseSelect(){
     return;
   }
   const cur = sel.value;
-  sel.innerHTML = inventoryItems.map(it=>"<option value=\"${escAttr(it.id)}\">${esc(it.name)} (${num(it.stock)} ${esc(it.unit||\"\")})</option>").join("");
+  sel.innerHTML = inventoryItems.map(it=>`<option value="${escAttr(it.id)}">${esc(it.name)} (${num(it.stock)} ${esc(it.unit||"")})</option>`).join("");
   if(cur && inventoryItems.some(x=>x.id===cur)) sel.value = cur;
 }
 
@@ -346,15 +346,15 @@ function renderPurchases(items){
   }
   body.innerHTML = items.map(p=>{
     const price = (p.price===null || p.price===undefined) ? "—" : num(p.price);
-    return "
+    return `
       <tr>
-        <td>${esc(p.date || \"\")}</td>
-        <td><b>${esc(p.name || \"\")}</b><div class=\"muted small\">${esc(p.unit || \"\")}</div></td>
-        <td style=\"text-align:right; font-weight:900;\">${num(p.qty)}</td>
-        <td style=\"text-align:right;\">${price}</td>
-        <td>${esc(p.note || \"\")}</td>
+        <td>${esc(p.date || "")}</td>
+        <td><b>${esc(p.name || "")}</b><div class="muted small">${esc(p.unit || "")}</div></td>
+        <td style="text-align:right; font-weight:900;">${num(p.qty)}</td>
+        <td style="text-align:right;">${price}</td>
+        <td>${esc(p.note || "")}</td>
       </tr>
-    ";
+    `;
   }).join("");
 }
 
@@ -425,27 +425,27 @@ function renderInventory(){
   const low = inventoryItems.filter(it => Number(it.stock) <= Number(it.minStock));
   if(lowBox){
     lowBox.innerHTML = low.length
-      ? low.map(it => "• <b>${esc(it.name)}</b> (${num(it.stock)} / ${num(it.minStock)} ${esc(it.unit||\"\")})").join("<br>")
+      ? low.map(it => `• <b>${esc(it.name)}</b> (${num(it.stock)} / ${num(it.minStock)} ${esc(it.unit||"")})`).join("<br>")
       : "Alles ok ✅";
   }
 
   body.innerHTML = inventoryItems.map(it=>{
     const isLow = Number(it.stock) <= Number(it.minStock);
-    return "
-      <tr class=\"${isLow ? \"lowRow\" : \"\"}\">
-        <td><b>${esc(it.name)}</b><div class=\"muted small\">${it.updatedAt ? esc(new Date(it.updatedAt).toLocaleString('de-DE')) : \"\"}</div></td>
-        <td>${esc(it.unit||\"Stk\")}</td>
-        <td style=\"text-align:right; font-weight:900;\">${num(it.stock)}</td>
-        <td style=\"text-align:right;\">${num(it.minStock)}</td>
-        <td class=\"noPrint\" style=\"text-align:right; white-space:nowrap;\">
-          <button class=\"ghost\" onclick=\"adjustInventory('${escAttr(it.id)}', -1)\">-1</button>
-          <button class=\"ghost\" onclick=\"adjustInventory('${escAttr(it.id)}', 1)\">+1</button>
-          <button class=\"ghost\" onclick=\"adjustInventoryPrompt('${escAttr(it.id)}')\">±</button>
-          <button class=\"primary\" onclick=\"openInventoryEditor('${escAttr(it.id)}')\">Bearbeiten</button>
-          <button class=\"ghost\" onclick=\"deleteInventoryItem('${escAttr(it.id)}')\">Löschen</button>
+    return `
+      <tr class="${isLow ? "lowRow" : ""}">
+        <td><b>${esc(it.name)}</b><div class="muted small">${it.updatedAt ? esc(new Date(it.updatedAt).toLocaleString('de-DE')) : ""}</div></td>
+        <td>${esc(it.unit||"Stk")}</td>
+        <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
+        <td style="text-align:right;">${num(it.minStock)}</td>
+        <td class="noPrint" style="text-align:right; white-space:nowrap;">
+          <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', -1)">-1</button>
+          <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', 1)">+1</button>
+          <button class="ghost" onclick="adjustInventoryPrompt('${escAttr(it.id)}')">±</button>
+          <button class="primary" onclick="openInventoryEditor('${escAttr(it.id)}')">Bearbeiten</button>
+          <button class="ghost" onclick="deleteInventoryItem('${escAttr(it.id)}')">Löschen</button>
         </td>
       </tr>
-    ";
+    `;
   }).join("");
 }
 
@@ -513,7 +513,7 @@ function adjustInventoryPrompt(id){
 
 async function deleteInventoryItem(id){
   if(!confirm("Artikel wirklich löschen?")) return;
-  const res = await fetch("/inventory/${encodeURIComponent(id)}",{ method:"DELETE" });
+  const res = await fetch(`/inventory/${encodeURIComponent(id)}`,{ method:"DELETE" });
   const data = await res.json().catch(()=>({}));
   if(!res.ok || !data.success){
     alert(data.message || "Konnte nicht löschen.");
@@ -592,7 +592,7 @@ function updateDayInfo(){
   if(screenTitle) screenTitle.innerText = currentCategory || "—";
   if(counterTitle){
     const short = (me?.displayName || "").trim().split(/\s+/)[0] || "";
-    counterTitle.innerText = short ? "Counter ${short}." : "Counter";
+    counterTitle.innerText = short ? `Counter ${short}.` : "Counter";
   }
 }
 setInterval(updateDayInfo, 1000);
@@ -707,15 +707,15 @@ function renderProductsEditor(){
   const msg = document.getElementById("mgmtProductsMsg");
   if(!body) return; // panel might not exist
   const list = (PRODUCTS||[]).slice().sort((a,b)=>(a.cat||"").localeCompare(b.cat||"") || (a.name||"").localeCompare(b.name||""));
-  body.innerHTML = list.map((p, idx)=>"
+  body.innerHTML = list.map((p, idx)=>`
     <tr>
       <td>${esc(p.name)}</td>
       <td>${esc(p.cat)}</td>
-      <td style=\"text-align:right;\">
-        <input class=\"input\" style=\"width:110px; text-align:right; padding:8px 10px;\" data-price-key=\"${escAttr(slugKey(p))}\" value=\"${escAttr(p.price)}\" />
+      <td style="text-align:right;">
+        <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-key="${escAttr(slugKey(p))}" value="${escAttr(p.price)}" />
       </td>
     </tr>
-  ").join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
+  `).join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
   if(msg) msg.innerText = "—";
 }
 
@@ -845,7 +845,7 @@ function getIconForProduct(p){
   const cat = String(p?.cat||p?.category||"");
 
   // 1) direct mapping
-  if(PRODUCT_ICON[name]) return "/icons/${PRODUCT_ICON[name]}";
+  if(PRODUCT_ICON[name]) return `/icons/${PRODUCT_ICON[name]}`;
 
   // 2) Menü: reuse burger icons (match by keyword, otherwise default burger)
   if(cat === "Menü"){
@@ -856,11 +856,11 @@ function getIconForProduct(p){
     });
     // try to match any known burger name inside the menu name
     for(const bn of burgerNames){
-      if(lower.includes(bn.toLowerCase())) return "/icons/${PRODUCT_ICON[bn]}";
+      if(lower.includes(bn.toLowerCase())) return `/icons/${PRODUCT_ICON[bn]}`;
     }
     // fallback: any burger icon we have
     const fallback = PRODUCT_ICON["The Bleeder"] || PRODUCT_ICON[burgerNames[0]];
-    if(fallback) return "/icons/${fallback}";
+    if(fallback) return `/icons/${fallback}`;
   }
 
   return "";
@@ -896,7 +896,7 @@ function renderProducts(){
     // Click on image adds to cart (touch + mouse)
     imgWrap.tabIndex = 0;
     imgWrap.setAttribute('role','button');
-    imgWrap.setAttribute('aria-label', "Add ${p.name} to cart");
+    imgWrap.setAttribute('aria-label', `Add ${p.name} to cart`);
     const onPick = (ev)=>{
       // Menüs open the builder (no cart animation until confirmed)
       const isMenu = String(p?.cat||p?.category||"") === "Menü";
@@ -942,8 +942,8 @@ function popPlusOne(x, y){
     const el=document.createElement('div');
     el.className='plusOne';
     el.textContent = '+1';
-    el.style.left = "${Math.round(x)}px";
-    el.style.top  = "${Math.round(y)}px";
+    el.style.left = `${Math.round(x)}px`;
+    el.style.top  = `${Math.round(y)}px`;
     document.body.appendChild(el);
     requestAnimationFrame(()=> el.classList.add('show'));
     setTimeout(()=>{ try{ el.remove(); }catch{} }, 900);
@@ -960,10 +960,10 @@ function flyToCart(imgEl, fromRect){
 
     const clone = imgEl.cloneNode(true);
     clone.className = 'flyImg';
-    clone.style.left = "${start.left}px";
-    clone.style.top  = "${start.top}px";
-    clone.style.width  = "${start.width}px";
-    clone.style.height = "${start.height}px";
+    clone.style.left = `${start.left}px`;
+    clone.style.top  = `${start.top}px`;
+    clone.style.width  = `${start.width}px`;
+    clone.style.height = `${start.height}px`;
     document.body.appendChild(clone);
 
     const targetX = toRect.left + Math.min(40, toRect.width/2);
@@ -972,7 +972,7 @@ function flyToCart(imgEl, fromRect){
     const dy = targetY - start.top;
 
     requestAnimationFrame(()=>{
-      clone.style.transform = "translate(${dx}px, ${dy}px) scale(0.25)";
+      clone.style.transform = `translate(${dx}px, ${dy}px) scale(0.25)`;
       clone.style.opacity = '0.2';
     });
 
@@ -1010,14 +1010,14 @@ function renderCart(){
   if(tot) tot.innerText=money(cartTotal());
   if(!box) return;
   if(cart.length===0){ box.innerHTML=`<div class="cartEmpty">Leer.</div>`; return; }
-  box.innerHTML=cart.map((x,idx)=>"
-    <div class=\"cartItem\">
-      <div class=\"name\">${esc(x.name)}</div>
-      <div style=\"display:flex; gap:8px; align-items:center;\">
-        <div class=\"price\">${money(x.price)}</div>
-        <button class=\"pushBtn\" style=\"width:26px; height:22px;\" onclick=\"removeItem(${idx})\">x</button>
+  box.innerHTML=cart.map((x,idx)=>`
+    <div class="cartItem">
+      <div class="name">${esc(x.name)}</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="price">${money(x.price)}</div>
+        <button class="pushBtn" style="width:26px; height:22px;" onclick="removeItem(${idx})">x</button>
       </div>
-    </div>").join("");
+    </div>`).join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); onCartChanged(); }
 
@@ -1029,7 +1029,7 @@ function toggleCart(){
 }
 
 /* Register */
-function setRegister(n){ currentRegister=Number(n)||1; const d=document.getElementById("registerDisplay"); if(d) d.innerText="Kasse ${currentRegister}"; switchCartToRegister(currentRegister); renderCart(); onCartChanged(); }`;
+function setRegister(n){ currentRegister=Number(n)||1; const d=document.getElementById("registerDisplay"); if(d) d.innerText=`Kasse ${currentRegister}`; switchCartToRegister(currentRegister); renderCart(); onCartChanged(); }`;
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsToStorage();
@@ -1146,7 +1146,7 @@ function formatElapsed(sec){
   sec = Math.max(0, Math.floor(sec||0));
   const m = Math.floor(sec/60);
   const s = sec%60;
-  return "${m}:${String(s).padStart(2,\"0\")}";
+  return `${m}:${String(s).padStart(2,"0")}`;
 }
 
 function stopKitchenTimers(){
@@ -1190,23 +1190,23 @@ async function loadKitchen(){
   const orders=(data.pending||[]).slice().sort((a,b)=> (Date.parse(a.time||"")||0) - (Date.parse(b.time||"")||0));
   if(orders.length===0){ box.innerHTML=`<div class="muted small">Keine offenen Bestellungen.</div>`; return; }
   box.innerHTML=orders.map(o=>{
-    const items=(o.items||[]).map(i=>"${i.qty||1}× ${i.name}").join(", ");
-    return "
-      <div class=\"kCard\" data-order-time=\"${escAttr(o.time||\"\")}\">
-        <div class=\"row\" style=\"justify-content:space-between; align-items:flex-start;\">
-          <div style=\"font-weight:900;\">#${o.id} · Kasse ${o.register}</div>
-          <div style=\"text-align:right;\">
-            <div class=\"muted small\">${esc(o.timeHM||\"\")}</div>
-            <div class=\"kElapsed\">0:00</div>
+    const items=(o.items||[]).map(i=>`${i.qty||1}× ${i.name}`).join(", ");
+    return `
+      <div class="kCard" data-order-time="${escAttr(o.time||"")}">
+        <div class="row" style="justify-content:space-between; align-items:flex-start;">
+          <div style="font-weight:900;">#${o.id} · Kasse ${o.register}</div>
+          <div style="text-align:right;">
+            <div class="muted small">${esc(o.timeHM||"")}</div>
+            <div class="kElapsed">0:00</div>
           </div>
         </div>
-        <div class=\"muted small\">${esc(o.employee||\"\")}</div>
-        <div style=\"margin-top:8px;\">${esc(items)}</div>
-        <div class=\"row\" style=\"margin-top:10px; justify-content:space-between;\">
-          <div class=\"muted small\">${money(o.total)}</div>
-          <button class=\"primary\" onclick=\"kitchenDone(${o.id})\">Fertig</button>
+        <div class="muted small">${esc(o.employee||"")}</div>
+        <div style="margin-top:8px;">${esc(items)}</div>
+        <div class="row" style="margin-top:10px; justify-content:space-between;">
+          <div class="muted small">${money(o.total)}</div>
+          <button class="primary" onclick="kitchenDone(${o.id})">Fertig</button>
         </div>
-      </div>";
+      </div>`;
   }).join("");
   updateKitchenTimers();
 }
@@ -1251,7 +1251,7 @@ async function loadDayReport(){
   const date=document.getElementById("dayDate")?.value || serverDay;
   if(!date) return;
 
-  const res=await fetch("/reports/day-details?date=${encodeURIComponent(date)}");
+  const res=await fetch(`/reports/day-details?date=${encodeURIComponent(date)}`);
   if(res.status===401) return showLoginPage("Bitte einloggen.");
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Tagesabrechnung.");
@@ -1264,8 +1264,8 @@ async function loadDayReport(){
   const stPrint=document.getElementById("dayPrintClosed");
   const closeBtn=document.getElementById("dayCloseBtn");
   if(closed){
-    const txt="Abgeschlossen: ${fmtDateTime(closed.closedAt)} — ${closed.closedByName||closed.closedBy||\"\"}" +
-      (closed.note ? " — ${closed.note}" : "");
+    const txt=`Abgeschlossen: ${fmtDateTime(closed.closedAt)} — ${closed.closedByName||closed.closedBy||""}` +
+      (closed.note ? ` — ${closed.note}` : "");
     if(st) st.innerText=txt;
     if(stPrint) stPrint.innerText=txt;
     if(closeBtn) closeBtn.disabled=true;
@@ -1279,14 +1279,14 @@ async function loadDayReport(){
 
   const tbody=document.getElementById("dayByEmployee");
   if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>"
+    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
       <tr>
-        <td>${esc(x.employee||x.employeeUsername||\"\")}</td>
-        <td style=\"text-align:right;\">${money(x.revenue||0)}</td>
-        <td style=\"text-align:right;\">${money(x.tips||0)}</td>
-        <td style=\"text-align:right;\">${x.orders||0}</td>
+        <td>${esc(x.employee||x.employeeUsername||"")}</td>
+        <td style="text-align:right;">${money(x.revenue||0)}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
+        <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    ").join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
+    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
@@ -1343,7 +1343,7 @@ async function loadWeekReport(){
   const kw=document.getElementById("weekKW")?.value;
   if(!kw) return;
   // kw format: YYYY-Www
-  const res=await fetch("/reports/week-employee?week=${encodeURIComponent(kw)}");
+  const res=await fetch(`/reports/week-employee?week=${encodeURIComponent(kw)}`);
   if(res.status===401) return showLoginPage("Bitte einloggen.");
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Wochenabrechnung.");
@@ -1351,7 +1351,7 @@ async function loadWeekReport(){
   currentWeekReport=data;
   document.getElementById("weekPrintKW").innerText=kw;
 
-  const range="${data.range?.start||\"—\"} bis ${data.range?.end||\"—\"}";
+  const range=`${data.range?.start||"—"} bis ${data.range?.end||"—"}`;
   document.getElementById("weekRange").innerText=range;
   document.getElementById("weekPrintRange").innerText=range;
 
@@ -1360,14 +1360,14 @@ async function loadWeekReport(){
 
   const tbody=document.getElementById("weekByEmployee");
   if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>"
+    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
       <tr>
-        <td>${esc(x.employee||x.employeeUsername||\"\")}</td>
-        <td style=\"text-align:right;\">${money(x.revenue||0)}</td>
-        <td style=\"text-align:right;\">${money(x.tips||0)}</td>
-        <td style=\"text-align:right;\">${x.orders||0}</td>
+        <td>${esc(x.employee||x.employeeUsername||"")}</td>
+        <td style="text-align:right;">${money(x.revenue||0)}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
+        <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    ").join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
+    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
@@ -1398,7 +1398,7 @@ async function loadMonthReport(){
   const ym=document.getElementById("monthYM")?.value;
   if(!ym) return;
 
-  const res=await fetch("/reports/month-employee?month=${encodeURIComponent(ym)}");
+  const res=await fetch(`/reports/month-employee?month=${encodeURIComponent(ym)}`);
   if(res.status===401) return showLoginPage("Bitte einloggen.");
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Laden der Monatsabrechnung.");
@@ -1409,21 +1409,21 @@ async function loadMonthReport(){
   document.getElementById("monthPrintYM").innerText=ym;
   document.getElementById("monthPrintWeeks").innerText=weeksText;
   const hint=document.getElementById("monthWeeksHint");
-  if(hint) hint.innerText = "Enthaltene KW: ${weeksText}" + (data.note ? " — ${data.note}" : "");
+  if(hint) hint.innerText = `Enthaltene KW: ${weeksText}` + (data.note ? ` — ${data.note}` : "");
 
   document.getElementById("monthRevenue").innerText=money(data.totals?.revenue||0);
   document.getElementById("monthOrders").innerText=String(data.totals?.orders||0);
 
   const tbody=document.getElementById("monthByEmployee");
   if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>"
+    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
       <tr>
-        <td>${esc(x.employee||x.employeeUsername||\"\")}</td>
-        <td style=\"text-align:right;\">${money(x.revenue||0)}</td>
-        <td style=\"text-align:right;\">${money(x.tips||0)}</td>
-        <td style=\"text-align:right;\">${x.orders||0}</td>
+        <td>${esc(x.employee||x.employeeUsername||"")}</td>
+        <td style="text-align:right;">${money(x.revenue||0)}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
+        <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    ").join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
+    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
@@ -1431,7 +1431,7 @@ async function loadMonthReport(){
 async function refreshStats(){
   if(!isBoss()) return;
   if(!serverDay) return;
-  const res=await fetch("/reports/day-details?date=${encodeURIComponent(serverDay)}");
+  const res=await fetch(`/reports/day-details?date=${encodeURIComponent(serverDay)}`);
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return;
 
@@ -1460,15 +1460,15 @@ async function loadUsers(){
   const box=document.getElementById("usersList");
   if(!box) return;
   const users=data.users||data.staff||[];
-  box.innerHTML=users.map(u=>"
-    <div class=\"userRow\">
+  box.innerHTML=users.map(u=>`
+    <div class="userRow">
       <div>
-        <div style=\"font-weight:900;\">${esc(u.displayName)}</div>
-        <div class=\"muted small\">${esc(u.username)} · ${esc(u.role)}</div>
+        <div style="font-weight:900;">${esc(u.displayName)}</div>
+        <div class="muted small">${esc(u.username)} · ${esc(u.role)}</div>
       </div>
-      <button class=\"ghost\" onclick=\"delUser('${escAttr(u.username)}')\">Löschen</button>
+      <button class="ghost" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
     </div>
-  ").join("");
+  `).join("");
 }
 
 function openAddUser(){
@@ -1520,8 +1520,8 @@ async function addUser(username, displayName, role, password){
   loadUsers();
 }
 async function delUser(username){
-  if(!confirm("User ${username} löschen?")) return;
-  const res=await fetch("/users/${encodeURIComponent(username)}",{ method:"DELETE" });
+  if(!confirm(`User ${username} löschen?`)) return;
+  const res=await fetch(`/users/${encodeURIComponent(username)}`,{ method:"DELETE" });
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler.");
   loadUsers();
@@ -1572,14 +1572,14 @@ function currentISOWeekString(d){
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
   const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
   const y = date.getUTCFullYear();
-  return "${y}-W${String(weekNo).padStart(2,\"0\")}";
+  return `${y}-W${String(weekNo).padStart(2,"0")}`;
 }
 
 // YYYY-MM for <input type="month">
 function currentISOYMString(d){
   const y=d.getFullYear();
   const m=String(d.getMonth()+1).padStart(2,"0");
-  return "${y}-${m}";
+  return `${y}-${m}`;
 }
 
 /* Boot */
