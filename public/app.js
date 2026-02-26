@@ -15,6 +15,27 @@ let cartsByRegister = {
 
 let cart = cartsByRegister[currentRegister];
 
+
+/* Warenkorb Persistenz */
+const CARTS_STORAGE_KEY = "bs_carts_by_register_v1";
+
+function loadCartsFromStorage(){
+  try{
+    const raw = localStorage.getItem(CARTS_STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(parsed && typeof parsed === "object"){
+      cartsByRegister = parsed;
+    }
+  }catch(e){}
+}
+
+function saveCartsToStorage(){
+  try{
+    localStorage.setItem(CARTS_STORAGE_KEY, JSON.stringify(cartsByRegister));
+  }catch(e){}
+}
+
 function switchCartToRegister(n){
   if(!cartsByRegister[n]) cartsByRegister[n] = [];
   cart = cartsByRegister[n];
@@ -439,6 +460,7 @@ async function login(){
   applyRoleVisibility();
   await initProducts();
   renderCart();
+  saveCartsToStorage();
   updateDayInfo();
 }
 
@@ -459,6 +481,7 @@ async function loadMe(){
   applyRoleVisibility();
   await initProducts();
   renderCart();
+  saveCartsToStorage();
   updateDayInfo();
 }
 
@@ -879,10 +902,12 @@ function addToCart(p){
   }
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
+  saveCartsToStorage();
 }
 function clearCart(){ cartsByRegister[currentRegister] = [];
   switchCartToRegister(currentRegister);
-  renderCart(); }
+  renderCart();
+  saveCartsToStorage(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
 function renderCart(){
@@ -900,7 +925,8 @@ function renderCart(){
       </div>
     </div>`).join("");
 }
-function removeItem(idx){ cart.splice(idx,1); renderCart(); }
+function removeItem(idx){ cart.splice(idx,1); renderCart();
+  saveCartsToStorage(); }
 
 // Mobile UX: collapse/expand cart panel
 function toggleCart(){
@@ -916,6 +942,7 @@ function setRegister(n){
   if(d) d.innerText=`Kasse ${currentRegister}`;
   switchCartToRegister(currentRegister);
   renderCart();
+  saveCartsToStorage();
 }
 
 /* Pay overlay */
@@ -973,6 +1000,7 @@ function confirmMenuBuilder(){
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
   renderCart();
+  saveCartsToStorage();
 }
 
 function openPay(){
@@ -1003,6 +1031,7 @@ async function submitPay(){
   cartsByRegister[currentRegister] = [];
   switchCartToRegister(currentRegister);
   renderCart();
+  saveCartsToStorage();
 }
 
 function slugify(s){
@@ -1460,4 +1489,6 @@ function currentISOYMString(d){
 }
 
 /* Boot */
+loadCartsFromStorage();
+switchCartToRegister(currentRegister);
 loadMe();
