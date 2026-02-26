@@ -493,6 +493,7 @@ button{ font-family:inherit; }
 .loginShell{
   width:100%;
   max-width:520px;
+  margin:0 auto;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -594,6 +595,16 @@ select.input{ appearance:none; -webkit-appearance:none; }
     overflow:visible;
   }
 
+  /* Make each row take full width so horizontal scrolling can work */
+  .registerBar,
+  .retroRight,
+  .catBar{
+    width:100%;
+    justify-self:stretch;
+  }
+  /* On mobile we want the action row to start on the left and scroll horizontally */
+  .retroRight{ justify-content:flex-start; }
+
   .retroLeft{ gap:8px; }
 
   /* Register buttons: single row, swipeable */
@@ -635,7 +646,8 @@ select.input{ appearance:none; -webkit-appearance:none; }
     display:flex;
     gap:10px;
     flex-wrap:nowrap;
-    overflow-x:scroll;
+    overflow-x:auto;
+    overflow-y:hidden;
     -webkit-overflow-scrolling:touch;
     touch-action:pan-x;
     overscroll-behavior-x:contain;
@@ -649,8 +661,11 @@ select.input{ appearance:none; -webkit-appearance:none; }
   .iconBtn, .logoutBtn{ scroll-snap-align:start; }
 
   /* Prevent any visual overlap between action row and category row */
-  .retroRight{ position:relative; z-index:2; }
-  .catBar{ position:relative; z-index:1; }
+  .retroRight{ position:relative; z-index:3; }
+  .catBar{ position:relative; z-index:2; }
+
+  /* Ensure category row never slides up over the action row */
+  .catBar{ margin-top:0 !important; padding-top:0 !important; }
 
   /* Main area becomes a clean vertical stack */
   .posRetro{
