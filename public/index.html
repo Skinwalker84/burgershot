@@ -38,6 +38,12 @@
   <!-- ===== APP (Hidden until logged in) ===== -->
   <div id="appRoot" class="appRoot hidden">
 
+    <!-- ===== BRAND HEADER (Logo + Burgershot) ===== -->
+    <div class="brandHeader" aria-label="Burger Shot">
+      <img src="/logo.png" alt="Burger Shot" class="brandLogo" onerror="this.style.display='none'" />
+      <div class="brandText">BURGERSHOT</div>
+    </div>
+
     <!-- ===== RETRO TOP BAR (matches Vorlage) ===== -->
     <div class="retroTop">
       <div class="retroLeft">
@@ -74,6 +80,11 @@
         <button class="iconBtn" onclick="openTab('tab_pos', null)" id="iconBtnPos" title="Kasse">
           <img src="/icons/kasse.png" alt="Kasse" />
           <span>Kasse</span>
+        </button>
+
+        <button class="iconBtn" onclick="openTab('tab_kitchen', null)" id="iconBtnKitchen" title="Küche">
+          <img src="/icons/kueche.png" alt="Küche" />
+          <span>Küche</span>
         </button>
 
         <button class="iconBtn" onclick="openTab('tab_mgmt', null)" id="iconBtnShop" title="Einkauf">

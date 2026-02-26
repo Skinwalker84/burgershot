@@ -345,6 +345,32 @@ const PRODUCT_ICON = {
   "Strawberry Sundae": "burgershot_sunday_strawberry.png",
 };
 
+function getIconForProduct(p){
+  const name = String(p?.name||"");
+  const cat = String(p?.cat||p?.category||"");
+
+  // 1) direct mapping
+  if(PRODUCT_ICON[name]) return `/icons/${PRODUCT_ICON[name]}`;
+
+  // 2) Menü: reuse burger icons (match by keyword, otherwise default burger)
+  if(cat === "Menü"){
+    const lower = name.toLowerCase();
+    const burgerNames = Object.keys(PRODUCT_ICON).filter(k => {
+      const c = (PRODUCTS||[]).find(x => x.name===k)?.cat;
+      return c === "Burger";
+    });
+    // try to match any known burger name inside the menu name
+    for(const bn of burgerNames){
+      if(lower.includes(bn.toLowerCase())) return `/icons/${PRODUCT_ICON[bn]}`;
+    }
+    // fallback: any burger icon we have
+    const fallback = PRODUCT_ICON["The Bleeder"] || PRODUCT_ICON[burgerNames[0]];
+    if(fallback) return `/icons/${fallback}`;
+  }
+
+  return "";
+}
+
 function renderProducts(){
   const box=document.getElementById("products");
   if(!box) return;
@@ -357,10 +383,10 @@ function renderProducts(){
     const imgWrap=document.createElement("div");
     imgWrap.className="dispImg";
     const img=document.createElement("img");
-    const icon = PRODUCT_ICON[p.name];
-    img.src = icon ? `/icons/${icon}` : "";
+    const src = getIconForProduct(p);
+    img.src = src;
     img.alt = p.name;
-    if(!icon){
+    if(!src){
       img.style.display='none';
       imgWrap.textContent = p.name;
       imgWrap.style.fontSize='11px';
@@ -372,12 +398,24 @@ function renderProducts(){
       imgWrap.appendChild(img);
     }
 
+    const meta=document.createElement('div');
+    meta.className='dispMeta';
+    const n=document.createElement('div');
+    n.className='dispName';
+    n.textContent=p.name;
+    const pr=document.createElement('div');
+    pr.className='dispPrice';
+    pr.textContent=money(p.price);
+    meta.appendChild(n);
+    meta.appendChild(pr);
+
     const push=document.createElement("button");
     push.className="pushBtn";
     push.textContent="PUSH";
     push.onclick=()=>addToCart(p);
 
     wrap.appendChild(imgWrap);
+    wrap.appendChild(meta);
     wrap.appendChild(push);
     box.appendChild(wrap);
   });
