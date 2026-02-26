@@ -1059,7 +1059,7 @@ function openMenuBuilder(menuProduct){
     drinks.forEach(d=>{
       const opt=document.createElement("option");
       opt.value=d.name;
-      opt.textContent = `${d.name} (${money(d.price)})`;
+      opt.textContent = d.name + " (" + money(d.price) + ")";
       sel.appendChild(opt);
     });
   }

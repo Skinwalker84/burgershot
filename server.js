@@ -381,7 +381,7 @@ function clearCookie(res, name) {
    MIDDLEWARE
    ========================= */
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public", { setHeaders: (res, path) => { res.setHeader('Cache-Control','no-store'); } })));
 
 function requireAuth(req, res, next) {
   rotateDayIfNeeded();
