@@ -9,6 +9,9 @@ const fs = require("fs");
 const crypto = require("crypto");
 
 const app = express();
+
+// Disable caching for static assets (avoid stale app.js in clients)
+app.use((req,res,next)=>{ if(req.path.endsWith('.js')||req.path.endsWith('.css')) res.setHeader('Cache-Control','no-store'); next(); });
 const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
@@ -381,7 +384,7 @@ function clearCookie(res, name) {
    MIDDLEWARE
    ========================= */
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public", { setHeaders: (res, path) => { res.setHeader('Cache-Control','no-store'); } })));
+app.use(express.static(path.join(__dirname, "public"), { setHeaders: (res, filePath) => { res.setHeader('Cache-Control','no-store'); } }));
 
 function requireAuth(req, res, next) {
   rotateDayIfNeeded();
