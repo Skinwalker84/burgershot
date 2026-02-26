@@ -130,6 +130,10 @@ const PRODUCTS_DEFAULT = [
   { name: "Chicken Nuggets", price: 10, cat: "Beilagen" },
   { name: "Onion Rings", price: 6, cat: "Beilagen" },
   { name: "ECola", price: 8, cat: "Getränke" },
+  { name: "ECola Light", price: 8, cat: "Getränke" },
+  { name: "Sprunk", price: 8, cat: "Getränke" },
+  { name: "Sprunk Light", price: 8, cat: "Getränke" },
+  // legacy typo kept for compatibility with older saved data
   { name: "Sprung", price: 8, cat: "Getränke" },
   { name: "Blueberry Slush", price: 10, cat: "Getränke" },
   { name: "Strawberry Slush", price: 10, cat: "Getränke" },
@@ -147,7 +151,8 @@ let PRODUCTS = [];
 
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
-const PRODUCTS_STORAGE_KEY = "bs_products_v1";
+// bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
+const PRODUCTS_STORAGE_KEY = "bs_products_v2";
 
 function loadProductsFromStorage(){
   try{
@@ -332,6 +337,10 @@ const PRODUCT_ICON = {
   "Chicken Nuggets": "burgershot_nuggets.png",
   "Onion Rings": "burgershot_onion_rings.png",
   "ECola": "ECola.PNG",
+  "ECola Light": "ecola_light.png",
+  "Sprunk": "sprunk.jpeg",
+  "Sprunk Light": "sprunk_light.png",
+  // legacy typo
   "Sprung": "sprunk.jpeg",
   "Blueberry Slush": "blueberry_slush.png",
   "Strawberry Slush": "strawberry_slush.png",

@@ -143,7 +143,9 @@ const DEFAULT_PRODUCTS = [
   { id:"onion_rings", name:"Onion Rings", price:6, cat:"Beilagen" },
 
   { id:"ecola", name:"ECola", price:8, cat:"Getränke" },
+  { id:"ecola_light", name:"ECola Light", price:8, cat:"Getränke" },
   { id:"sprunk", name:"Sprunk", price:8, cat:"Getränke" },
+  { id:"sprunk_light", name:"Sprunk Light", price:8, cat:"Getränke" },
   { id:"blueberry_slush", name:"Blueberry Slush", price:10, cat:"Getränke" },
   { id:"strawberry_slush", name:"Strawberry Slush", price:10, cat:"Getränke" },
   { id:"choco_milchshake", name:"Choco Milchshake", price:10, cat:"Getränke" },
