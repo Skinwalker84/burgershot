@@ -34,6 +34,47 @@ function saveCartsToStorage(){
   try{
     localStorage.setItem(CARTS_STORAGE_KEY, JSON.stringify(cartsByRegister));
   }catch(e){}
+
+/* Serverseitige Warenkorb-Sync (geräteübergreifend) */
+let cartsServerSaveTimer = null;
+let cartsServerInFlight = false;
+
+async function loadCartsFromServer(){
+  try{
+    const res = await fetch("/carts");
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.success && data.carts){
+      cartsByRegister = data.carts;
+      switchCartToRegister(currentRegister);
+      renderCart();
+      // keep local fallback in sync
+      saveCartsToStorage();
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+function scheduleSaveCartsToServer(){
+  // debounce so we don't spam the server on every click
+  if(cartsServerSaveTimer) clearTimeout(cartsServerSaveTimer);
+  cartsServerSaveTimer = setTimeout(()=>{ saveCartsToServer(); }, 350);
+}
+
+async function saveCartsToServer(){
+  if(cartsServerInFlight) return;
+  cartsServerInFlight = true;
+  try{
+    const res = await fetch("/carts",{
+      method:"PUT",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ carts: cartsByRegister })
+    });
+    // ignore body errors; local fallback stays
+    await res.json().catch(()=>({}));
+  }catch(e){}
+  cartsServerInFlight = false;
+}
 }
 
 function switchCartToRegister(n){
@@ -459,8 +500,10 @@ async function login(){
   showApp();
   applyRoleVisibility();
   await initProducts();
+  await loadCartsFromServer().catch(()=>false);
   renderCart();
   saveCartsToStorage();
+  scheduleSaveCartsToServer();
   updateDayInfo();
 }
 
@@ -480,8 +523,10 @@ async function loadMe(){
   showApp();
   applyRoleVisibility();
   await initProducts();
+  await loadCartsFromServer().catch(()=>false);
   renderCart();
   saveCartsToStorage();
+  scheduleSaveCartsToServer();
   updateDayInfo();
 }
 
@@ -903,11 +948,13 @@ function addToCart(p){
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
   saveCartsToStorage();
+  scheduleSaveCartsToServer();
 }
 function clearCart(){ cartsByRegister[currentRegister] = [];
   switchCartToRegister(currentRegister);
   renderCart();
-  saveCartsToStorage(); }
+  saveCartsToStorage();
+  scheduleSaveCartsToServer(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
 function renderCart(){
@@ -926,7 +973,8 @@ function renderCart(){
     </div>`).join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart();
-  saveCartsToStorage(); }
+  saveCartsToStorage();
+  scheduleSaveCartsToServer(); }
 
 // Mobile UX: collapse/expand cart panel
 function toggleCart(){
@@ -943,6 +991,7 @@ function setRegister(n){
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsToStorage();
+  scheduleSaveCartsToServer();
 }
 
 /* Pay overlay */
@@ -1001,6 +1050,7 @@ function confirmMenuBuilder(){
   closeMenuBuilder();
   renderCart();
   saveCartsToStorage();
+  scheduleSaveCartsToServer();
 }
 
 function openPay(){
@@ -1032,6 +1082,7 @@ async function submitPay(){
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsToStorage();
+  scheduleSaveCartsToServer();
 }
 
 function slugify(s){

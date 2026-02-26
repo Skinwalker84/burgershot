@@ -210,6 +210,10 @@ function makeFreshDB() {
     // Einkäufe (Chef) – Bewegungslog / Historie
     purchases: [],
 
+    // Warenkörbe pro Kasse (serverseitig, geräteübergreifend)
+    cartsByRegister: { 1: [], 2: [], 3: [], 4: [] },
+    cartsUpdatedAt: new Date().toISOString(),
+
     salesByDay: { [today]: [] },
     kitchenByDay: { [today]: { pending: [], done: [] } },
     closedDays: {}
@@ -243,6 +247,21 @@ function normalizeInventory(list){
   }
   // sort stable
   out.sort((a,b)=>String(a.name).localeCompare(String(b.name), "de"));
+  return out;
+}
+
+
+function normalizeCartsByRegister(obj){
+  const out = { 1: [], 2: [], 3: [], 4: [] };
+  if(!obj || typeof obj !== "object") return out;
+  for(const k of ["1","2","3","4"]){
+    const arr = Array.isArray(obj[k]) ? obj[k] : [];
+    out[Number(k)] = arr.filter(x=>x && typeof x==="object").map(x=>({
+      name: String(x.name||"").slice(0,200),
+      price: Number(x.price)||0,
+      qty: Math.max(1, Math.floor(Number(x.qty)||1))
+    })).filter(x=>x.name);
+  }
   return out;
 }
 
@@ -296,6 +315,10 @@ function normalizeDB(db) {
 
   // purchases: keep simple array of objects
   db.purchases = (Array.isArray(db.purchases) ? db.purchases : []).filter(x => x && typeof x === "object");
+
+  // carts: serverseitig
+  db.cartsByRegister = normalizeCartsByRegister(db.cartsByRegister);
+  if(!db.cartsUpdatedAt) db.cartsUpdatedAt = new Date().toISOString();
 
   const day = db.meta.currentDay;
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
@@ -445,6 +468,27 @@ app.post("/auth/logout", requireAuth, (req, res) => {
   clearCookie(res, "bs_token");
   res.json({ success: true });
 });
+
+/* =========================
+   CARTS (serverseitig, geräteübergreifend)
+   ========================= */
+app.get("/carts", requireAuth, (req, res) => {
+  const carts = normalizeCartsByRegister(db.cartsByRegister);
+  db.cartsByRegister = carts;
+  if(!db.cartsUpdatedAt) db.cartsUpdatedAt = new Date().toISOString();
+  // Do not force-save on read; only if shape changed
+  res.json({ success:true, carts, updatedAt: db.cartsUpdatedAt });
+});
+
+app.put("/carts", requireAuth, (req, res) => {
+  const incoming = req.body && (req.body.carts || req.body.cartsByRegister);
+  const carts = normalizeCartsByRegister(incoming);
+  db.cartsByRegister = carts;
+  db.cartsUpdatedAt = new Date().toISOString();
+  saveDB(db);
+  res.json({ success:true, carts, updatedAt: db.cartsUpdatedAt });
+});
+
 
 app.post("/auth/change-password", requireAuth, (req, res) => {
   const oldPw = String(req.body?.oldPw || "");
