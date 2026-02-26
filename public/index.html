@@ -46,8 +46,7 @@
 
     <!-- ===== RETRO TOP BAR (matches Vorlage) ===== -->
     <div class="retroTop">
-      <div class="retroLeft">
-        <div class="registerBar" aria-label="Kassen">
+      <div class="registerBar" aria-label="Kassen">
           <button class="regBtn active" onclick="setRegister(1); activateRegBtn(this)">
             <img src="/icons/kasse.png" alt="Kasse" />
             <span class="regNo">1</span>
@@ -66,15 +65,7 @@
           </button>
         </div>
 
-        <div class="catBar" aria-label="Kategorien">
-          <button class="catBtn active" onclick="setCategory('Burger', this)">BURGER</button>
-          <button class="catBtn" onclick="setCategory('Beilagen', this)">SIDES</button>
-          <button class="catBtn" onclick="setCategory('Süßes', this)">DESSERT</button>
-          <button class="catBtn" onclick="setCategory('Getränke', this)">DRINKS</button>
-          <button class="catBtn" onclick="setCategory('Menü', this)">MENÜ</button>
-        </div>
-      </div>
-
+        
       <div class="retroRight">
         <!-- Back to POS / Kasse (always visible) -->
         <button class="iconBtn" onclick="openTab('tab_pos', null)" id="iconBtnPos" title="Kasse">
@@ -113,6 +104,14 @@
 
         <button class="logoutBtn" onclick="logout()">LOGOUT</button>
       </div>
+
+      <div class="catBar" aria-label="Kategorien">
+          <button class="catBtn active" onclick="setCategory('Burger', this)">BURGER</button>
+          <button class="catBtn" onclick="setCategory('Beilagen', this)">SIDES</button>
+          <button class="catBtn" onclick="setCategory('Süßes', this)">DESSERT</button>
+          <button class="catBtn" onclick="setCategory('Getränke', this)">DRINKS</button>
+          <button class="catBtn" onclick="setCategory('Menü', this)">MENÜ</button>
+        </div>
     </div>
 
     <!-- ===== TAB: POS ===== -->
