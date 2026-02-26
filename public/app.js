@@ -95,12 +95,8 @@ async function loadMe(){
 function updateDayInfo(){
   const dayInfo = document.getElementById("dayInfo");
   const who = document.getElementById("whoami");
-  const nowStr = new Date().toLocaleTimeString("de-DE");
-  if(dayInfo) dayInfo.innerText = `Tag: ${serverDay||"—"} · Uhrzeit: ${nowStr}`;
+  if(dayInfo) dayInfo.innerText = `Tag: ${serverDay||"—"} · Uhrzeit: ${new Date().toLocaleTimeString("de-DE")}`;
   if(who) who.innerText = me ? `${me.displayName} (${me.role})` : "Nicht eingeloggt";
-
-  const clock=document.getElementById("posClock");
-  if(clock) clock.innerText = nowStr;
 }
 setInterval(updateDayInfo, 1000);
 
@@ -206,8 +202,7 @@ function renderProductsEditor(){
   const list = (PRODUCTS||[]).slice().sort((a,b)=>(a.cat||"").localeCompare(b.cat||"") || (a.name||"").localeCompare(b.name||""));
   body.innerHTML = list.map((p, idx)=>`
     <tr>
-      <td><img src="${resolveProductIcon(p)}" class="posIcon" onerror="this.style.display=\'none\'">
-${esc(p.name)}</td>
+      <td>${esc(p.name)}</td>
       <td>${esc(p.cat)}</td>
       <td style="text-align:right;">
         <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-key="${escAttr(slugKey(p))}" value="${escAttr(p.price)}" />
@@ -295,14 +290,8 @@ function mgmtResetProducts(){
 
 function setCategory(cat, btn){
   currentCategory=cat;
-
-  // highlight category button in POS strip (if present)
-  document.querySelectorAll(".posCatBtn").forEach(b=>b.classList.remove("active"));
-  if(btn && btn.classList) btn.classList.add("active");
-
-  const t=document.getElementById("posCatTitle");
-  if(t) t.innerText=cat;
-
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
   renderProducts();
 }
 
@@ -310,21 +299,10 @@ function renderProducts(){
   const box=document.getElementById("products");
   if(!box) return;
   box.innerHTML="";
-
-  const t=document.getElementById("posCatTitle");
-  if(t) t.innerText=currentCategory || "—";
-
   PRODUCTS.filter(p=>p.cat===currentCategory).forEach(p=>{
     const el=document.createElement("button");
-    el.className="posItem";
-        el.innerHTML = `
-      <div class="posItemImg">
-        <img class="posItemIcon" alt="">
-      </div>
-      <div class="posItemName">${esc(p.name)}</div>
-      <div class="posItemPrice">${money(p.price)}</div>
-    `;
-    applyIconWithFallback(el.querySelector("img.posItemIcon"), getIconCandidates(p));
+    el.className="productBtn";
+    el.innerHTML=`<div style="font-weight:900;">${esc(p.name)}</div><div class="muted small">${money(p.price)}</div>`;
     el.onclick=()=>addToCart(p);
     box.appendChild(el);
   });
@@ -347,37 +325,18 @@ function renderCart(){
   const tot=document.getElementById("cartTotal");
   if(tot) tot.innerText=money(cartTotal());
   if(!box) return;
-
-  if(cart.length===0){
-    box.innerHTML=`<div class="posReceiptEmpty">Leer.</div>`;
-    return;
-  }
-
+  if(cart.length===0){ box.innerHTML=`<div class="muted small">Leer.</div>`; return; }
   box.innerHTML=cart.map((x,idx)=>`
-    <div class="posReceiptRow">
-      <div class="posReceiptRowMain">
-        <div class="posReceiptRowName">${esc(x.name)}</div>
-        <div class="posReceiptRowPrice">${money(x.price)}</div>
-      </div>
-      <button class="posReceiptRemove" onclick="removeItem(${idx})">✕</button>
+    <div class="cartRow">
+      <div style="font-weight:900;">${esc(x.name)}</div>
+      <div class="muted small">${money(x.price)}</div>
+      <button class="ghost" onclick="removeItem(${idx})">x</button>
     </div>`).join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); }
 
 /* Register */
-function setRegister(n, btn){
-  currentRegister=n;
-  const d=document.getElementById("registerDisplay");
-  if(d) d.innerText=`Kasse ${n}`;
-
-  // highlight register button in POS strip (if present)
-  document.querySelectorAll(".posRegBtn").forEach(b=>b.classList.remove("active"));
-  if(btn && btn.classList) btn.classList.add("active");
-  else {
-    const match=document.querySelector(`.posRegBtn[data-reg="${n}"]`);
-    if(match) match.classList.add("active");
-  }
-}`; }
+function setRegister(n){ currentRegister=n; const d=document.getElementById("registerDisplay"); if(d) d.innerText=`Kasse ${n}`; }
 
 /* Pay overlay */
 
@@ -711,12 +670,45 @@ async function loadUsers(){
 }
 
 function openAddUser(){
-  const username=prompt("Username (login) (ohne Leerzeichen, z.B. max.mustermann):");
-  if(!username) return;
-  const displayName=prompt("Anzeigename:", username) || username;
-  const role=prompt("Rolle: staff oder boss", "staff") || "staff";
-  const password=prompt("Passwort (default admin):", "admin") || "admin";
-  addUser(username, displayName, role, password);
+  const uEl=document.getElementById("addUserUsername");
+  const dEl=document.getElementById("addUserDisplayName");
+  const rEl=document.getElementById("addUserRole");
+  const pEl=document.getElementById("addUserPassword");
+  const msg=document.getElementById("addUserMsg");
+
+  if(uEl) uEl.value="";
+  if(dEl) dEl.value="";
+  if(rEl) rEl.value="staff";
+  if(pEl) pEl.value="admin";
+  if(msg) msg.innerText="—";
+
+  document.getElementById("addUserOverlay").classList.remove("hidden");
+  setTimeout(()=>{ try{ uEl && uEl.focus(); }catch(e){} }, 0);
+}
+
+function closeAddUser(){ document.getElementById("addUserOverlay").classList.add("hidden"); }
+
+async function submitAddUser(){
+  const u=(document.getElementById("addUserUsername").value||"").trim().toLowerCase();
+  const d=(document.getElementById("addUserDisplayName").value||"").trim() || u;
+  const role=String(document.getElementById("addUserRole").value||"staff");
+  const pw=(document.getElementById("addUserPassword").value||"admin");
+  const msg=document.getElementById("addUserMsg");
+
+  if(!u){ if(msg) msg.innerText="Username fehlt."; return; }
+  if(!["boss","staff"].includes(role)){ if(msg) msg.innerText="Ungültige Rolle."; return; }
+
+  // optional: prevent spaces
+  if(/\s/.test(u)){ if(msg) msg.innerText="Username darf keine Leerzeichen enthalten."; return; }
+
+  if(msg) msg.innerText="Speichern…";
+  const res=await fetch("/users",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ username:u, displayName:d, role, password:pw || "admin" }) });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){ if(msg) msg.innerText=(data.message || "Fehler."); return; }
+
+  if(msg) msg.innerText="Erstellt ✅";
+  closeAddUser();
+  loadUsers();
 }
 
 async function addUser(username, displayName, role, password){
@@ -758,55 +750,6 @@ async function submitPwChange(){
 
 /* Helpers */
 function money(n){ const x=Number(n||0); return "$"+(Number.isFinite(x)?x:0); }
-
-
-function slugifyName(name){
-  return String(name||"")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g,"_")
-    .replace(/^_+|_+$/g,"");
-}
-
-function getIconCandidates(product){
-  const id = String(product.id||"").toLowerCase();
-  const slug = slugifyName(product.name);
-  // Order matters: try the most specific first
-  return [
-    `/icons/burgershot_${slug}.png`,
-    `/icons/burgershot_${id}.png`,
-    `/icons/${id}.png`,
-    `/icons/${slug}.png`,
-    `/icons/burgershot_${slug}.webp`,
-    `/icons/burgershot_${id}.webp`,
-    `/icons/${id}.webp`,
-    `/icons/${slug}.webp`,
-    `/icons/${id}.jpg`,
-    `/icons/${slug}.jpg`,
-    `/icons/${id}.jpeg`,
-    `/icons/${slug}.jpeg`
-  ];
-}
-
-function applyIconWithFallback(imgEl, candidates){
-  if(!imgEl) return;
-  imgEl.dataset.iconCandidates = JSON.stringify(candidates || []);
-  imgEl.dataset.iconIndex = "0";
-  imgEl.src = candidates?.[0] || "";
-  imgEl.onerror = () => {
-    try{
-      const list = JSON.parse(imgEl.dataset.iconCandidates || "[]");
-      let i = Number(imgEl.dataset.iconIndex || "0") + 1;
-      imgEl.dataset.iconIndex = String(i);
-      if(i < list.length){
-        imgEl.src = list[i];
-      }else{
-        imgEl.style.display = "none";
-      }
-    }catch(e){
-      imgEl.style.display = "none";
-    }
-  };
-}
 function esc(s){
   return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
