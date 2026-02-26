@@ -472,6 +472,50 @@ app.post("/auth/logout", requireAuth, (req, res) => {
 /* =========================
    CARTS (serverseitig, geräteübergreifend)
    ========================= */
+
+
+// Live carts sync via Server-Sent Events (SSE)
+const cartsSseClients = new Set();
+
+function sseSend(res, payload){
+  try{
+    res.write(`event: carts\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  }catch{}
+}
+
+function broadcastCarts(payload){
+  for(const res of Array.from(cartsSseClients)){
+    sseSend(res, payload);
+  }
+}
+
+app.get("/carts/stream", requireAuth, (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // nginx
+  res.flushHeaders && res.flushHeaders();
+
+  cartsSseClients.add(res);
+
+  // Send initial snapshot
+  const carts = normalizeCartsByRegister(db.cartsByRegister);
+  db.cartsByRegister = carts;
+  if(!db.cartsUpdatedAt) db.cartsUpdatedAt = new Date().toISOString();
+  sseSend(res, { carts, updatedAt: db.cartsUpdatedAt, origin: "snapshot" });
+
+  const keepAlive = setInterval(() => {
+    try{ res.write(": ping\n\n"); }catch{}
+  }, 25000);
+
+  req.on("close", () => {
+    clearInterval(keepAlive);
+    cartsSseClients.delete(res);
+    try{ res.end(); }catch{}
+  });
+});
+
 app.get("/carts", requireAuth, (req, res) => {
   const carts = normalizeCartsByRegister(db.cartsByRegister);
   db.cartsByRegister = carts;
@@ -482,10 +526,13 @@ app.get("/carts", requireAuth, (req, res) => {
 
 app.put("/carts", requireAuth, (req, res) => {
   const incoming = req.body && (req.body.carts || req.body.cartsByRegister);
+  const clientId = String(req.body?.clientId || "");
   const carts = normalizeCartsByRegister(incoming);
   db.cartsByRegister = carts;
   db.cartsUpdatedAt = new Date().toISOString();
   saveDB(db);
+  // broadcast to all connected clients
+  broadcastCarts({ carts, updatedAt: db.cartsUpdatedAt, clientId });
   res.json({ success:true, carts, updatedAt: db.cartsUpdatedAt });
 });
 

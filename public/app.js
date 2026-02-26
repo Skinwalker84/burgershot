@@ -6,18 +6,32 @@ let me = null;
 let serverDay = null;
 
 // Warenkorb pro Kasse
-let cartsByRegister = {
-  1: [],
-  2: [],
-  3: [],
-  4: []
-};
+let cartsByRegister = { 1: [], 2: [], 3: [], 4: [] };
+let cart = cartsByRegister[currentRegister]; // Alias auf aktuell aktive Kasse
 
-let cart = cartsByRegister[currentRegister];
+function switchCartToRegister(n){
+  const key = Number(n) || 1;
+  if(!cartsByRegister[key]) cartsByRegister[key] = [];
+  cart = cartsByRegister[key];
+}
 
+/* ===== Warenkorb Sync (Local + Server Live) ===== */
+const CARTS_STORAGE_KEY = "bs_carts_by_register_v2";
+const CLIENT_ID_KEY = "bs_client_id_v1";
+let clientId = "";
 
-/* Warenkorb Persistenz */
-const CARTS_STORAGE_KEY = "bs_carts_by_register_v1";
+function getClientId(){
+  try{
+    let id = localStorage.getItem(CLIENT_ID_KEY);
+    if(!id){
+      id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(CLIENT_ID_KEY, id);
+    }
+    return id;
+  }catch{
+    return "anon";
+  }
+}
 
 function loadCartsFromStorage(){
   try{
@@ -25,19 +39,26 @@ function loadCartsFromStorage(){
     if(!raw) return;
     const parsed = JSON.parse(raw);
     if(parsed && typeof parsed === "object"){
-      cartsByRegister = parsed;
+      // keep only 1..4 arrays
+      const out = { 1: [], 2: [], 3: [], 4: [] };
+      for(const k of [1,2,3,4]){
+        if(Array.isArray(parsed[k])) out[k] = parsed[k];
+      }
+      cartsByRegister = out;
+      switchCartToRegister(currentRegister);
     }
-  }catch(e){}
+  }catch{}
 }
 
 function saveCartsToStorage(){
   try{
     localStorage.setItem(CARTS_STORAGE_KEY, JSON.stringify(cartsByRegister));
-  }catch(e){}
+  }catch{}
+}
 
-/* Serverseitige Warenkorb-Sync (geräteübergreifend) */
-let cartsServerSaveTimer = null;
-let cartsServerInFlight = false;
+let cartsSaveTimer = null;
+let cartsSse = null;
+let lastServerUpdatedAt = "";
 
 async function loadCartsFromServer(){
   try{
@@ -45,42 +66,63 @@ async function loadCartsFromServer(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success && data.carts){
       cartsByRegister = data.carts;
+      lastServerUpdatedAt = String(data.updatedAt||"");
       switchCartToRegister(currentRegister);
       renderCart();
-      // keep local fallback in sync
       saveCartsToStorage();
-      return true;
     }
-  }catch(e){}
-  return false;
+  }catch{}
 }
 
 function scheduleSaveCartsToServer(){
-  // debounce so we don't spam the server on every click
-  if(cartsServerSaveTimer) clearTimeout(cartsServerSaveTimer);
-  cartsServerSaveTimer = setTimeout(()=>{ saveCartsToServer(); }, 350);
+  if(cartsSaveTimer) clearTimeout(cartsSaveTimer);
+  cartsSaveTimer = setTimeout(saveCartsToServer, 250);
 }
 
 async function saveCartsToServer(){
-  if(cartsServerInFlight) return;
-  cartsServerInFlight = true;
+  cartsSaveTimer = null;
   try{
-    const res = await fetch("/carts",{
+    await fetch("/carts",{
       method:"PUT",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ carts: cartsByRegister })
+      body: JSON.stringify({ carts: cartsByRegister, clientId })
     });
-    // ignore body errors; local fallback stays
-    await res.json().catch(()=>({}));
-  }catch(e){}
-  cartsServerInFlight = false;
-}
+  }catch{}
 }
 
-function switchCartToRegister(n){
-  if(!cartsByRegister[n]) cartsByRegister[n] = [];
-  cart = cartsByRegister[n];
+function startCartsLiveSync(){
+  try{ if(cartsSse){ cartsSse.close(); cartsSse=null; } }catch{}
+  try{
+    cartsSse = new EventSource("/carts/stream");
+    cartsSse.addEventListener("carts", (ev)=>{
+      try{
+        const payload = JSON.parse(ev.data||"{}");
+        if(!payload || !payload.carts) return;
+        // ignore older updates
+        const upd = String(payload.updatedAt||"");
+        if(lastServerUpdatedAt && upd && upd < lastServerUpdatedAt) return;
+
+        // if this update came from us, we still accept it (server is source of truth)
+        cartsByRegister = payload.carts;
+        lastServerUpdatedAt = upd || lastServerUpdatedAt;
+
+        // keep current cart pointer valid
+        switchCartToRegister(currentRegister);
+        renderCart();
+        saveCartsToStorage();
+      }catch{}
+    });
+
+    cartsSse.onerror = ()=>{ /* browser will auto-reconnect */ };
+  }catch{}
 }
+
+function onCartChanged(){
+  saveCartsToStorage();
+  scheduleSaveCartsToServer();
+}
+
+
 let currentDayReport = null;
 let currentWeekReport = null;
 let currentMonthReport = null;
@@ -499,6 +541,10 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
+  clientId = getClientId();
+  loadCartsFromStorage();
+  await loadCartsFromServer();
+  startCartsLiveSync();
   await initProducts();
   await loadCartsFromServer().catch(()=>false);
   renderCart();
@@ -522,6 +568,10 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
+  clientId = getClientId();
+  loadCartsFromStorage();
+  await loadCartsFromServer();
+  startCartsLiveSync();
   await initProducts();
   await loadCartsFromServer().catch(()=>false);
   renderCart();
@@ -947,14 +997,11 @@ function addToCart(p){
   }
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
+  onCartChanged();
   saveCartsToStorage();
   scheduleSaveCartsToServer();
 }
-function clearCart(){ cartsByRegister[currentRegister] = [];
-  switchCartToRegister(currentRegister);
-  renderCart();
-  saveCartsToStorage();
-  scheduleSaveCartsToServer(); }
+function clearCart(){ cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); onCartChanged(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
 function renderCart(){
@@ -972,9 +1019,7 @@ function renderCart(){
       </div>
     </div>`).join("");
 }
-function removeItem(idx){ cart.splice(idx,1); renderCart();
-  saveCartsToStorage();
-  scheduleSaveCartsToServer(); }
+function removeItem(idx){ cart.splice(idx,1); renderCart(); onCartChanged(); }
 
 // Mobile UX: collapse/expand cart panel
 function toggleCart(){
@@ -984,10 +1029,7 @@ function toggleCart(){
 }
 
 /* Register */
-function setRegister(n){
-  currentRegister = Number(n) || 1;
-  const d=document.getElementById("registerDisplay");
-  if(d) d.innerText=`Kasse ${currentRegister}`;
+function setRegister(n){ currentRegister=Number(n)||1; const d=document.getElementById("registerDisplay"); if(d) d.innerText=`Kasse ${currentRegister}`; switchCartToRegister(currentRegister); renderCart(); onCartChanged(); }`;
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsToStorage();
@@ -1049,6 +1091,7 @@ function confirmMenuBuilder(){
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
   renderCart();
+  onCartChanged();
   saveCartsToStorage();
   scheduleSaveCartsToServer();
 }
