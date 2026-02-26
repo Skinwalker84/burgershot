@@ -65,10 +65,12 @@ body{
    ========================= */
 
 .retroTop{
-  height:76px;
+  /* allow enough vertical space so icons are never clipped */
+  min-height:92px;
+  height:auto;
   padding:8px 10px;
   display:flex;
-  align-items:flex-end;
+  align-items:center;
   justify-content:space-between;
   gap:10px;
   background:linear-gradient(180deg, var(--chrome1), var(--chrome2));
@@ -120,10 +122,10 @@ body{
   background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.25));
 }
 
-.retroRight{ display:flex; gap:10px; align-items:flex-end; }
+.retroRight{ display:flex; gap:10px; align-items:center; }
 .iconBtn{
   width:78px;
-  height:52px;
+  height:64px;
   border-radius:14px;
   border:2px solid rgba(255,255,255,.35);
   background:linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.08));
@@ -137,11 +139,11 @@ body{
   color:#0b1f33;
   font-weight:900;
 }
-.iconBtn img{ width:26px; height:26px; object-fit:contain; }
+.iconBtn img{ width:30px; height:30px; object-fit:contain; }
 .iconBtn span{ font-size:12px; line-height:12px; }
 
 .logoutBtn{
-  height:52px;
+  height:64px;
   padding:0 18px;
   border-radius:16px;
   border:2px solid rgba(255,255,255,.35);
