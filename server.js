@@ -277,6 +277,11 @@ function normalizeProducts(list) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0) });
     }
   }
+  // Remove products that no longer exist in DEFAULT_PRODUCTS (e.g. renamed/deleted defaults)
+  const defaultIds = new Set(DEFAULT_PRODUCTS.map(p => String(p.id || "").trim()).filter(Boolean));
+  for (const [id] of map) {
+    if (!defaultIds.has(id)) map.delete(id);
+  }
   return Array.from(map.values());
 }
 
