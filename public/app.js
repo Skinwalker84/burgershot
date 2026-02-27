@@ -109,11 +109,33 @@ function renderShopTable(){
         <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
         <td style="text-align:right;">${num(it.minStock)}</td>
         <td style="text-align:right;">
-          <input class="input shopQty" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0" style="width:140px; text-align:right;" />
+          <input class="input shopQty" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0" style="width:120px; text-align:right;" oninput="updateShopTotal()" />
         </td>
+        <td style="text-align:right;">
+          <input class="input shopPrice" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0.00" style="width:110px; text-align:right;" oninput="updateShopTotal()" />
+        </td>
+        <td style="text-align:right; font-weight:900;" id="shopRowTotal_${escAttr(it.id)}">—</td>
       </tr>
     `;
   }).join("");
+  updateShopTotal();
+}
+
+function updateShopTotal(){
+  let total = 0;
+  const qtyInputs = Array.from(document.querySelectorAll(".shopQty"));
+  for(const qtyEl of qtyInputs){
+    const id = qtyEl.getAttribute("data-id");
+    const priceEl = document.querySelector(`.shopPrice[data-id="${id}"]`);
+    const rowEl = document.getElementById("shopRowTotal_" + id);
+    const qty = Number(qtyEl.value) || 0;
+    const price = Number(priceEl?.value) || 0;
+    const rowTotal = qty * price;
+    if(rowEl) rowEl.innerText = rowTotal > 0 ? "$" + rowTotal.toFixed(2) : "—";
+    total += rowTotal;
+  }
+  const totalEl = document.getElementById("shopTotal");
+  if(totalEl) totalEl.innerText = "$" + total.toFixed(2);
 }
 
 async function bookShopPurchases(){
@@ -127,7 +149,9 @@ async function bookShopPurchases(){
     const qty = Number(inp.value);
     if(!id) return null;
     if(!Number.isFinite(qty) || qty<=0) return null;
-    return { inventoryId: id, qty };
+    const priceEl = document.querySelector(`.shopPrice[data-id="${id}"]`);
+    const price = Number(priceEl?.value) || null;
+    return { inventoryId: id, qty, price: price > 0 ? price : null };
   }).filter(Boolean);
 
   if(items.length===0){
