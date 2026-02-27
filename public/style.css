@@ -773,3 +773,8 @@ select.input{ appearance:none; -webkit-appearance:none; }
   .panel{ box-shadow:none !important; border-color:#ccc !important; }
   .tabPage.hidden{ display:none !important; }
 }
+/* Low stock toast animation */
+@keyframes slideInRight {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}

@@ -475,6 +475,69 @@ async function login(){
   await loadCartsFromServer();
   startCartsSSE();
   updateDayInfo();
+  if(isBoss()){
+    checkLowStockAlert();
+    startLowStockMonitor();
+  }
+}
+
+async function checkLowStockAlert(){
+  try{
+    const res = await fetch("/inventory");
+    const data = await res.json().catch(()=>({}));
+    const items = data.items || [];
+    const low = items.filter(it => Number(it.minStock) > 0 && Number(it.stock) <= Number(it.minStock));
+    
+    // Badge on lager icon
+    const badge = document.getElementById("stockBadge");
+    if(badge){
+      if(low.length > 0){
+        badge.innerText = low.length;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    // Toast notification
+    if(low.length > 0){
+      showLowStockToast(low);
+    }
+  }catch(e){}
+}
+
+function showLowStockToast(items){
+  // Remove existing toast
+  document.getElementById("lowStockToast")?.remove();
+
+  const toast = document.createElement("div");
+  toast.id = "lowStockToast";
+  toast.style.cssText = `
+    position:fixed; bottom:24px; right:24px; z-index:9999;
+    background:#1e293b; border:2px solid #ef4444; border-radius:10px;
+    padding:14px 18px; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.5);
+    animation: slideInRight .3s ease;
+  `;
+  toast.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+      <div>
+        <div style="font-weight:900; color:#ef4444; margin-bottom:6px;">⚠️ Mindestbestand unterschritten</div>
+        <div style="font-size:13px; color:#94a3b8; line-height:1.6;">
+          ${items.map(it => `<div>• <b style="color:#e2e8f0;">${esc(it.name)}</b> — ${num(it.stock)} ${esc(it.unit||"Stk")} (Min: ${num(it.minStock)})</div>`).join("")}
+        </div>
+      </div>
+      <button onclick="document.getElementById('lowStockToast').remove()" 
+        style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;line-height:1;padding:0;flex-shrink:0;">✕</button>
+    </div>
+    <button onclick="openTab('tab_stock',null); document.getElementById('lowStockToast').remove();"
+      style="margin-top:10px; width:100%; padding:6px; background:#ef4444; border:none; border-radius:6px; color:#fff; font-weight:900; cursor:pointer;">
+      Zum Lager →
+    </button>
+  `;
+  document.body.appendChild(toast);
+
+  // Auto-dismiss after 15 seconds
+  setTimeout(() => toast.remove(), 15000);
 }
 
 async function logout(){

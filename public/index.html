@@ -84,9 +84,16 @@
         </button>
 
         
-        <button class="iconBtn" onclick="openTab('tab_stock', null)" id="iconBtnStock" title="Lagerbestand">
+        <button class="iconBtn" onclick="openTab('tab_stock', null)" id="iconBtnStock" title="Lagerbestand" style="position:relative;">
           <img src="/icons/lager.png" alt="Lager" />
           <span>Lager</span>
+          <span id="stockBadge" class="hidden" style="
+            position:absolute; top:2px; right:2px;
+            background:#ef4444; color:#fff; font-size:10px; font-weight:900;
+            border-radius:99px; min-width:18px; height:18px;
+            display:flex; align-items:center; justify-content:center;
+            padding:0 4px; pointer-events:none;
+          "></span>
         </button>
 
         <button class="iconBtn" onclick="openTab('tab_day', null)" id="iconBtnDay" title="Tag">
