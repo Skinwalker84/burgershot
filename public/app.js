@@ -440,6 +440,7 @@ async function login(){
   await loadCartsFromServer();
   startCartsSSE();
   startPresenceSSE();
+  startPresenceLoop();
   renderPresenceWarning();
   await loadCartsFromServer();
   startCartsSSE();
@@ -470,6 +471,7 @@ async function loadMe(){
   await loadCartsFromServer();
   startCartsSSE();
   startPresenceSSE();
+  startPresenceLoop();
   renderPresenceWarning();
   updateDayInfo();
 }
@@ -899,14 +901,13 @@ function addToCart(p){
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
   saveCartsDebounced();
-  startPresenceLoop();
   sendPresencePing();
   renderPresenceWarning();
   updateRegisterDisplay();
 }
 
 function clearCart(){ cartsByRegister[currentRegister]=[]; if(currentRegister){ if(currentRegister){ switchCartToRegister(currentRegister); renderCart(); } } saveCartsDebounced(); }
-function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
+function cartTotal(){ if(!Array.isArray(cart)) return 0; return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
 function renderCart(){
   const box=document.getElementById("cart");
@@ -936,10 +937,10 @@ function toggleCart(){
 /* Register */
 function setRegister(n){
   const desired = Number(n) || 1;
-  const prev = Number(currentRegister) || 1;
-  // If another user is already on the desired register, show popup and keep current.
+  const prev = currentRegister ? Number(currentRegister) : null;
+  // Always check if another user is on the desired register
   const others = getOtherUsersOnRegister(desired);
-  if(desired !== prev && others && others.length){
+  if(others && others.length){
     const names = others.map(o=>o.name).join(', ');
     showRegisterBlocked(desired, names);
     // revert active button highlight to current register
@@ -1604,11 +1605,13 @@ function ensureRegisterBlockOverlay(){
   ov.id = 'regBlockOverlay';
   ov.className = 'overlay hidden';
   ov.innerHTML = `
-    <div class="overlayCard" style="max-width:420px;">
-      <div style="font-weight:900; font-size:18px;">Kasse <span id="regBlockNum">—</span> wird von <span id="regBlockName">—</span> benutzt.</div>
-      <div class="muted" style="margin-top:10px; font-size:14px;">Bitte wähle eine andere Kasse.</div>
-      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-        <button class="primary" id="regBlockOkBtn">OK</button>
+    <div class="overlayCard" style="max-width:420px; text-align:center;">
+      <div style="font-size:48px; margin-bottom:8px;">🔒</div>
+      <div style="font-weight:900; font-size:20px; margin-bottom:6px;">Kasse <span id="regBlockNum">—</span> ist belegt</div>
+      <div style="font-size:15px; margin-bottom:4px;"><b><span id="regBlockName">—</span></b> arbeitet gerade an dieser Kasse.</div>
+      <div class="muted" style="font-size:13px; margin-top:6px;">Bitte wähle eine andere Kasse oder warte, bis sie freigegeben wird.</div>
+      <div style="display:flex; justify-content:center; margin-top:20px;">
+        <button class="primary" id="regBlockOkBtn" style="min-width:120px;">OK</button>
       </div>
     </div>
   `;
@@ -1680,6 +1683,17 @@ function startPresenceSSE(){
         const data = JSON.parse(ev.data||"{}");
         presenceData = data.presence || null;
         renderPresenceWarning();
+        // If current register is now occupied by someone else, show block popup
+        if(currentRegister){
+          const others = getOtherUsersOnRegister(currentRegister);
+          if(others && others.length){
+            const names = others.map(o=>o.name).join(', ');
+            showRegisterBlocked(currentRegister, names);
+            currentRegister = null;
+            syncActiveRegisterButton(null);
+            updateRegisterDisplay();
+          }
+        }
       }catch(e){}
     };
     presenceES.onerror = ()=>{};
