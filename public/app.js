@@ -1,6 +1,6 @@
 /* Burger Shot – App JS */
 
-let currentRegister = 1;
+let currentRegister = null;
 let currentCategory = "Burger";
 let me = null;
 let serverDay = null;
@@ -433,13 +433,12 @@ async function login(){
   serverDay = data.currentDay;
   showApp();
   applyRoleVisibility();
+  updateRegisterDisplay();
   await initProducts();
   renderCart();
   await loadCartsFromServer();
   startCartsSSE();
   startPresenceSSE();
-  startPresenceLoop();
-  sendPresencePing();
   renderPresenceWarning();
   await loadCartsFromServer();
   startCartsSSE();
@@ -463,13 +462,12 @@ async function loadMe(){
   me = data.user;
   showApp();
   applyRoleVisibility();
+  updateRegisterDisplay();
   await initProducts();
   renderCart();
   await loadCartsFromServer();
   startCartsSSE();
   startPresenceSSE();
-  startPresenceLoop();
-  sendPresencePing();
   renderPresenceWarning();
   updateDayInfo();
 }
@@ -490,6 +488,11 @@ function updateDayInfo(){
   }
 }
 setInterval(updateDayInfo, 1000);
+
+function updateRegisterDisplay(){
+  const d=document.getElementById("registerDisplay");
+  if(d) d.innerText = currentRegister ? ("Kasse " + currentRegister) : "Kasse —";
+}
 
 function activateRegBtn(btn){
   document.querySelectorAll('.regBtn').forEach(b=>b.classList.remove('active'));
@@ -895,7 +898,7 @@ function addToCart(p){
   sendPresencePing();
   renderPresenceWarning();
 }
-function clearCart(){ cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); saveCartsDebounced(); }
+function clearCart(){ cartsByRegister[currentRegister]=[]; if(currentRegister){ if(currentRegister){ switchCartToRegister(currentRegister); renderCart(); } } saveCartsDebounced(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
 function renderCart(){
@@ -903,6 +906,7 @@ function renderCart(){
   const tot=document.getElementById("cartTotal");
   if(tot) tot.innerText=money(cartTotal());
   if(!box) return;
+  if(!Array.isArray(cart)) cart=[];
   if(cart.length===0){ box.innerHTML=`<div class="cartEmpty">Leer.</div>`; return; }
   box.innerHTML=cart.map((x,idx)=>`
     <div class="cartItem">
@@ -1008,6 +1012,7 @@ function confirmMenuBuilder(){
 
 
 function openPay(){
+  if(!currentRegister) return alert("Bitte zuerst eine Kasse wählen.");
   if(cart.length===0) return alert("Warenkorb ist leer.");
   document.getElementById("payTotal").innerText=money(cartTotal());
   document.getElementById("payAmount").value="";
@@ -1616,6 +1621,7 @@ function showRegisterBlocked(reg, names){
 
 function renderPresenceWarning(){
   const el = ensurePresenceBanner();
+  if(!currentRegister){ el.style.display='none'; return; }
   const myUser = String(me?.username || "").trim();
   const regKey = String(currentRegister||1);
   const usersObj = presenceData && presenceData[regKey] && presenceData[regKey].users ? presenceData[regKey].users : {};
@@ -1642,8 +1648,9 @@ async function sendPresenceLeave(){
 async function sendPresencePing(){
   try{
     if(!me) return;
+    if(!currentRegister) return;
     const payload = {
-      register: String(currentRegister||1),
+      register: String(currentRegister||""),
       username: String(me.username||""),
       name: String(me.displayName||me.username||"")
     };
@@ -1721,5 +1728,4 @@ function currentISOYMString(d){
 /* Boot */
 window.addEventListener('beforeunload', ()=>{ try{ sendPresenceLeave(); }catch(e){} });
 
-switchCartToRegister(currentRegister);
 loadMe();
