@@ -462,9 +462,64 @@
             </table>
           </div>
         </div>
+
+        <!-- Lager-Zuordnung -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:900;">Lager-Zuordnung</div>
+              <div class="muted small">Welcher Lagerartikel wird pro Verkauf abgezogen?</div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="primary" onclick="openAddStockLink()">+ Zuordnung</button>
+              <button class="primary" onclick="saveStockLinks()">Speichern</button>
+            </div>
+          </div>
+          <div class="muted small" id="stockLinksMsg" style="margin-top:10px;">—</div>
+          <div style="margin-top:10px; overflow:auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Produkt</th>
+                  <th>Lagerartikel</th>
+                  <th style="text-align:right;">Menge/Stk</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="stockLinksBody"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
 
+  </div>
+
+  <!-- ===== ADD STOCK LINK OVERLAY ===== -->
+  <div id="addStockLinkOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:480px;">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Zuordnung hinzufügen</div>
+        <button class="ghost" onclick="closeAddStockLink()">X</button>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="muted small">Produkt</div>
+        <select id="slProductId" class="input" style="width:100%;"></select>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="muted small">Lagerartikel</div>
+        <select id="slInventoryId" class="input" style="width:100%;"></select>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="muted small">Menge pro Verkauf</div>
+        <input id="slQty" class="input" type="number" step="0.01" min="0.01" value="1" style="width:100%;" />
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="ghost" onclick="closeAddStockLink()">Abbrechen</button>
+        <button class="primary" onclick="confirmAddStockLink()">Hinzufügen</button>
+      </div>
+    </div>
   </div>
 
   <!-- ===== PAY OVERLAY ===== -->

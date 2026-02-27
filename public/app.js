@@ -70,9 +70,9 @@ function openTab(tabId, btn){
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
-    // Management: only Mitarbeiter + VK-Preise
     loadUsers();
     mgmtReloadProducts();
+    loadStockLinks();
   }
 }
 
@@ -697,6 +697,110 @@ function mgmtResetProducts(){
   if(msg) msg.innerText = "Zurückgesetzt ✅";
 }
 
+/* ===== LAGER-ZUORDNUNG (Produkt → Lagerartikel) ===== */
+let stockLinks = []; // [{productId, inventoryId, qty}]
+
+async function loadStockLinks(){
+  try{
+    const res = await fetch("/sale-inventory-links");
+    const data = await res.json().catch(()=>({}));
+    if(data.success) stockLinks = data.links || [];
+    renderStockLinks();
+  }catch(e){}
+}
+
+function renderStockLinks(){
+  const body = document.getElementById("stockLinksBody");
+  if(!body) return;
+  if(!stockLinks.length){
+    body.innerHTML = `<tr><td colspan="4" class="muted small" style="text-align:center;">Keine Zuordnungen. Klicke "+ Zuordnung" um eine hinzuzufügen.</td></tr>`;
+    return;
+  }
+  body.innerHTML = stockLinks.map((l, i) => {
+    const prod = (PRODUCTS||[]).find(p => p.id === l.productId);
+    const prodName = prod ? `${prod.name} (${prod.cat})` : l.productId;
+    const inv = (window._invItems||[]).find(x => x.id === l.inventoryId);
+    const invName = inv ? inv.name : l.inventoryId;
+    return `<tr>
+      <td>${esc(prodName)}</td>
+      <td>${esc(invName)}</td>
+      <td style="text-align:right;">${l.qty}</td>
+      <td style="text-align:right;"><button class="ghost" onclick="removeStockLink(${i})">Löschen</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function removeStockLink(idx){
+  stockLinks.splice(idx, 1);
+  renderStockLinks();
+}
+
+async function saveStockLinks(){
+  const msg = document.getElementById("stockLinksMsg");
+  try{
+    const res = await fetch("/sale-inventory-links",{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ links: stockLinks })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.success){
+      stockLinks = data.links || stockLinks;
+      renderStockLinks();
+      if(msg) msg.innerText = "Gespeichert ✅";
+      setTimeout(()=>{ if(msg) msg.innerText="—"; }, 3000);
+    } else {
+      if(msg) msg.innerText = data.message || "Fehler beim Speichern.";
+    }
+  }catch(e){
+    if(msg) msg.innerText = "Netzwerkfehler.";
+  }
+}
+
+async function openAddStockLink(){
+  // Load inventory items for dropdown
+  try{
+    const res = await fetch("/inventory");
+    const data = await res.json().catch(()=>({}));
+    window._invItems = data.items || [];
+  }catch(e){ window._invItems = []; }
+
+  // Fill product dropdown — alle Produkte AUSSER Menüs (die werden über Komponenten abgedeckt)
+  const prodSel = document.getElementById("slProductId");
+  const invSel = document.getElementById("slInventoryId");
+  if(!prodSel || !invSel) return;
+
+  const allProds = (PRODUCTS||[]).filter(p => String(p.cat||"") !== "Menü");
+  prodSel.innerHTML = allProds.map(p =>
+    `<option value="${escAttr(p.id||p.name)}">${esc(p.name)} (${esc(p.cat)})</option>`
+  ).join("");
+
+  invSel.innerHTML = (window._invItems||[]).map(it =>
+    `<option value="${escAttr(it.id)}">${esc(it.name)} (${esc(it.unit||"Stk")})</option>`
+  ).join("");
+
+  if(!window._invItems.length){
+    invSel.innerHTML = `<option value="">— Keine Lagerartikel vorhanden —</option>`;
+  }
+
+  document.getElementById("slQty").value = "1";
+  document.getElementById("addStockLinkOverlay").classList.remove("hidden");
+}
+
+function closeAddStockLink(){
+  document.getElementById("addStockLinkOverlay").classList.add("hidden");
+}
+
+function confirmAddStockLink(){
+  const productId = document.getElementById("slProductId").value;
+  const inventoryId = document.getElementById("slInventoryId").value;
+  const qty = Number(document.getElementById("slQty").value);
+  if(!productId || !inventoryId){ alert("Bitte Produkt und Lagerartikel wählen."); return; }
+  if(!Number.isFinite(qty) || qty <= 0){ alert("Menge muss > 0 sein."); return; }
+  stockLinks.push({ productId, inventoryId, qty: Math.round(qty*100)/100 });
+  renderStockLinks();
+  closeAddStockLink();
+}
 
 function setCategory(cat, btn){
   currentCategory=cat;
@@ -898,7 +1002,7 @@ function addToCart(p){
     openMenuBuilder(p);
     return;
   }
-  cart.push({ name: p.name, price: p.price, qty: 1 });
+  cart.push({ name: p.name, price: p.price, qty: 1, productId: p.id || null });
   renderCart();
   saveCartsDebounced();
   sendPresencePing();
@@ -1022,7 +1126,19 @@ function confirmMenuBuilder(){
 
   const displayName = String(base.name||"") + " • Drink: " + String(drinkName||"") + " • " + String(friesLabel||"");
 
-  cart.push({ name: displayName, price: finalPrice, qty:1 });
+  // Ermittle Komponenten-ProductIds für Lagerbuchung
+  const burgerProductId = String(base.id||"").replace(/^menu_/, ""); // z.B. "menu_bleeder" -> "bleeder"
+  const friesProductId = cheesy ? "cheesy_fries" : "fries";
+  const drinkProduct = (PRODUCTS||[]).find(p => p.name === drinkName && String(p.cat||"") === "Getränke");
+  const drinkProductId = drinkProduct ? (drinkProduct.id || null) : null;
+
+  const components = [
+    { productId: burgerProductId, qty: 1 },
+    { productId: friesProductId, qty: 1 }
+  ];
+  if(drinkProductId) components.push({ productId: drinkProductId, qty: 1 });
+
+  cart.push({ name: displayName, price: finalPrice, qty:1, components });
   closeMenuBuilder();
   renderCart();  saveCartsDebounced();
   sendPresencePing();
