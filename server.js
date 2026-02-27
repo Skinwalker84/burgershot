@@ -978,6 +978,17 @@ app.post("/reset/today", requireAuth, requireBoss, (req, res) => {
   res.json({ success: true });
 });
 
+// Reset ALL sales, purchases, tips and closed days (Testphase only)
+app.post("/reset/all-data", requireAuth, requireBoss, (req, res) => {
+  db.salesByDay = {};
+  db.kitchenByDay = {};
+  db.purchases = [];
+  db.closedDays = {};
+  db.meta.nextOrderId = 1;
+  saveDB(db);
+  res.json({ success: true });
+});
+
 /* =========================
    REPORTS (Day details only; keep existing endpoints if you have more)
    ========================= */

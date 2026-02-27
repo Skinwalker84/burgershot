@@ -829,6 +829,19 @@ function confirmAddStockLink(){
   closeAddStockLink();
 }
 
+async function resetAllData(){
+  if(!isBoss()) return;
+  const ok = confirm("⚠️ ACHTUNG: Alle Verkäufe, Einkäufe, Trinkgelder und Tagesabschlüsse werden unwiderruflich gelöscht.\n\nLager und Mitarbeiter bleiben erhalten.\n\nWirklich fortfahren?");
+  if(!ok) return;
+  const res = await fetch("/reset/all-data", { method:"POST", headers:{"Content-Type":"application/json"} });
+  const data = await res.json().catch(()=>({}));
+  if(res.ok && data.success){
+    alert("✅ Alle Abrechnungsdaten gelöscht.");
+  } else {
+    alert(data.message || "Fehler beim Zurücksetzen.");
+  }
+}
+
 function setCategory(cat, btn){
   currentCategory=cat;
   document.querySelectorAll(".catBtn").forEach(b=>b.classList.remove("active"));
