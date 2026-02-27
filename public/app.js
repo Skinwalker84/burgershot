@@ -1596,8 +1596,6 @@ function syncActiveRegisterButton(reg){
     if(btns[idx]) btns[idx].classList.add('active');
   }catch(e){}
 }
-catch(e){}
-}
 
 function ensureRegisterBlockOverlay(){
   let ov = document.getElementById('regBlockOverlay');
