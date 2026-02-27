@@ -1161,7 +1161,7 @@ async function submitPay(){
   if(!Number.isFinite(paid) || paid<total) return alert("Bezahlt muss >= Total sein.");
   const payload={
     register: currentRegister,
-    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty })),
+    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty, productId: x.productId||null, components: x.components||null })),
     total,
     paidAmount: paid,
     time: new Date().toISOString()
