@@ -795,6 +795,22 @@ app.post("/purchases", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   BANK BALANCE
+   ========================= */
+app.get("/bank-balance", requireAuth, requireBoss, (req, res) => {
+  res.json({ success: true, balance: db.bankBalance ?? null, updatedAt: db.bankBalanceUpdatedAt ?? null });
+});
+
+app.put("/bank-balance", requireAuth, requireBoss, (req, res) => {
+  const balance = Number(req.body?.balance);
+  if (!Number.isFinite(balance)) return res.status(400).json({ success: false, message: "Ungültiger Betrag." });
+  db.bankBalance = Math.round(balance * 100) / 100;
+  db.bankBalanceUpdatedAt = new Date().toISOString();
+  saveDB(db);
+  res.json({ success: true, balance: db.bankBalance, updatedAt: db.bankBalanceUpdatedAt });
+});
+
+/* =========================
    SALE INVENTORY LINKS (Management)
    ========================= */
 

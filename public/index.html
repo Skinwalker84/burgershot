@@ -207,6 +207,13 @@
             <div class="muted small">Gewinn</div>
             <div style="font-weight:900; font-size:22px; color:#22c55e;" id="dayProfit">—</div>
           </div>
+          <div class="panel" style="flex:1 1 180px;">
+            <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <div class="muted small">Kontostand</div>
+              <button class="ghost" style="padding:2px 8px; font-size:11px;" onclick="openBankEdit()">✏️</button>
+            </div>
+            <div style="font-weight:900; font-size:22px; color:#60a5fa;" id="bankBalance">—</div>
+          </div>
         </div>
 
         <!-- Nur Mitarbeiter -->
@@ -560,6 +567,25 @@
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
         <button class="ghost" onclick="closeAddStockLink()">Abbrechen</button>
         <button class="primary" onclick="confirmAddStockLink()">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BANK BALANCE OVERLAY ===== -->
+  <div id="bankOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:380px;">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">Kontostand aktualisieren</div>
+        <button class="ghost" onclick="closeBankEdit()">X</button>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="muted small">Aktueller Kontostand ($)</div>
+        <input id="bankInput" class="input" type="number" step="0.01" placeholder="z.B. 12500.00" style="width:100%; margin-top:6px;" />
+      </div>
+      <div class="muted small" style="margin-top:8px;" id="bankMsg">—</div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="ghost" onclick="closeBankEdit()">Abbrechen</button>
+        <button class="primary" onclick="saveBankBalance()">Speichern</button>
       </div>
     </div>
   </div>

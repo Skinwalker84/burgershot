@@ -829,6 +829,47 @@ function confirmAddStockLink(){
   closeAddStockLink();
 }
 
+/* ===== BANK BALANCE ===== */
+async function loadBankBalance(){
+  try{
+    const res = await fetch("/bank-balance");
+    const data = await res.json().catch(()=>({}));
+    const el = document.getElementById("bankBalance");
+    if(!el) return;
+    if(data.success && data.balance !== null){
+      el.innerText = money(data.balance);
+      const hint = data.updatedAt ? ` (${fmtDateTime(data.updatedAt)})` : "";
+      el.title = "Zuletzt aktualisiert" + hint;
+    } else {
+      el.innerText = "—";
+    }
+  }catch(e){}
+}
+
+function openBankEdit(){
+  const el = document.getElementById("bankBalance");
+  const cur = el?.innerText?.replace(/[^0-9.-]/g,"") || "";
+  document.getElementById("bankInput").value = cur && cur !== "—" ? cur : "";
+  document.getElementById("bankMsg").innerText = "—";
+  document.getElementById("bankOverlay").classList.remove("hidden");
+  setTimeout(()=>document.getElementById("bankInput")?.focus(), 100);
+}
+function closeBankEdit(){ document.getElementById("bankOverlay").classList.add("hidden"); }
+
+async function saveBankBalance(){
+  const val = Number(document.getElementById("bankInput").value);
+  const msg = document.getElementById("bankMsg");
+  if(!Number.isFinite(val)){ if(msg) msg.innerText = "Bitte einen gültigen Betrag eingeben."; return; }
+  const res = await fetch("/bank-balance",{ method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ balance: val }) });
+  const data = await res.json().catch(()=>({}));
+  if(res.ok && data.success){
+    closeBankEdit();
+    loadBankBalance();
+  } else {
+    if(msg) msg.innerText = data.message || "Fehler beim Speichern.";
+  }
+}
+
 async function resetAllData(){
   if(!isBoss()) return;
   const ok = confirm("⚠️ ACHTUNG: Alle Verkäufe, Einkäufe, Trinkgelder und Tagesabschlüsse werden unwiderruflich gelöscht.\n\nLager und Mitarbeiter bleiben erhalten.\n\nWirklich fortfahren?");
