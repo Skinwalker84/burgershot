@@ -923,7 +923,18 @@ function toggleCart(){
 
 /* Register */
 function setRegister(n){
-  currentRegister = Number(n) || 1;
+  const desired = Number(n) || 1;
+  const prev = Number(currentRegister) || 1;
+  // If another user is already on the desired register, show popup and keep current.
+  const others = getOtherUsersOnRegister(desired);
+  if(desired !== prev && others && others.length){
+    const names = others.map(o=>o.name).join(', ');
+    showRegisterBlocked(desired, names);
+    // revert active button highlight to current register
+    setTimeout(()=>syncActiveRegisterButton(prev), 0);
+    return;
+  }
+  currentRegister = desired;
   const d=document.getElementById("registerDisplay");
   if(d) d.innerText="Kasse " + currentRegister;
   switchCartToRegister(currentRegister);
@@ -932,6 +943,7 @@ function setRegister(n){
   sendPresencePing();
   renderPresenceWarning();
 }
+
 
 
 /* Pay overlay */
@@ -1550,6 +1562,55 @@ function ensurePresenceBanner(){
     host.appendChild(el);
   }
   return el;
+}
+
+
+function getOtherUsersOnRegister(reg){
+  const myUser = String(me?.username || "").trim();
+  const regKey = String(reg||1);
+  const usersObj = presenceData && presenceData[regKey] && presenceData[regKey].users ? presenceData[regKey].users : {};
+  const users = Object.keys(usersObj||{}).map(k=>({ username:k, name: usersObj[k]?.name || k }));
+  return users.filter(u => u.username && u.username !== myUser);
+}
+
+function syncActiveRegisterButton(reg){
+  try{
+    const btns = Array.from(document.querySelectorAll('.regBtn'));
+    btns.forEach(b=>b.classList.remove('active'));
+    const idx = (Number(reg)||1) - 1;
+    if(btns[idx]) btns[idx].classList.add('active');
+  }catch(e){}
+}
+
+function ensureRegisterBlockOverlay(){
+  let ov = document.getElementById('regBlockOverlay');
+  if(ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'regBlockOverlay';
+  ov.className = 'overlay hidden';
+  ov.innerHTML = `
+    <div class="overlayCard" style="max-width:420px;">
+      <div style="font-weight:900; font-size:18px;">Kasse <span id="regBlockNum">—</span> wird von <span id="regBlockName">—</span> benutzt.</div>
+      <div class="muted" style="margin-top:10px; font-size:14px;">Bitte wähle eine andere Kasse.</div>
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button class="primary" id="regBlockOkBtn">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+  ov.querySelector('#regBlockOkBtn')?.addEventListener('click', ()=>{
+    ov.classList.add('hidden');
+  });
+  return ov;
+}
+
+function showRegisterBlocked(reg, names){
+  const ov = ensureRegisterBlockOverlay();
+  const nEl = ov.querySelector('#regBlockNum');
+  const nameEl = ov.querySelector('#regBlockName');
+  if(nEl) nEl.textContent = String(reg||"—");
+  if(nameEl) nameEl.textContent = String(names||"—");
+  ov.classList.remove('hidden');
 }
 
 function renderPresenceWarning(){
