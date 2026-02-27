@@ -938,12 +938,23 @@ function toggleCart(){
 function setRegister(n){
   const desired = Number(n) || 1;
   const prev = currentRegister ? Number(currentRegister) : null;
+
+  // Toggle: clicking the active register releases it
+  if(desired === prev){
+    currentRegister = null;
+    const d=document.getElementById("registerDisplay");
+    if(d) d.innerText="Kasse —";
+    syncActiveRegisterButton(null);
+    sendPresenceLeave();
+    renderPresenceWarning();
+    return;
+  }
+
   // Always check if another user is on the desired register
   const others = getOtherUsersOnRegister(desired);
   if(others && others.length){
     const names = others.map(o=>o.name).join(', ');
     showRegisterBlocked(desired, names);
-    // revert active button highlight to current register
     setTimeout(()=>{ syncActiveRegisterButton(prev); updateRegisterDisplay(); }, 0);
     return;
   }
