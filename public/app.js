@@ -1614,7 +1614,9 @@ function normalizeCarts(obj){
         out[k] = arr.filter(x=>x && typeof x==='object').map(x=>({
           name: String(x.name||''),
           price: Number(x.price)||0,
-          qty: Number(x.qty)||1
+          qty: Number(x.qty)||1,
+          productId: x.productId || null,
+          components: x.components || null
         }));
       }
     }
