@@ -975,8 +975,9 @@ function confirmMenuBuilder(){
 
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
-  renderCart();
+  renderCart();  saveCartsDebounced();
 }
+
 
 function openPay(){
   if(cart.length===0) return alert("Warenkorb ist leer.");
