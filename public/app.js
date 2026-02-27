@@ -447,6 +447,7 @@ async function login(){
 }
 
 async function logout(){
+  await sendPresenceLeave();
   await fetch("/auth/logout",{ method:"POST" }).catch(()=>{});
   me=null;
   stopPresenceLoop();
@@ -1629,6 +1630,15 @@ function renderPresenceWarning(){
   }
 }
 
+async function sendPresenceLeave(){
+  try{
+    if(!me) return;
+    const u = encodeURIComponent(String(me.username||""));
+    // keepalive works on unload in modern browsers
+    await fetch("/presence/leave?u=" + u, { method:"POST", keepalive:true }).catch(()=>{});
+  }catch(e){}
+}
+
 async function sendPresencePing(){
   try{
     if(!me) return;
@@ -1709,5 +1719,7 @@ function currentISOYMString(d){
 }
 
 /* Boot */
+window.addEventListener('beforeunload', ()=>{ try{ sendPresenceLeave(); }catch(e){} });
+
 switchCartToRegister(currentRegister);
 loadMe();

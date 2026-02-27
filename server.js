@@ -1132,7 +1132,11 @@ app.post("/presence", (req, res) => {
     const register = String((req.body && req.body.register) || "");
     const username = String((req.body && req.body.username) || "").trim();
     const name = String((req.body && req.body.name) || username).trim() || username;
-    if(!["1","2","3","4"].includes(register) || !username){
+        // Move user: remove from any other register first
+    for(const k of ["1","2","3","4"]){
+      try{ if(presenceState[k]?.users && presenceState[k].users[username]) delete presenceState[k].users[username]; }catch(e){}
+    }
+if(!["1","2","3","4"].includes(register) || !username){
       return res.status(400).json({ success:false, message:"Bad payload" });
     }
     if(!presenceState[register]) presenceState[register] = { users:{} };
@@ -1140,6 +1144,28 @@ app.post("/presence", (req, res) => {
     presenceState[register].users[username] = { name, at: Date.now() };
     broadcastPresence();
     return res.json({ success:true });
+  }catch(e){
+    return res.status(400).json({ success:false });
+  }
+});
+
+
+// Presence leave (remove user immediately)
+app.post("/presence/leave", (req, res) => {
+  try{
+    const username = String(((req.query && (req.query.u || req.query.username)) || (req.body && req.body.username) || "")).trim();
+    if(!username) return res.status(400).json({ success:false, message:"Bad payload" });
+    let changed = false;
+    for(const k of ["1","2","3","4"]){
+      try{
+        if(presenceState[k] && presenceState[k].users && presenceState[k].users[username]){
+          delete presenceState[k].users[username];
+          changed = true;
+        }
+      }catch(e){}
+    }
+    if(changed) broadcastPresence();
+    return res.json({ success:true, changed });
   }catch(e){
     return res.status(400).json({ success:false });
   }
