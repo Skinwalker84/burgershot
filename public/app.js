@@ -916,7 +916,7 @@ function setRegister(n){
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsDebounced();
-}`; }
+}
 
 /* Pay overlay */
 
