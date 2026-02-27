@@ -330,6 +330,18 @@ function saveDB(next) {
   safeWriteJSON(DB_PATH, db);
 }
 
+// Startup migration: remove deprecated product IDs from DB
+function migrateProducts() {
+  const defaultIds = new Set(DEFAULT_PRODUCTS.map(p => String(p.id || "").trim()).filter(Boolean));
+  const before = (db.products || []).length;
+  db.products = (db.products || []).filter(p => defaultIds.has(String(p.id || "").trim()));
+  if (db.products.length !== before) {
+    console.log(`[Migration] ${before - db.products.length} veraltete Produkte entfernt.`);
+    saveDB(db);
+  }
+}
+migrateProducts();
+
 function rotateDayIfNeeded() {
   const today = getDayKeyLocal(new Date());
   if (db.meta.currentDay !== today) {
