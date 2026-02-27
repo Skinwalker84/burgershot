@@ -434,6 +434,7 @@ async function login(){
   showApp();
   applyRoleVisibility();
   updateRegisterDisplay();
+  syncActiveRegisterButton(null);
   await initProducts();
   renderCart();
   await loadCartsFromServer();
@@ -463,6 +464,7 @@ async function loadMe(){
   showApp();
   applyRoleVisibility();
   updateRegisterDisplay();
+  syncActiveRegisterButton(null);
   await initProducts();
   renderCart();
   await loadCartsFromServer();
@@ -492,7 +494,9 @@ setInterval(updateDayInfo, 1000);
 function updateRegisterDisplay(){
   const d=document.getElementById("registerDisplay");
   if(d) d.innerText = currentRegister ? ("Kasse " + currentRegister) : "Kasse —";
+  syncActiveRegisterButton(currentRegister);
 }
+
 
 function activateRegBtn(btn){
   document.querySelectorAll('.regBtn').forEach(b=>b.classList.remove('active'));
@@ -895,9 +899,12 @@ function addToCart(p){
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
   saveCartsDebounced();
+  startPresenceLoop();
   sendPresencePing();
   renderPresenceWarning();
+  updateRegisterDisplay();
 }
+
 function clearCart(){ cartsByRegister[currentRegister]=[]; if(currentRegister){ if(currentRegister){ switchCartToRegister(currentRegister); renderCart(); } } saveCartsDebounced(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
 
@@ -936,7 +943,7 @@ function setRegister(n){
     const names = others.map(o=>o.name).join(', ');
     showRegisterBlocked(desired, names);
     // revert active button highlight to current register
-    setTimeout(()=>syncActiveRegisterButton(prev), 0);
+    setTimeout(()=>{ syncActiveRegisterButton(prev); updateRegisterDisplay(); }, 0);
     return;
   }
   currentRegister = desired;
@@ -1583,9 +1590,13 @@ function syncActiveRegisterButton(reg){
   try{
     const btns = Array.from(document.querySelectorAll('.regBtn'));
     btns.forEach(b=>b.classList.remove('active'));
-    const idx = (Number(reg)||1) - 1;
+    const num = Number(reg);
+    if(!num) return;
+    const idx = num - 1;
     if(btns[idx]) btns[idx].classList.add('active');
   }catch(e){}
+}
+catch(e){}
 }
 
 function ensureRegisterBlockOverlay(){
