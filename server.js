@@ -359,46 +359,50 @@ function clearCookie(res, name) {
    ========================= */
 app.use(express.json());
 
-// ===== Live Carts (shared across devices) =====
+// ===== Live Carts (SSE) =====
 let cartsRev = 0;
 let cartsState = { 1: [], 2: [], 3: [], 4: [] };
 const cartsClients = new Set();
 
-function normalizeCartsServer(obj){
-  const out = { 1:[],2:[],3:[],4:[] };
-  for(const k of [1,2,3,4]){
+function normalizeCarts(obj){
+  const out = { 1:[], 2:[], 3:[], 4:[] };
+  [1,2,3,4].forEach(k=>{
     const arr = obj && (obj[k] || obj[String(k)]);
     if(Array.isArray(arr)){
-      out[k] = arr.filter(x=>x && typeof x==='object').map(x=>({
-        name: String(x.name||''),
+      out[k] = arr.filter(x=>x && typeof x==="object").map(x=>({
+        name: String(x.name||""),
         price: Number(x.price)||0,
         qty: Number(x.qty)||1
       }));
     }
-  }
+  });
   return out;
 }
 
 function broadcastCarts(){
   const payload = JSON.stringify({ rev: cartsRev, carts: cartsState });
   for(const res of Array.from(cartsClients)){
-    try{ res.write(`data: ${payload}\n\n`); }catch(e){ try{ cartsClients.delete(res); }catch{} }
+    try{ res.write("data: " + payload + "\n\n"); }
+    catch(e){ try{ cartsClients.delete(res); }catch(_){} }
   }
 }
 
 function loadCartsFromDb(db){
   try{
-    if(db && db.carts && typeof db.carts==='object'){
-      cartsState = normalizeCartsServer(db.carts);
-    }
-    cartsRev = Number(db?.cartsRev)||0;
+    if(db && db.carts) cartsState = normalizeCarts(db.carts);
+    cartsRev = Number(db && db.cartsRev) || 0;
   }catch(e){}
 }
 
-function saveCartsToDb(db){
+function persistCartsToDb(){
   try{
+    const db = readDB();
+    
+loadCartsFromDb(db);
+loadCartsFromDb(db); // bring existing in
     db.carts = cartsState;
     db.cartsRev = cartsRev;
+    writeDB(db);
   }catch(e){}
 }
 
@@ -1040,20 +1044,16 @@ app.post("/reports/close-day", requireAuth, requireBoss, (req, res) => {
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
 
-// Live carts stream (SSE)
+// SSE stream for carts (auth required if middleware exists)
 app.get("/events/carts", (req, res) => {
   res.status(200);
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.flushHeaders && res.flushHeaders();
+  if(res.flushHeaders) res.flushHeaders();
 
   cartsClients.add(res);
-
-  // send current state immediately
-  try{
-    res.write(`data: ${JSON.stringify({ rev: cartsRev, carts: cartsState })}\n\n`);
-  }catch(e){}
+  try{ res.write("data: " + JSON.stringify({ rev: cartsRev, carts: cartsState }) + "\n\n"); }catch(e){}
 
   req.on("close", () => {
     try{ cartsClients.delete(res); }catch(e){}
@@ -1061,30 +1061,19 @@ app.get("/events/carts", (req, res) => {
 });
 
 app.get("/carts", (req, res) => {
-  return res.json({ success: true, rev: cartsRev, carts: cartsState });
+  res.json({ success: true, rev: cartsRev, carts: cartsState });
 });
 
 app.put("/carts", (req, res) => {
   try{
     const incoming = req.body && req.body.carts;
-    const next = normalizeCartsServer(incoming);
-    cartsState = next;
+    cartsState = normalizeCarts(incoming);
     cartsRev = (Number(cartsRev)||0) + 1;
-
-    // persist
-    try{
-      const db = readDB();
-      loadCartsFromDb(db); // keep other state stable
-      cartsState = next;
-      cartsRev = (Number(db.cartsRev)||0) + 1;
-      saveCartsToDb(db);
-      writeDB(db);
-    }catch(e){}
-
+    persistCartsToDb();
     broadcastCarts();
-    return res.json({ success: true, rev: cartsRev });
+    res.json({ success: true, rev: cartsRev });
   }catch(e){
-    return res.status(400).json({ success: false, message: "Bad carts payload" });
+    res.status(400).json({ success: false, message: "Bad carts payload" });
   }
 });
 

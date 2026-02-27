@@ -459,6 +459,8 @@ async function loadMe(){
   applyRoleVisibility();
   await initProducts();
   renderCart();
+  await loadCartsFromServer();
+  startCartsSSE();
   updateDayInfo();
 }
 
@@ -912,11 +914,12 @@ function toggleCart(){
 function setRegister(n){
   currentRegister = Number(n) || 1;
   const d=document.getElementById("registerDisplay");
-  if(d) d.innerText = "Kasse " + currentRegister;
+  if(d) d.innerText="Kasse " + currentRegister;
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsDebounced();
 }
+
 
 /* Pay overlay */
 
@@ -1531,4 +1534,5 @@ function currentISOYMString(d){
 }
 
 /* Boot */
+switchCartToRegister(currentRegister);
 loadMe();
