@@ -553,7 +553,8 @@ function loadProductsFromStorage(){
       const cat = String(p.cat||"").trim();
       const price = Number(p.price);
       if(!name || !cat || !Number.isFinite(price) || price<0) continue;
-      out.push({ name, cat, price: Math.round(price) });
+      const id = String(p.id||"").trim() || null;
+      out.push({ id, name, cat, price: Math.round(price) });
     }
     return out.length ? out : null;
   }catch{ return null; }
@@ -593,12 +594,13 @@ async function hydrateProducts(){
   // 2) LocalStorage fallback
   const stored = loadProductsFromStorage();
   if(stored && Array.isArray(stored) && stored.length){
-    PRODUCTS = stored.map(p=>({ ...p, price:Number(p.price)||0 }));
+    PRODUCTS = stored.map(p=>({ ...p, price:Number(p.price)||0, id: p.id || slugKey(p) }));
     return;
   }
 
   // 3) Defaults
   PRODUCTS = PRODUCTS_DEFAULT.map(p=>({ ...p, id: p.id || slugKey(p) }));
+  saveProductsToStorage(PRODUCTS);
 }
 
 function renderProductsEditor(){
