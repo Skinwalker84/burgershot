@@ -890,6 +890,8 @@ app.post("/sale", requireAuth, (req, res) => {
   // Lagerbestand reduzieren
   try {
     const links = db.saleInventoryLinks || [];
+    console.log("[LAGER] Links:", JSON.stringify(links));
+    console.log("[LAGER] Items:", JSON.stringify(items));
     for (const saleItem of items) {
       const productIds = [];
       // Einzelne Komponenten (Menü hat components-Array)
