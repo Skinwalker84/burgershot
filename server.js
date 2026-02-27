@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
 
-// DB_PATH: Liest DATA_FILE oder DB_PATH Umgebungsvariable (Railway Volume).
+// DB_PATH: Wenn RAILWAY_VOLUME_MOUNT_PATH gesetzt ist, wird das persistente Volume genutzt.
 // Sonst fallback auf lokales data/db.json (Entwicklung).
 const DB_PATH = process.env.DATA_FILE || process.env.DB_PATH
   ? path.resolve(process.env.DATA_FILE || process.env.DB_PATH)
@@ -242,7 +242,10 @@ function normalizeInventory(list){
     stock = Math.max(0, Math.round(stock * 100) / 100);
     minStock = Math.max(0, Math.round(minStock * 100) / 100);
     const updatedAt = String(it.updatedAt || new Date().toISOString());
-    out.push({ id, name, unit, stock, minStock, updatedAt });
+    let ekPrice = Number(it.ekPrice);
+    if(!Number.isFinite(ekPrice) || ekPrice < 0) ekPrice = 0;
+    ekPrice = Math.round(ekPrice * 100) / 100;
+    out.push({ id, name, unit, stock, minStock, ekPrice, updatedAt });
   }
   // sort stable
   out.sort((a,b)=>String(a.name).localeCompare(String(b.name), "de"));
@@ -616,6 +619,10 @@ app.post("/inventory", requireAuth, requireBoss, (req, res) => {
 
   if(!Array.isArray(db.inventory)) db.inventory = [];
 
+  let ekPrice = Number(body.ekPrice);
+  if(!Number.isFinite(ekPrice) || ekPrice < 0) ekPrice = 0;
+  ekPrice = Math.round(ekPrice * 100) / 100;
+
   if(id){
     const it = db.inventory.find(x => x.id === id);
     if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
@@ -623,9 +630,10 @@ app.post("/inventory", requireAuth, requireBoss, (req, res) => {
     it.unit = unit;
     it.stock = stock;
     it.minStock = minStock;
+    it.ekPrice = ekPrice;
     it.updatedAt = new Date().toISOString();
   } else {
-    db.inventory.push({ id: makeInvId(), name, unit, stock, minStock, updatedAt: new Date().toISOString() });
+    db.inventory.push({ id: makeInvId(), name, unit, stock, minStock, ekPrice, updatedAt: new Date().toISOString() });
   }
 
   db.inventory = normalizeInventory(db.inventory);
