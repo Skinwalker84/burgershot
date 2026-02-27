@@ -501,8 +501,8 @@ function updateRegisterDisplay(){
 
 
 function activateRegBtn(btn){
-  document.querySelectorAll('.regBtn').forEach(b=>b.classList.remove('active'));
-  btn?.classList?.add('active');
+  // setRegister already updated currentRegister — just sync buttons to match
+  syncActiveRegisterButton(currentRegister);
 }
 
 /* Products */
