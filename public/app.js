@@ -831,13 +831,9 @@ const PRODUCT_ICON = {
   "Sprunk Light": "sprunk_light.png",
   // legacy typo
   "Sprung": "sprunk.jpeg",
-  "Blueberry Slush": "blueberry_slush.png",
-  "Strawberry Slush": "strawberry_slush.png",
-  "Choco Milchshake": "choco_milkshake.png",
-  "Vanille Milchshake": "vanille_milkshake.png",
-  "Strawberry Milchshake": "strawberry_milkshake.png",
-  "Glazed Donut": "burgershot_donut.png",
-  "Sprinke Donut": "burgershot_donut.png",
+  "Slush": "slush.png",
+  "Milchshake": "milchshake.png",
+  "Donut": "burgershot_donut.png",
   "Caramel Sundae": "burgershot_sunday_caramel.png",
   "Chocolate Sundae": "burgershot_sunday_chocolate.png",
   "Strawberry Sundae": "burgershot_sunday_strawberry.png",
@@ -846,22 +842,29 @@ const PRODUCT_ICON = {
 function getIconForProduct(p){
   const name = String(p?.name||"");
   const cat = String(p?.cat||p?.category||"");
+  const lower = name.toLowerCase();
 
-  // 1) direct mapping
+  // 1) exact match
   if(PRODUCT_ICON[name]) return `/icons/${PRODUCT_ICON[name]}`;
 
-  // 2) Menü: reuse burger icons (match by keyword, otherwise default burger)
+  // 2) case-insensitive match
+  const keys = Object.keys(PRODUCT_ICON);
+  const ciMatch = keys.find(k => k.toLowerCase() === lower);
+  if(ciMatch) return `/icons/${PRODUCT_ICON[ciMatch]}`;
+
+  // 3) partial match (name contains key or key contains name)
+  const partialMatch = keys.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
+  if(partialMatch) return `/icons/${PRODUCT_ICON[partialMatch]}`;
+
+  // 4) Menü: reuse burger icons
   if(cat === "Menü"){
-    const lower = name.toLowerCase();
-    const burgerNames = Object.keys(PRODUCT_ICON).filter(k => {
+    const burgerNames = keys.filter(k => {
       const c = (PRODUCTS||[]).find(x => x.name===k)?.cat;
       return c === "Burger";
     });
-    // try to match any known burger name inside the menu name
     for(const bn of burgerNames){
       if(lower.includes(bn.toLowerCase())) return `/icons/${PRODUCT_ICON[bn]}`;
     }
-    // fallback: any burger icon we have
     const fallback = PRODUCT_ICON["The Bleeder"] || PRODUCT_ICON[burgerNames[0]];
     if(fallback) return `/icons/${fallback}`;
   }
