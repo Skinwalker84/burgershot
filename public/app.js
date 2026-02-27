@@ -1003,7 +1003,8 @@ function addToCart(p){
     openMenuBuilder(p);
     return;
   }
-  cart.push({ name: p.name, price: p.price, qty: 1, productId: p.id || null });
+  const productId = p.id || (PRODUCTS||[]).find(x=>x.name===p.name)?.id || slugKey(p);
+  cart.push({ name: p.name, price: p.price, qty: 1, productId: productId });
   renderCart();
   saveCartsDebounced();
   sendPresencePing();
