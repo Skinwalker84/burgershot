@@ -323,7 +323,7 @@ function normalizeDB(db) {
 }
 
 let db = normalizeDB(safeReadJSON(DB_PATH) || makeFreshDB());
-safeWriteJSON(DB_PATH, db);
+// Note: do NOT write back here - would overwrite Volume data with empty defaults
 
 function saveDB(next) {
   db = normalizeDB(next);
