@@ -1354,6 +1354,8 @@ async function loadDayReport(){
   }
 
   document.getElementById("dayRevenue").innerText=money(data.totals?.revenue||0);
+  document.getElementById("dayPurchases").innerText=money(data.totals?.purchases||0);
+  document.getElementById("dayProfit").innerText=money(data.totals?.profit||0);
 
   const tbody=document.getElementById("dayByEmployee");
   if(tbody){
@@ -1434,6 +1436,8 @@ async function loadWeekReport(){
   document.getElementById("weekPrintRange").innerText=range;
 
   document.getElementById("weekRevenue").innerText=money(data.totals?.revenue||0);
+  document.getElementById("weekPurchases").innerText=money(data.totals?.purchases||0);
+  document.getElementById("weekProfit").innerText=money(data.totals?.profit||0);
   document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
 
   const tbody=document.getElementById("weekByEmployee");
@@ -1490,6 +1494,8 @@ async function loadMonthReport(){
   if(hint) hint.innerText = `Enthaltene KW: ${weeksText}` + (data.note ? ` — ${data.note}` : "");
 
   document.getElementById("monthRevenue").innerText=money(data.totals?.revenue||0);
+  document.getElementById("monthPurchases").innerText=money(data.totals?.purchases||0);
+  document.getElementById("monthProfit").innerText=money(data.totals?.profit||0);
   document.getElementById("monthOrders").innerText=String(data.totals?.orders||0);
 
   const tbody=document.getElementById("monthByEmployee");

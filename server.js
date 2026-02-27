@@ -981,6 +981,14 @@ app.post("/reset/today", requireAuth, requireBoss, (req, res) => {
 /* =========================
    REPORTS (Day details only; keep existing endpoints if you have more)
    ========================= */
+// Helper: sum purchase costs for a list of day keys
+function getPurchaseCosts(dayKeys) {
+  const keySet = new Set(dayKeys);
+  return (db.purchases || [])
+    .filter(p => keySet.has(String(p.date || "").slice(0, 10)))
+    .reduce((s, p) => s + (Number(p.price) > 0 ? Number(p.qty || 0) * Number(p.price) : 0), 0);
+}
+
 app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
   rotateDayIfNeeded();
   const dateStr = String(req.query?.date || db.meta.currentDay);
@@ -996,6 +1004,8 @@ app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
     orders: sales.length
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+  totals.purchases = getPurchaseCosts([dayKey]);
+  totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
   for (const s of sales) {
@@ -1047,6 +1057,8 @@ app.get("/reports/week-employee", requireAuth, requireBoss, (req, res) => {
     orders: salesAll.length
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+  totals.purchases = getPurchaseCosts(dayKeys);
+  totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
   for (const s of salesAll) {
@@ -1110,6 +1122,14 @@ app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
     orders: salesAll.length
   };
   totals.avg = totals.orders>0 ? totals.revenue / totals.orders : 0;
+
+  // collect all day keys in this month for purchase cost lookup
+  const monthDayKeys = [];
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+    monthDayKeys.push(getDayKeyLocal(d));
+  }
+  totals.purchases = getPurchaseCosts(monthDayKeys);
+  totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
   for(const s of salesAll){
