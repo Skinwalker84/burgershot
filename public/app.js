@@ -1601,11 +1601,23 @@ function getOtherUsersOnRegister(reg){
 function syncActiveRegisterButton(reg){
   try{
     const btns = Array.from(document.querySelectorAll('.regBtn'));
-    btns.forEach(b=>b.classList.remove('active'));
-    const num = Number(reg);
-    if(!num) return;
-    const idx = num - 1;
-    if(btns[idx]) btns[idx].classList.add('active');
+    const myUser = String(me?.username || "").trim();
+    btns.forEach((btn, i) => {
+      const kassNum = i + 1;
+      btn.classList.remove('active', 'free', 'occupied');
+      // Check who is on this register
+      const regKey = String(kassNum);
+      const usersObj = presenceData && presenceData[regKey] && presenceData[regKey].users ? presenceData[regKey].users : {};
+      const others = Object.keys(usersObj).filter(u => u !== myUser);
+      const isMine = Number(reg) === kassNum;
+      if(isMine){
+        btn.classList.add('active');
+      } else if(others.length > 0){
+        btn.classList.add('occupied');
+      } else {
+        btn.classList.add('free');
+      }
+    });
   }catch(e){}
 }
 
@@ -1703,7 +1715,11 @@ function startPresenceSSE(){
             currentRegister = null;
             syncActiveRegisterButton(null);
             updateRegisterDisplay();
+          } else {
+            syncActiveRegisterButton(currentRegister);
           }
+        } else {
+          syncActiveRegisterButton(null);
         }
       }catch(e){}
     };

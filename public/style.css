@@ -135,10 +135,28 @@ body{
   color:#0b1f33;
   text-shadow:0 1px 0 rgba(255,255,255,.55);
 }
+/* free = niemand auf dieser Kasse */
+.regBtn.free{
+  border-color: rgba(34,197,94,.9);
+  background: linear-gradient(180deg, rgba(34,197,94,.85), rgba(22,163,74,.7));
+  box-shadow: 0 4px 12px rgba(34,197,94,.35), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.regBtn.free .regNo{ color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+
+/* occupied = jemand anderes ist auf dieser Kasse */
+.regBtn.occupied{
+  border-color: rgba(239,68,68,.9);
+  background: linear-gradient(180deg, rgba(239,68,68,.9), rgba(185,28,28,.75));
+  box-shadow: 0 4px 12px rgba(239,68,68,.35), inset 0 1px 0 rgba(255,255,255,.25);
+  cursor: not-allowed;
+}
+.regBtn.occupied .regNo{ color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+
+/* active = eigene Kasse (blau/weiß Rahmen, leicht hochgestellt) */
 .regBtn.active{
   border-color: rgba(255,255,255,.95);
-  background: linear-gradient(180deg, rgba(255,59,48,.95), rgba(255,149,0,.75));
-  box-shadow: 0 6px 18px rgba(0,0,0,.25), 0 0 0 3px rgba(255,255,255,.22) inset, 0 0 16px rgba(255,149,0,.45);
+  background: linear-gradient(180deg, rgba(59,130,246,.95), rgba(37,99,235,.8));
+  box-shadow: 0 6px 18px rgba(0,0,0,.25), 0 0 0 3px rgba(255,255,255,.22) inset, 0 0 16px rgba(59,130,246,.55);
   transform: translateY(-1px) scale(1.03);
 }
 .regBtn.active .regNo{
