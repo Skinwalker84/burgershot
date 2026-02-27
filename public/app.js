@@ -112,7 +112,7 @@ function renderShopTable(){
           <input class="input shopQty" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0" style="width:120px; text-align:right;" oninput="updateShopTotal()" />
         </td>
         <td style="text-align:right;">
-          <input class="input shopPrice" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0.00" style="width:110px; text-align:right;" oninput="updateShopTotal()" />
+          <input class="input shopPrice" data-id="${escAttr(it.id)}" type="number" step="0.01" min="0" placeholder="0.00" style="width:110px; text-align:right;" value="${it.ekPrice > 0 ? it.ekPrice : ""}" oninput="updateShopTotal()" />
         </td>
         <td style="text-align:right; font-weight:900;" id="shopRowTotal_${escAttr(it.id)}">—</td>
       </tr>
@@ -359,6 +359,7 @@ function renderInventory(){
           <button class="ghost" onclick="adjustInventoryPrompt('${escAttr(it.id)}')">±</button>
           <button class="primary" onclick="openInventoryEditor('${escAttr(it.id)}')">Bearbeiten</button>
           <button class="ghost" onclick="deleteInventoryItem('${escAttr(it.id)}')">Löschen</button>
+          <span class="muted small" style="margin-left:6px;">EK: $${Number(it.ekPrice||0).toFixed(2)}</span>
         </td>
       </tr>
     `;
@@ -376,16 +377,20 @@ function openInventoryEditor(id){
   if(stockStr===null) return;
   const minStr = prompt("Mindestbestand (Warnung ab diesem Wert):", String(existing?.minStock ?? 0));
   if(minStr===null) return;
+  const ekStr = prompt("EK-Preis pro Einheit ($):", String(existing?.ekPrice ?? 0));
+  if(ekStr===null) return;
 
   const stock = Number(String(stockStr).replace(",","."));
   const minStock = Number(String(minStr).replace(",","."));
+  const ekPrice = Number(String(ekStr).replace(",","."));
 
   saveInventory({
     id: existing?.id,
     name: String(name).trim(),
     unit: String(unit).trim() || "Stk",
     stock: Number.isFinite(stock) ? stock : 0,
-    minStock: Number.isFinite(minStock) ? minStock : 0
+    minStock: Number.isFinite(minStock) ? minStock : 0,
+    ekPrice: Number.isFinite(ekPrice) && ekPrice >= 0 ? ekPrice : 0
   });
 }
 
