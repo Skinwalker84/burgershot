@@ -9,9 +9,6 @@ const fs = require("fs");
 const crypto = require("crypto");
 
 const app = express();
-
-// Disable caching for static assets (avoid stale app.js in clients)
-app.use((req,res,next)=>{ if(req.path.endsWith('.js')||req.path.endsWith('.css')) res.setHeader('Cache-Control','no-store'); next(); });
 const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
@@ -213,10 +210,6 @@ function makeFreshDB() {
     // Einkäufe (Chef) – Bewegungslog / Historie
     purchases: [],
 
-    // Warenkörbe pro Kasse (serverseitig, geräteübergreifend)
-    cartsByRegister: { 1: [], 2: [], 3: [], 4: [] },
-    cartsUpdatedAt: new Date().toISOString(),
-
     salesByDay: { [today]: [] },
     kitchenByDay: { [today]: { pending: [], done: [] } },
     closedDays: {}
@@ -250,21 +243,6 @@ function normalizeInventory(list){
   }
   // sort stable
   out.sort((a,b)=>String(a.name).localeCompare(String(b.name), "de"));
-  return out;
-}
-
-
-function normalizeCartsByRegister(obj){
-  const out = { 1: [], 2: [], 3: [], 4: [] };
-  if(!obj || typeof obj !== "object") return out;
-  for(const k of ["1","2","3","4"]){
-    const arr = Array.isArray(obj[k]) ? obj[k] : [];
-    out[Number(k)] = arr.filter(x=>x && typeof x==="object").map(x=>({
-      name: String(x.name||"").slice(0,200),
-      price: Number(x.price)||0,
-      qty: Math.max(1, Math.floor(Number(x.qty)||1))
-    })).filter(x=>x.name);
-  }
   return out;
 }
 
@@ -318,10 +296,6 @@ function normalizeDB(db) {
 
   // purchases: keep simple array of objects
   db.purchases = (Array.isArray(db.purchases) ? db.purchases : []).filter(x => x && typeof x === "object");
-
-  // carts: serverseitig
-  db.cartsByRegister = normalizeCartsByRegister(db.cartsByRegister);
-  if(!db.cartsUpdatedAt) db.cartsUpdatedAt = new Date().toISOString();
 
   const day = db.meta.currentDay;
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
@@ -384,7 +358,51 @@ function clearCookie(res, name) {
    MIDDLEWARE
    ========================= */
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public"), { setHeaders: (res, filePath) => { res.setHeader('Cache-Control','no-store'); } }));
+
+// ===== Live Carts (shared across devices) =====
+let cartsRev = 0;
+let cartsState = { 1: [], 2: [], 3: [], 4: [] };
+const cartsClients = new Set();
+
+function normalizeCartsServer(obj){
+  const out = { 1:[],2:[],3:[],4:[] };
+  for(const k of [1,2,3,4]){
+    const arr = obj && (obj[k] || obj[String(k)]);
+    if(Array.isArray(arr)){
+      out[k] = arr.filter(x=>x && typeof x==='object').map(x=>({
+        name: String(x.name||''),
+        price: Number(x.price)||0,
+        qty: Number(x.qty)||1
+      }));
+    }
+  }
+  return out;
+}
+
+function broadcastCarts(){
+  const payload = JSON.stringify({ rev: cartsRev, carts: cartsState });
+  for(const res of Array.from(cartsClients)){
+    try{ res.write(`data: ${payload}\n\n`); }catch(e){ try{ cartsClients.delete(res); }catch{} }
+  }
+}
+
+function loadCartsFromDb(db){
+  try{
+    if(db && db.carts && typeof db.carts==='object'){
+      cartsState = normalizeCartsServer(db.carts);
+    }
+    cartsRev = Number(db?.cartsRev)||0;
+  }catch(e){}
+}
+
+function saveCartsToDb(db){
+  try{
+    db.carts = cartsState;
+    db.cartsRev = cartsRev;
+  }catch(e){}
+}
+
+app.use(express.static(path.join(__dirname, "public")));
 
 function requireAuth(req, res, next) {
   rotateDayIfNeeded();
@@ -471,74 +489,6 @@ app.post("/auth/logout", requireAuth, (req, res) => {
   clearCookie(res, "bs_token");
   res.json({ success: true });
 });
-
-/* =========================
-   CARTS (serverseitig, geräteübergreifend)
-   ========================= */
-
-
-// Live carts sync via Server-Sent Events (SSE)
-const cartsSseClients = new Set();
-
-function sseSend(res, payload){
-  try{
-    res.write(`event: carts\n`);
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  }catch{}
-}
-
-function broadcastCarts(payload){
-  for(const res of Array.from(cartsSseClients)){
-    sseSend(res, payload);
-  }
-}
-
-app.get("/carts/stream", requireAuth, (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no"); // nginx
-  res.flushHeaders && res.flushHeaders();
-
-  cartsSseClients.add(res);
-
-  // Send initial snapshot
-  const carts = normalizeCartsByRegister(db.cartsByRegister);
-  db.cartsByRegister = carts;
-  if(!db.cartsUpdatedAt) db.cartsUpdatedAt = new Date().toISOString();
-  sseSend(res, { carts, updatedAt: db.cartsUpdatedAt, origin: "snapshot" });
-
-  const keepAlive = setInterval(() => {
-    try{ res.write(": ping\n\n"); }catch{}
-  }, 25000);
-
-  req.on("close", () => {
-    clearInterval(keepAlive);
-    cartsSseClients.delete(res);
-    try{ res.end(); }catch{}
-  });
-});
-
-app.get("/carts", requireAuth, (req, res) => {
-  const carts = normalizeCartsByRegister(db.cartsByRegister);
-  db.cartsByRegister = carts;
-  if(!db.cartsUpdatedAt) db.cartsUpdatedAt = new Date().toISOString();
-  // Do not force-save on read; only if shape changed
-  res.json({ success:true, carts, updatedAt: db.cartsUpdatedAt });
-});
-
-app.put("/carts", requireAuth, (req, res) => {
-  const incoming = req.body && (req.body.carts || req.body.cartsByRegister);
-  const clientId = String(req.body?.clientId || "");
-  const carts = normalizeCartsByRegister(incoming);
-  db.cartsByRegister = carts;
-  db.cartsUpdatedAt = new Date().toISOString();
-  saveDB(db);
-  // broadcast to all connected clients
-  broadcastCarts({ carts, updatedAt: db.cartsUpdatedAt, clientId });
-  res.json({ success:true, carts, updatedAt: db.cartsUpdatedAt });
-});
-
 
 app.post("/auth/change-password", requireAuth, (req, res) => {
   const oldPw = String(req.body?.oldPw || "");
@@ -1088,6 +1038,55 @@ app.post("/reports/close-day", requireAuth, requireBoss, (req, res) => {
    FRONTEND
    ========================= */
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+
+
+// Live carts stream (SSE)
+app.get("/events/carts", (req, res) => {
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders && res.flushHeaders();
+
+  cartsClients.add(res);
+
+  // send current state immediately
+  try{
+    res.write(`data: ${JSON.stringify({ rev: cartsRev, carts: cartsState })}\n\n`);
+  }catch(e){}
+
+  req.on("close", () => {
+    try{ cartsClients.delete(res); }catch(e){}
+  });
+});
+
+app.get("/carts", (req, res) => {
+  return res.json({ success: true, rev: cartsRev, carts: cartsState });
+});
+
+app.put("/carts", (req, res) => {
+  try{
+    const incoming = req.body && req.body.carts;
+    const next = normalizeCartsServer(incoming);
+    cartsState = next;
+    cartsRev = (Number(cartsRev)||0) + 1;
+
+    // persist
+    try{
+      const db = readDB();
+      loadCartsFromDb(db); // keep other state stable
+      cartsState = next;
+      cartsRev = (Number(db.cartsRev)||0) + 1;
+      saveCartsToDb(db);
+      writeDB(db);
+    }catch(e){}
+
+    broadcastCarts();
+    return res.json({ success: true, rev: cartsRev });
+  }catch(e){
+    return res.status(400).json({ success: false, message: "Bad carts payload" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`BurgerShot Server läuft auf http://localhost:${PORT}`);
