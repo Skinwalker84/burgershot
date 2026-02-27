@@ -15,8 +15,8 @@ app.set("trust proxy", 1);
 
 // DB_PATH: Wenn RAILWAY_VOLUME_MOUNT_PATH gesetzt ist, wird das persistente Volume genutzt.
 // Sonst fallback auf lokales data/db.json (Entwicklung).
-const DB_PATH = process.env.DB_PATH
-  ? path.resolve(process.env.DB_PATH)
+const DB_PATH = (process.env.DB_PATH || process.env.DATA_FILE)
+  ? path.resolve(process.env.DB_PATH || process.env.DATA_FILE)
   : path.join(__dirname, "data", "db.json");
 
 console.log("[DB] Pfad:", DB_PATH);
