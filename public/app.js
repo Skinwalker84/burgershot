@@ -437,6 +437,10 @@ async function login(){
   renderCart();
   await loadCartsFromServer();
   startCartsSSE();
+  startPresenceSSE();
+  startPresenceLoop();
+  sendPresencePing();
+  renderPresenceWarning();
   await loadCartsFromServer();
   startCartsSSE();
   updateDayInfo();
@@ -445,6 +449,7 @@ async function login(){
 async function logout(){
   await fetch("/auth/logout",{ method:"POST" }).catch(()=>{});
   me=null;
+  stopPresenceLoop();
   showLoginPage("Ausgeloggt.");
 }
 
@@ -461,6 +466,10 @@ async function loadMe(){
   renderCart();
   await loadCartsFromServer();
   startCartsSSE();
+  startPresenceSSE();
+  startPresenceLoop();
+  sendPresencePing();
+  renderPresenceWarning();
   updateDayInfo();
 }
 
@@ -882,6 +891,8 @@ function addToCart(p){
   cart.push({ name: p.name, price: p.price, qty: 1 });
   renderCart();
   saveCartsDebounced();
+  sendPresencePing();
+  renderPresenceWarning();
 }
 function clearCart(){ cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); saveCartsDebounced(); }
 function cartTotal(){ return cart.reduce((s,x)=>s+x.price*x.qty,0); }
@@ -918,6 +929,8 @@ function setRegister(n){
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsDebounced();
+  sendPresencePing();
+  renderPresenceWarning();
 }
 
 
@@ -976,6 +989,8 @@ function confirmMenuBuilder(){
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
   renderCart();  saveCartsDebounced();
+  sendPresencePing();
+  renderPresenceWarning();
 }
 
 
@@ -1501,6 +1516,104 @@ function startCartsSSE(){
     };
   }catch(e){}
 }
+
+
+/* ===== Soft Lock / Presence (SSE) ===== */
+let presenceData = null;
+let presenceInterval = null;
+let presenceES = null;
+
+function ensurePresenceBanner(){
+  let el = document.getElementById("presenceBanner");
+  if(el) return el;
+  const host = document.getElementById("registerDisplay")?.parentElement || document.body;
+  el = document.createElement("div");
+  el.id = "presenceBanner";
+  el.style.marginTop = "6px";
+  el.style.padding = "6px 10px";
+  el.style.borderRadius = "12px";
+  el.style.fontWeight = "900";
+  el.style.fontSize = "12px";
+  el.style.display = "none";
+  el.style.background = "rgba(255, 193, 7, 0.20)";
+  el.style.border = "1px solid rgba(255, 193, 7, 0.45)";
+  el.style.color = "#ffcc66";
+  // try to place near register display
+  try{
+    const reg = document.getElementById("registerDisplay");
+    if(reg && reg.parentElement){
+      reg.parentElement.appendChild(el);
+    }else{
+      host.appendChild(el);
+    }
+  }catch(e){
+    host.appendChild(el);
+  }
+  return el;
+}
+
+function renderPresenceWarning(){
+  const el = ensurePresenceBanner();
+  const myUser = String(me?.username || "").trim();
+  const regKey = String(currentRegister||1);
+  const usersObj = presenceData && presenceData[regKey] && presenceData[regKey].users ? presenceData[regKey].users : {};
+  const users = Object.keys(usersObj||{}).map(k=>({ username:k, name: usersObj[k]?.name || k }));
+  const others = users.filter(u => u.username && u.username !== myUser);
+  if(others.length > 0){
+    const names = others.map(o=>o.name).join(", ");
+    el.textContent = "⚠️ Hinweis: Kasse " + regKey + " wird auch von " + names + " genutzt.";
+    el.style.display = "";
+  }else{
+    el.style.display = "none";
+  }
+}
+
+async function sendPresencePing(){
+  try{
+    if(!me) return;
+    const payload = {
+      register: String(currentRegister||1),
+      username: String(me.username||""),
+      name: String(me.displayName||me.username||"")
+    };
+    await fetch("/presence",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+  }catch(e){}
+}
+
+function startPresenceSSE(){
+  try{
+    if(presenceES) return;
+    presenceES = new EventSource("/events/presence");
+    presenceES.onmessage = (ev)=>{
+      try{
+        const data = JSON.parse(ev.data||"{}");
+        presenceData = data.presence || null;
+        renderPresenceWarning();
+      }catch(e){}
+    };
+    presenceES.onerror = ()=>{};
+  }catch(e){}
+}
+
+function startPresenceLoop(){
+  try{
+    if(presenceInterval) clearInterval(presenceInterval);
+    sendPresencePing();
+    presenceInterval = setInterval(sendPresencePing, 5000);
+  }catch(e){}
+}
+
+function stopPresenceLoop(){
+  try{ if(presenceInterval) clearInterval(presenceInterval); }catch(e){}
+  presenceInterval = null;
+  try{ if(presenceES){ presenceES.close(); } }catch(e){}
+  presenceES = null;
+}
+
 
 /* Helpers */
 function money(n){ const x=Number(n||0); return "$"+(Number.isFinite(x)?x:0); }

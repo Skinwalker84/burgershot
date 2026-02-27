@@ -359,6 +359,38 @@ function clearCookie(res, name) {
    ========================= */
 app.use(express.json());
 
+
+// ===== Soft Lock / Presence (SSE) =====
+const presenceClients = new Set();
+// { "1": { users: { "username": { name, at } } } }
+let presenceState = { "1": {users:{}}, "2": {users:{}}, "3": {users:{}}, "4": {users:{}} };
+
+function prunePresence(){
+  const now = Date.now();
+  let changed = false;
+  for(const k of ["1","2","3","4"]){
+    const users = presenceState[k]?.users || {};
+    for(const u of Object.keys(users)){
+      if(now - (users[u].at||0) > 20000){ // 20s stale
+        delete users[u];
+        changed = true;
+      }
+    }
+  }
+  if(changed) broadcastPresence();
+}
+
+function broadcastPresence(){
+  const payload = JSON.stringify({ presence: presenceState, ts: Date.now() });
+  for(const res of Array.from(presenceClients)){
+    try{ res.write("data: " + payload + "\n\n"); }
+    catch(e){ try{ presenceClients.delete(res); }catch(_){} }
+  }
+}
+
+// prune periodically
+setInterval(prunePresence, 5000);
+
 // ===== Live Carts (SSE) =====
 let cartsRev = 0;
 let cartsState = { 1: [], 2: [], 3: [], 4: [] };
@@ -1074,6 +1106,42 @@ app.put("/carts", (req, res) => {
     res.json({ success: true, rev: cartsRev });
   }catch(e){
     res.status(400).json({ success: false, message: "Bad carts payload" });
+  }
+});
+
+
+// Presence stream (SSE)
+app.get("/events/presence", (req, res) => {
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  if(res.flushHeaders) res.flushHeaders();
+
+  presenceClients.add(res);
+  try{ res.write("data: " + JSON.stringify({ presence: presenceState, ts: Date.now() }) + "\n\n"); }catch(e){}
+
+  req.on("close", () => {
+    try{ presenceClients.delete(res); }catch(e){}
+  });
+});
+
+// Presence ping (soft lock helper)
+app.post("/presence", (req, res) => {
+  try{
+    const register = String((req.body && req.body.register) || "");
+    const username = String((req.body && req.body.username) || "").trim();
+    const name = String((req.body && req.body.name) || username).trim() || username;
+    if(!["1","2","3","4"].includes(register) || !username){
+      return res.status(400).json({ success:false, message:"Bad payload" });
+    }
+    if(!presenceState[register]) presenceState[register] = { users:{} };
+    if(!presenceState[register].users) presenceState[register].users = {};
+    presenceState[register].users[username] = { name, at: Date.now() };
+    broadcastPresence();
+    return res.json({ success:true });
+  }catch(e){
+    return res.status(400).json({ success:false });
   }
 });
 
