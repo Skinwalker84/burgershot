@@ -159,7 +159,7 @@ async function bookShopPurchases(){
   }
 
   const added = Number(data.added) || items.length;
-  if(msg) msg.innerText = `Gebucht ✅ ${added} Position${added===1?"":"en"} ins Lager übernommen.`;
+  if(msg) msg.innerText = "Gebucht ✅ " + added + " Position" + (added===1?"":"en") + " ins Lager übernommen.";
 }
 
 /* =========================
@@ -912,7 +912,7 @@ function toggleCart(){
 function setRegister(n){
   currentRegister = Number(n) || 1;
   const d=document.getElementById("registerDisplay");
-  if(d) d.innerText=`Kasse ${currentRegister}`;
+  if(d) d.innerText = "Kasse " + currentRegister;
   switchCartToRegister(currentRegister);
   renderCart();
   saveCartsDebounced();
@@ -941,7 +941,7 @@ function openMenuBuilder(menuProduct){
     drinks.forEach(d=>{
       const opt=document.createElement("option");
       opt.value=d.name;
-      opt.textContent = `${d.name} (${money(d.price)})`;
+      opt.textContent = d.name + " (" + money(d.price) + ")";
       sel.appendChild(opt);
     });
   }
@@ -968,7 +968,7 @@ function confirmMenuBuilder(){
   const base = menuBuilderState.base;
   const finalPrice = Math.round(Number(base.price||0) + extra);
 
-  const displayName = `${base.name} • Drink: ${drinkName} • ${friesLabel}`;
+  const displayName = String(base.name||"") + " • Drink: " + String(drinkName||"") + " • " + String(friesLabel||"");
 
   cart.push({ name: displayName, price: finalPrice, qty:1 });
   closeMenuBuilder();
@@ -999,7 +999,7 @@ async function submitPay(){
   const data=await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Speichern.");
   closePay();
-  alert(`Order #${data.orderId} gespeichert. Trinkgeld: ${money(data.tip||0)}`);
+  alert("Order #" + String(data.orderId||"") + " gespeichert. Trinkgeld: " + money(data.tip||0));
   cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); saveCartsDebounced();
 }
 
@@ -1012,7 +1012,7 @@ function slugify(s){
     .slice(0,60) || "item";
 }
 function slugKey(p){
-  return `${slugify(p.cat||p.category||"")}__${slugify(p.name||"")}`;
+  return slugify(p.cat||p.category||"") + "__" + slugify(p.name||"");
 }
 
 /* Kitchen */
@@ -1021,7 +1021,7 @@ function formatElapsed(sec){
   sec = Math.max(0, Math.floor(sec||0));
   const m = Math.floor(sec/60);
   const s = sec%60;
-  return `${m}:${String(s).padStart(2,"0")}`;
+  return String(m) + ":" + String(s).padStart(2,"0");
 }
 
 function stopKitchenTimers(){
