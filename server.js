@@ -322,7 +322,12 @@ function normalizeDB(db) {
   return db;
 }
 
-let db = normalizeDB(safeReadJSON(DB_PATH) || makeFreshDB());
+const rawDb = safeReadJSON(DB_PATH);
+console.log("[STARTUP] DB_PATH:", DB_PATH);
+console.log("[STARTUP] DB gefunden:", !!rawDb);
+console.log("[STARTUP] Inventory:", (rawDb?.inventory||[]).length, "Artikel");
+console.log("[STARTUP] Links:", (rawDb?.saleInventoryLinks||[]).length, "Zuordnungen");
+let db = normalizeDB(rawDb || makeFreshDB());
 // Note: do NOT write back here - would overwrite Volume data with empty defaults
 
 function saveDB(next) {
@@ -426,7 +431,9 @@ function normalizeCarts(obj){
       out[k] = arr.filter(x=>x && typeof x==="object").map(x=>({
         name: String(x.name||""),
         price: Number(x.price)||0,
-        qty: Number(x.qty)||1
+        qty: Number(x.qty)||1,
+        productId: x.productId || null,
+        components: x.components || null
       }));
     }
   });
