@@ -209,6 +209,7 @@ function makeFreshDB() {
     sessions: {},
 
     products: DEFAULT_PRODUCTS,
+    saleInventoryLinks: [],
 
     // Lagerbestand (Chef)
     inventory: [],
@@ -299,6 +300,8 @@ function normalizeDB(db) {
 
   db.products = normalizeProducts(db.products);
   db.inventory = normalizeInventory(db.inventory);
+  // saleInventoryLinks: [{id, productId, inventoryId, qty}]
+  if(!Array.isArray(db.saleInventoryLinks)) db.saleInventoryLinks = [];
 
   // purchases: keep simple array of objects
   db.purchases = (Array.isArray(db.purchases) ? db.purchases : []).filter(x => x && typeof x === "object");
@@ -764,6 +767,31 @@ app.post("/purchases", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   SALE INVENTORY LINKS (Management)
+   ========================= */
+
+app.get("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
+  res.json({ success: true, links: db.saleInventoryLinks || [] });
+});
+
+app.put("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
+  const incoming = req.body?.links;
+  if (!Array.isArray(incoming)) return res.status(400).json({ success: false, message: "links muss ein Array sein." });
+  const validated = [];
+  for (const l of incoming) {
+    const productId = String(l.productId || "").trim();
+    const inventoryId = String(l.inventoryId || "").trim();
+    const qty = Number(l.qty);
+    if (!productId || !inventoryId) continue;
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    validated.push({ productId, inventoryId, qty: Math.round(qty * 100) / 100 });
+  }
+  db.saleInventoryLinks = validated;
+  saveDB(db);
+  res.json({ success: true, links: db.saleInventoryLinks });
+});
+
+/* =========================
    USERS (Management)
    ========================= */
 app.get("/users", requireAuth, requireBoss, (req, res) => {
@@ -845,6 +873,32 @@ app.post("/sale", requireAuth, (req, res) => {
 
   const kitchen = todaysKitchen();
   kitchen.pending.push({ id: orderId, day, time, timeHM: sale.timeHM, employee: sale.employee, register, items, total });
+
+  // Lagerbestand reduzieren
+  try {
+    const links = db.saleInventoryLinks || [];
+    for (const saleItem of items) {
+      const productIds = [];
+      // Einzelne Komponenten (Menü hat components-Array)
+      if (Array.isArray(saleItem.components)) {
+        for (const c of saleItem.components) {
+          if (c.productId) productIds.push({ productId: c.productId, qty: (c.qty || 1) * (saleItem.qty || 1) });
+        }
+      } else if (saleItem.productId) {
+        productIds.push({ productId: saleItem.productId, qty: saleItem.qty || 1 });
+      }
+      for (const { productId, qty } of productIds) {
+        const matched = links.filter(l => l.productId === productId);
+        for (const link of matched) {
+          const invItem = (db.inventory || []).find(x => x.id === link.inventoryId);
+          if (invItem) {
+            invItem.stock = Math.max(0, Math.round((Number(invItem.stock) || 0) * 100 - link.qty * qty * 100) / 100);
+            invItem.updatedAt = new Date().toISOString();
+          }
+        }
+      }
+    }
+  } catch(e) { console.error("Lager-Abzug Fehler:", e); }
 
   saveDB(db);
   res.json({ success: true, orderId, tip });
