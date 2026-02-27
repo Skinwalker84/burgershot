@@ -258,6 +258,7 @@
             <button class="ghost" onclick="setWeekToThisKW()">Diese KW</button>
             <button class="primary noPrint" onclick="loadWeekReport()">Laden</button>
             <button class="ghost noPrint" onclick="printWeekReport()">PDF</button>
+            <button class="primary noPrint" onclick="openTipPayout()">💰 Trinkgeld auszahlen</button>
           </div>
         </div>
 
@@ -529,6 +530,31 @@
           </div>
         </div>
 
+        <!-- Trinkgeld Auszahlungshistorie -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:900;">Trinkgeld-Auszahlungen</div>
+              <div class="muted small">Protokoll aller Auszahlungen</div>
+            </div>
+            <button class="ghost" onclick="loadTipPayouts()">Neu laden</button>
+          </div>
+          <div style="margin-top:10px; overflow:auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>KW</th>
+                  <th>Mitarbeiter</th>
+                  <th style="text-align:right;">Betrag</th>
+                  <th>Ausgezahlt von</th>
+                </tr>
+              </thead>
+              <tbody id="tipPayoutsBody"><tr><td colspan="5" class="muted small">—</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Testphase Reset -->
         <div class="panel" style="margin-top:14px; border:2px solid #ef4444;">
           <div class="row" style="justify-content:space-between; align-items:center;">
@@ -567,6 +593,34 @@
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
         <button class="ghost" onclick="closeAddStockLink()">Abbrechen</button>
         <button class="primary" onclick="confirmAddStockLink()">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TIP PAYOUT OVERLAY ===== -->
+  <div id="tipPayoutOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:480px;">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">💰 Trinkgeld auszahlen</div>
+        <button class="ghost" onclick="closeTipPayout()">X</button>
+      </div>
+      <div class="muted small" style="margin-top:6px;" id="tipPayoutWeekLabel">—</div>
+      <div style="margin-top:12px; overflow:auto;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mitarbeiter</th>
+              <th style="text-align:right;">Trinkgeld</th>
+              <th style="text-align:right;">Auszahlen</th>
+            </tr>
+          </thead>
+          <tbody id="tipPayoutBody"></tbody>
+        </table>
+      </div>
+      <div class="muted small" style="margin-top:10px;" id="tipPayoutMsg">—</div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="ghost" onclick="closeTipPayout()">Abbrechen</button>
+        <button class="primary" onclick="confirmTipPayout()">Auszahlung bestätigen</button>
       </div>
     </div>
   </div>

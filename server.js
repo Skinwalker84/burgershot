@@ -795,6 +795,52 @@ app.post("/purchases", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   TIP PAYOUTS
+   ========================= */
+app.get("/tip-payouts", requireAuth, requireBoss, (req, res) => {
+  const limit = Math.min(200, Number(req.query.limit) || 50);
+  const list = (db.tipPayouts || []).slice().reverse().slice(0, limit);
+  res.json({ success: true, payouts: list });
+});
+
+app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
+  const body = req.body || {};
+  const week = String(body.week || "").trim();
+  const entries = body.entries; // [{employeeUsername, employee, amount}]
+  if (!week || !Array.isArray(entries) || entries.length === 0)
+    return res.status(400).json({ success: false, message: "Fehlende Daten." });
+
+  const validated = entries
+    .filter(e => e && Number(e.amount) > 0)
+    .map(e => ({
+      employeeUsername: String(e.employeeUsername || ""),
+      employee: String(e.employee || e.employeeUsername || ""),
+      amount: Math.round(Number(e.amount) * 100) / 100
+    }));
+
+  if (!validated.length)
+    return res.status(400).json({ success: false, message: "Keine gültigen Beträge." });
+
+  const total = validated.reduce((s, e) => s + e.amount, 0);
+  const payout = {
+    id: crypto.randomBytes(8).toString("hex"),
+    ts: new Date().toISOString(),
+    week,
+    by: req.user.username,
+    byName: req.user.displayName || req.user.username,
+    entries: validated,
+    total: Math.round(total * 100) / 100
+  };
+
+  if (!Array.isArray(db.tipPayouts)) db.tipPayouts = [];
+  db.tipPayouts.push(payout);
+  if (db.tipPayouts.length > 1000) db.tipPayouts = db.tipPayouts.slice(-1000);
+
+  saveDB(db);
+  res.json({ success: true, payout });
+});
+
+/* =========================
    BANK BALANCE
    ========================= */
 app.get("/bank-balance", requireAuth, requireBoss, (req, res) => {

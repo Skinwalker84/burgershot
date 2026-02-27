@@ -73,6 +73,7 @@ function openTab(tabId, btn){
     loadUsers();
     mgmtReloadProducts();
     loadStockLinks();
+    loadTipPayouts();
   }
 }
 
@@ -827,6 +828,94 @@ function confirmAddStockLink(){
   stockLinks.push({ productId, inventoryId, qty: Math.round(qty*100)/100 });
   renderStockLinks();
   closeAddStockLink();
+}
+
+/* ===== TIP PAYOUTS ===== */
+function openTipPayout(){
+  if(!isBoss()) return;
+  if(!currentWeekReport) return alert("Bitte zuerst eine Wochenabrechnung laden.");
+  const kw = document.getElementById("weekKW")?.value || "";
+  document.getElementById("tipPayoutWeekLabel").innerText = "KW: " + kw;
+
+  const employees = (currentWeekReport.byEmployee || []).filter(x => Number(x.tips) > 0);
+  const body = document.getElementById("tipPayoutBody");
+  if(!employees.length){
+    body.innerHTML = `<tr><td colspan="3" class="muted small">Kein Trinkgeld diese Woche.</td></tr>`;
+  } else {
+    body.innerHTML = employees.map(x => `
+      <tr>
+        <td>${esc(x.employee || x.employeeUsername || "")}</td>
+        <td style="text-align:right;">${money(x.tips||0)}</td>
+        <td style="text-align:right;">
+          <input class="input tipPayoutAmount" data-username="${escAttr(x.employeeUsername||"")}" data-name="${escAttr(x.employee||"")}"
+            type="number" step="0.01" min="0" value="${Number(x.tips||0).toFixed(2)}"
+            style="width:100px; text-align:right;" />
+        </td>
+      </tr>
+    `).join("");
+  }
+  document.getElementById("tipPayoutMsg").innerText = "—";
+  document.getElementById("tipPayoutOverlay").classList.remove("hidden");
+}
+
+function closeTipPayout(){
+  document.getElementById("tipPayoutOverlay").classList.add("hidden");
+}
+
+async function confirmTipPayout(){
+  const kw = document.getElementById("weekKW")?.value || "";
+  const msg = document.getElementById("tipPayoutMsg");
+  const inputs = Array.from(document.querySelectorAll(".tipPayoutAmount"));
+  const entries = inputs.map(inp => ({
+    employeeUsername: inp.getAttribute("data-username"),
+    employee: inp.getAttribute("data-name"),
+    amount: Number(inp.value) || 0
+  })).filter(e => e.amount > 0);
+
+  if(!entries.length){ if(msg) msg.innerText = "Keine Beträge eingetragen."; return; }
+
+  const res = await fetch("/tip-payouts", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ week: kw, entries })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(res.ok && data.success){
+    closeTipPayout();
+    alert("✅ Trinkgeld-Auszahlung gespeichert!");
+  } else {
+    if(msg) msg.innerText = data.message || "Fehler beim Speichern.";
+  }
+}
+
+async function loadTipPayouts(){
+  const body = document.getElementById("tipPayoutsBody");
+  if(!body) return;
+  try{
+    const res = await fetch("/tip-payouts");
+    const data = await res.json().catch(()=>({}));
+    const payouts = data.payouts || [];
+    if(!payouts.length){
+      body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Auszahlungen.</td></tr>`;
+      return;
+    }
+    // Flatten: one row per employee per payout
+    const rows = [];
+    for(const p of payouts){
+      for(const e of p.entries){
+        rows.push(`<tr>
+          <td>${esc(fmtDateTime(p.ts))}</td>
+          <td>${esc(p.week||"")}</td>
+          <td>${esc(e.employee||e.employeeUsername||"")}</td>
+          <td style="text-align:right;">${money(e.amount||0)}</td>
+          <td>${esc(p.byName||p.by||"")}</td>
+        </tr>`);
+      }
+    }
+    body.innerHTML = rows.join("");
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="5" class="muted small">Fehler beim Laden.</td></tr>`;
+  }
 }
 
 /* ===== BANK BALANCE ===== */
