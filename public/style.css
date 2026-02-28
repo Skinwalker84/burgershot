@@ -225,8 +225,8 @@ body{
 .posNew{
   flex:1 1 auto;
   display:flex;
-  gap:12px;
-  padding:12px;
+  gap:0;
+  padding:0;
   overflow:hidden;
 }
 .posCartPanel{
@@ -235,6 +235,15 @@ body{
   display:flex;
   flex-direction:column;
   overflow:hidden;
+  border-radius:0 !important;
+  border-right:0 !important;
+  background:#fff !important;
+  color:#1b1b1b !important;
+}
+.posCartPanel .muted{ color:#555 !important; }
+.posCartPanel .ghost{
+  border-color:rgba(0,0,0,.2) !important;
+  color:#1b1b1b !important;
 }
 .posCartBody{
   flex:1 1 auto;
@@ -246,6 +255,7 @@ body{
   display:flex;
   flex-direction:column;
   overflow:hidden;
+  border-radius:0 !important;
 }
 .productsNew{
   flex:1 1 auto;
@@ -253,7 +263,7 @@ body{
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
   gap:16px;
-  padding:4px 2px;
+  padding:12px;
   align-content:start;
 }
 
