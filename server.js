@@ -7,6 +7,8 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+let webpush;
+try { webpush = require("web-push"); } catch(_) { console.warn("[PUSH] web-push nicht installiert — Push deaktiviert."); }
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -327,6 +329,21 @@ function normalizeDB(db) {
 
 const rawDb = safeReadJSON(DB_PATH);
 console.log("[STARTUP] DB_PATH:", DB_PATH);
+
+// VAPID Keys for Web Push
+if (webpush) {
+  if (!db.vapidKeys) {
+    db.vapidKeys = webpush.generateVAPIDKeys();
+    saveDB(db);
+    console.log("[PUSH] VAPID Keys generiert.");
+  }
+  webpush.setVapidDetails(
+    "mailto:admin@burgershot.local",
+    db.vapidKeys.publicKey,
+    db.vapidKeys.privateKey
+  );
+  console.log("[PUSH] VAPID Keys geladen.");
+}
 console.log("[STARTUP] DB gefunden:", !!rawDb);
 console.log("[STARTUP] Inventory:", (rawDb?.inventory||[]).length, "Artikel");
 console.log("[STARTUP] Links:", (rawDb?.saleInventoryLinks||[]).length, "Zuordnungen");
@@ -841,6 +858,68 @@ app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   WEB PUSH SUBSCRIPTIONS
+   ========================= */
+
+// Helper: send push to all boss subscriptions
+async function sendPushToAll(payload) {
+  if (!webpush || !db.vapidKeys) return;
+  const subs = db.pushSubscriptions || [];
+  const dead = [];
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+    } catch (e) {
+      if (e.statusCode === 404 || e.statusCode === 410) dead.push(sub.endpoint);
+    }
+  }
+  if (dead.length) {
+    db.pushSubscriptions = subs.filter(s => !dead.includes(s.endpoint));
+    saveDB(db);
+  }
+}
+
+app.get("/push/vapid-public-key", requireAuth, (req, res) => {
+  if (!webpush || !db.vapidKeys) return res.status(503).json({ success: false, message: "Push nicht verfügbar." });
+  res.json({ success: true, publicKey: db.vapidKeys.publicKey });
+});
+
+app.post("/push/subscribe", requireAuth, requireBoss, (req, res) => {
+  const sub = req.body;
+  if (!sub || !sub.endpoint) return res.status(400).json({ success: false, message: "Ungültige Subscription." });
+  if (!Array.isArray(db.pushSubscriptions)) db.pushSubscriptions = [];
+  // Avoid duplicates
+  db.pushSubscriptions = db.pushSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+  db.pushSubscriptions.push(sub);
+  if (db.pushSubscriptions.length > 200) db.pushSubscriptions = db.pushSubscriptions.slice(-200);
+  saveDB(db);
+  res.json({ success: true });
+});
+
+app.post("/push/unsubscribe", requireAuth, (req, res) => {
+  const { endpoint } = req.body || {};
+  if (!endpoint) return res.status(400).json({ success: false });
+  db.pushSubscriptions = (db.pushSubscriptions || []).filter(s => s.endpoint !== endpoint);
+  saveDB(db);
+  res.json({ success: true });
+});
+
+// Push low stock check — called after every purchase/sale that changes inventory
+async function checkAndPushLowStock() {
+  if (!webpush || !db.vapidKeys) return;
+  const low = (db.inventory || []).filter(it =>
+    Number(it.minStock) > 0 && Number(it.stock) <= Number(it.minStock)
+  );
+  if (!low.length) return;
+  const names = low.map(it => `${it.name} (${it.stock} ${it.unit||"Stk"})`).join(", ");
+  await sendPushToAll({
+    title: "⚠️ BurgerShot — Mindestbestand",
+    body: names,
+    tag: "lowstock"
+  });
+}
+
+/* =========================
    BANK BALANCE
    ========================= */
 app.get("/bank-balance", requireAuth, requireBoss, (req, res) => {
@@ -1023,6 +1102,7 @@ app.post("/sale", requireAuth, (req, res) => {
   } catch(e) { console.error("Lager-Abzug Fehler:", e); }
 
   saveDB(db);
+  checkAndPushLowStock().catch(()=>{});
   res.json({ success: true, orderId, tip });
 });
 
