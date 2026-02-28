@@ -572,6 +572,16 @@ async function loadMe(){
   updateDayInfo();
 }
 
+function updateHeaderClock(){
+  const now = new Date();
+  const timeEl = document.getElementById("headerTime");
+  const dateEl = document.getElementById("headerDate");
+  if(timeEl) timeEl.innerText = now.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+  if(dateEl) dateEl.innerText = now.toLocaleDateString("de-DE", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
+}
+setInterval(updateHeaderClock, 1000);
+updateHeaderClock();
+
 function updateDayInfo(){
   const clock = document.getElementById("clockDisplay");
   const screenTitle = document.getElementById("screenTitle");
