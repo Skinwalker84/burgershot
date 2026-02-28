@@ -847,11 +847,34 @@ app.get("/bank-balance", requireAuth, requireBoss, (req, res) => {
   res.json({ success: true, balance: db.bankBalance ?? null, updatedAt: db.bankBalanceUpdatedAt ?? null });
 });
 
+app.get("/bank-balance/history", requireAuth, requireBoss, (req, res) => {
+  const limit = Math.min(200, Number(req.query.limit) || 100);
+  const history = (db.bankHistory || []).slice().reverse().slice(0, limit);
+  res.json({ success: true, history });
+});
+
 app.put("/bank-balance", requireAuth, requireBoss, (req, res) => {
   const balance = Number(req.body?.balance);
+  const note = String(req.body?.note || "").trim();
   if (!Number.isFinite(balance)) return res.status(400).json({ success: false, message: "Ungültiger Betrag." });
+
+  const prev = db.bankBalance ?? null;
   db.bankBalance = Math.round(balance * 100) / 100;
   db.bankBalanceUpdatedAt = new Date().toISOString();
+
+  // Save to history
+  if (!Array.isArray(db.bankHistory)) db.bankHistory = [];
+  db.bankHistory.push({
+    ts: db.bankBalanceUpdatedAt,
+    balance: db.bankBalance,
+    prev,
+    diff: prev !== null ? Math.round((db.bankBalance - prev) * 100) / 100 : null,
+    note: note || null,
+    by: req.user?.username || null,
+    byName: req.user?.displayName || req.user?.username || null
+  });
+  if (db.bankHistory.length > 500) db.bankHistory = db.bankHistory.slice(-500);
+
   saveDB(db);
   res.json({ success: true, balance: db.bankBalance, updatedAt: db.bankBalanceUpdatedAt });
 });

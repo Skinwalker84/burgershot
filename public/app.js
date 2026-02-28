@@ -73,6 +73,7 @@ function openTab(tabId, btn){
     loadUsers();
     mgmtReloadProducts();
     loadStockLinks();
+    loadBankHistory();
     loadTipPayouts();
   }
 }
@@ -1002,6 +1003,7 @@ function openBankEdit(){
   const el = document.getElementById("bankBalance");
   const cur = el?.innerText?.replace(/[^0-9.-]/g,"") || "";
   document.getElementById("bankInput").value = cur && cur !== "—" ? cur : "";
+  document.getElementById("bankNote").value = "";
   document.getElementById("bankMsg").innerText = "—";
   document.getElementById("bankOverlay").classList.remove("hidden");
   setTimeout(()=>document.getElementById("bankInput")?.focus(), 100);
@@ -1010,15 +1012,44 @@ function closeBankEdit(){ document.getElementById("bankOverlay").classList.add("
 
 async function saveBankBalance(){
   const val = Number(document.getElementById("bankInput").value);
+  const note = document.getElementById("bankNote")?.value || "";
   const msg = document.getElementById("bankMsg");
   if(!Number.isFinite(val)){ if(msg) msg.innerText = "Bitte einen gültigen Betrag eingeben."; return; }
-  const res = await fetch("/bank-balance",{ method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ balance: val }) });
+  const res = await fetch("/bank-balance",{ method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ balance: val, note }) });
   const data = await res.json().catch(()=>({}));
   if(res.ok && data.success){
     closeBankEdit();
     loadBankBalance();
+    loadBankHistory();
   } else {
     if(msg) msg.innerText = data.message || "Fehler beim Speichern.";
+  }
+}
+
+async function loadBankHistory(){
+  const body = document.getElementById("bankHistoryBody");
+  if(!body) return;
+  try{
+    const res = await fetch("/bank-balance/history");
+    const data = await res.json().catch(()=>({}));
+    const history = data.history || [];
+    if(!history.length){
+      body.innerHTML = `<tr><td colspan="5" class="muted small">Noch keine Einträge.</td></tr>`;
+      return;
+    }
+    body.innerHTML = history.map(h => {
+      const diffColor = h.diff === null ? "" : h.diff >= 0 ? "color:#22c55e;" : "color:#ef4444;";
+      const diffStr = h.diff === null ? "—" : (h.diff >= 0 ? "+" : "") + money(h.diff);
+      return `<tr>
+        <td>${esc(fmtDateTime(h.ts))}</td>
+        <td style="text-align:right; font-weight:900;">${money(h.balance)}</td>
+        <td style="text-align:right; font-weight:900; ${diffColor}">${diffStr}</td>
+        <td>${esc(h.note || "—")}</td>
+        <td>${esc(h.byName || h.by || "—")}</td>
+      </tr>`;
+    }).join("");
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="5" class="muted small">Fehler beim Laden.</td></tr>`;
   }
 }
 
