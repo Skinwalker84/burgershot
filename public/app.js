@@ -2231,7 +2231,7 @@ function stopPresenceLoop(){
 
 
 /* Helpers */
-function money(n){ const x=Number(n||0); return "$"+(Number.isFinite(x)?x:0); }
+function money(n){ const x=Number.isFinite(Number(n)) ? Number(n) : 0; return "$" + x.toLocaleString("de-DE", {minimumFractionDigits:0, maximumFractionDigits:2}).replace(/,([0-9]+)$/, ".$1"); }
 function num(n){
   const x = Number(n);
   if(!Number.isFinite(x)) return "0";
