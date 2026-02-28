@@ -647,6 +647,27 @@ select.input{ appearance:none; -webkit-appearance:none; }
 }
 
 @media (max-width: 820px){
+  /* ===== NEW POS LAYOUT ===== */
+  .posNew{
+    flex-direction:column;
+    padding:8px;
+    gap:8px;
+    overflow-y:auto;
+  }
+  .posCartPanel{
+    width:100% !important;
+    flex-shrink:0;
+  }
+  .posCartBody{
+    max-height:22vh;
+    overflow-y:auto;
+  }
+  .posProductsPanel{ min-height:0; }
+  .productsNew{
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+    padding:6px 2px;
+  }
   /* Keep sticky stack stable on mobile (prevents overlap/squish when content changes) */
   :root{ --mobileBrandH: 64px; }
 
@@ -798,9 +819,32 @@ select.input{ appearance:none; -webkit-appearance:none; }
     backdrop-filter: blur(2px);
   }
   .payBtn{ width:100%; max-width:none; }
+
+  /* Cart items bigger touch targets on mobile */
+  .cartItem{ padding:6px 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:15px; }
+  .pushBtn{ width:32px !important; height:32px !important; font-size:16px; }
+
+  /* Buttons in posCartPanel should stack nicely */
+  .posCartPanel .primary,
+  .posCartPanel .ghost{ padding:10px 12px; font-size:14px; }
+
+  /* Management + other tabs scroll on mobile */
+  #tab_mgmt, #tab_stock, #tab_shop, #tab_day, #tab_week, #tab_month{
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:20px;
+  }
+
+  /* Clock shrinks on mobile */
+  #headerTime{ font-size:13px; }
+  #headerDate{ font-size:10px; }
+  #headerClock{ width:90px; }
 }
 
 @media (max-width: 420px){
+  .productsNew{
+    grid-template-columns:repeat(2, 1fr);
+  }
   .brandText{ font-size:18px; }
   .regBtn{ flex:0 0 86px; width:86px; }
   .iconBtn{ flex:0 0 82px; width:82px; }
