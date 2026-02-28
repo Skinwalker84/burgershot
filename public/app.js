@@ -1053,6 +1053,69 @@ async function loadBankHistory(){
   }
 }
 
+/* ===== STAFF ORDER ===== */
+async function openStaffOrder(){
+  if(!currentRegister) return alert("Bitte zuerst eine Kasse wählen.");
+  if(cart.length === 0) return alert("Warenkorb ist leer.");
+
+  // Fill employee dropdown
+  const sel = document.getElementById("staffOrderEmployee");
+  try{
+    const res = await fetch("/users");
+    const data = await res.json().catch(()=>({}));
+    const users = (data.users || []).filter(u => u.role !== "boss");
+    sel.innerHTML = users.length
+      ? users.map(u => `<option value="${escAttr(u.username)}">${esc(u.displayName||u.username)}</option>`).join("")
+      : `<option value="">— Keine Mitarbeiter —</option>`;
+  }catch(e){
+    sel.innerHTML = `<option value="${escAttr(me?.username||"")}">Ich (${esc(me?.displayName||"")})</option>`;
+  }
+
+  // Show cart items
+  const itemsDiv = document.getElementById("staffOrderItems");
+  itemsDiv.innerHTML = cart.map(x =>
+    `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.07);">
+      <span>${esc(x.name)}</span><span class="muted small">×${x.qty}</span>
+    </div>`
+  ).join("");
+
+  document.getElementById("staffOrderMsg").innerText = "—";
+  document.getElementById("staffOrderOverlay").classList.remove("hidden");
+}
+
+function closeStaffOrder(){
+  document.getElementById("staffOrderOverlay").classList.add("hidden");
+}
+
+async function confirmStaffOrder(){
+  const empSel = document.getElementById("staffOrderEmployee");
+  const empUsername = empSel?.value || "";
+  const empName = empSel?.options[empSel.selectedIndex]?.text || empUsername;
+  const msg = document.getElementById("staffOrderMsg");
+
+  const payload = {
+    register: currentRegister,
+    items: cart.map(x => ({ name:x.name, price:0, qty:x.qty, productId: x.productId||null, components: x.components||null })),
+    total: 0,
+    paidAmount: 0,
+    time: new Date().toISOString(),
+    staffOrder: true,
+    staffEmployee: empUsername,
+    staffEmployeeName: empName
+  };
+
+  const res = await fetch("/sale", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){ if(msg) msg.innerText = data.message || "Fehler."; return; }
+
+  closeStaffOrder();
+  cartsByRegister[currentRegister] = [];
+  switchCartToRegister(currentRegister);
+  renderCart();
+  saveCartsDebounced();
+  alert("✅ Mitarbeiter-Verzehr gebucht für " + empName);
+}
+
 async function resetAllData(){
   if(!isBoss()) return;
   const ok = confirm("⚠️ ACHTUNG: Alle Verkäufe, Einkäufe, Trinkgelder und Tagesabschlüsse werden unwiderruflich gelöscht.\n\nLager und Mitarbeiter bleiben erhalten.\n\nWirklich fortfahren?");

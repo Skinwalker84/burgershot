@@ -959,7 +959,8 @@ app.post("/sale", requireAuth, (req, res) => {
   if (!Number.isFinite(register) || register < 1) return res.status(400).json({ success: false, message: "Invalid sale payload (register)." });
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ success: false, message: "Invalid sale payload (items)." });
   if (!Number.isFinite(total) || total < 0) return res.status(400).json({ success: false, message: "Invalid sale payload (total)." });
-  if (!Number.isFinite(paidAmount) || paidAmount < total) return res.status(400).json({ success: false, message: "Invalid sale payload (paidAmount)." });
+  const isStaffOrder = body.staffOrder === true;
+  if (!Number.isFinite(paidAmount) || (!isStaffOrder && paidAmount < total)) return res.status(400).json({ success: false, message: "Invalid sale payload (paidAmount)." });
 
   const day = db.meta.currentDay;
   if (db.closedDays && db.closedDays[day]) return res.status(409).json({ success: false, message: "Dieser Tag ist bereits abgeschlossen. Keine neuen Verkäufe möglich." });
@@ -978,7 +979,10 @@ app.post("/sale", requireAuth, (req, res) => {
     items,
     total,
     paidAmount,
-    tip
+    tip,
+    staffOrder: isStaffOrder || false,
+    staffEmployee: isStaffOrder ? String(body.staffEmployee||"").trim() : undefined,
+    staffEmployeeName: isStaffOrder ? String(body.staffEmployeeName||"").trim() : undefined
   };
 
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
