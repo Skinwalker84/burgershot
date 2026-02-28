@@ -480,12 +480,16 @@
         </div>
 
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('mgmtMitarbeiter')">
             <div style="font-weight:900;">Mitarbeiter</div>
-            <button class="primary" onclick="openAddUser()">+ Add</button>
+            <span id="mgmtMitarbeiterArrow" style="font-size:18px; transition:transform .2s;">▼</span>
           </div>
-          <div id="usersList" style="margin-top:10px;"></div>
-
+          <div id="mgmtMitarbeiter" class="hidden">
+            <div style="margin-top:10px;">
+              <button class="primary" onclick="openAddUser()">+ Add</button>
+            </div>
+            <div id="usersList" style="margin-top:10px;"></div>
+          </div>
         </div>
 
         <div class="panel" style="margin-top:14px;">
@@ -551,65 +555,71 @@
 
         <!-- Mitarbeiter-Verzehr -->
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('staffConsumption'); if(!document.getElementById('staffConsumption').classList.contains('hidden')) loadStaffConsumption();">
             <div>
               <div style="font-weight:900;">Mitarbeiter-Verzehr</div>
               <div class="muted small">Was haben Mitarbeiter sich selbst verbucht?</div>
             </div>
-            <button class="ghost" onclick="loadStaffConsumption()">Neu laden</button>
+            <span id="staffConsumptionArrow" style="font-size:18px; transition:transform .2s;">▼</span>
           </div>
-          <div style="margin-top:10px;" id="staffConsumptionBody">
-            <div class="muted small">—</div>
+          <div id="staffConsumption" class="hidden">
+            <div style="margin-top:10px;" id="staffConsumptionBody">
+              <div class="muted small">—</div>
+            </div>
           </div>
         </div>
 
         <!-- Kontostand-Verlauf -->
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('bankHistory'); if(!document.getElementById('bankHistory').classList.contains('hidden')) loadBankHistory();">
             <div>
               <div style="font-weight:900;">Kontostand-Verlauf</div>
               <div class="muted small">Alle Kontostand-Änderungen</div>
             </div>
-            <button class="ghost" onclick="loadBankHistory()">Neu laden</button>
+            <span id="bankHistoryArrow" style="font-size:18px; transition:transform .2s;">▼</span>
           </div>
-          <div style="margin-top:10px; overflow:auto;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Datum</th>
-                  <th style="text-align:right;">Kontostand</th>
-                  <th style="text-align:right;">Änderung</th>
-                  <th>Notiz</th>
-                  <th>Geändert von</th>
-                </tr>
-              </thead>
-              <tbody id="bankHistoryBody"><tr><td colspan="5" class="muted small">—</td></tr></tbody>
-            </table>
+          <div id="bankHistory" class="hidden">
+            <div style="margin-top:10px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th style="text-align:right;">Kontostand</th>
+                    <th style="text-align:right;">Änderung</th>
+                    <th>Notiz</th>
+                    <th>Geändert von</th>
+                  </tr>
+                </thead>
+                <tbody id="bankHistoryBody"><tr><td colspan="5" class="muted small">—</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- Trinkgeld Auszahlungshistorie -->
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('tipPayouts'); if(!document.getElementById('tipPayouts').classList.contains('hidden')) loadTipPayouts();">
             <div>
               <div style="font-weight:900;">Trinkgeld-Auszahlungen</div>
               <div class="muted small">Protokoll aller Auszahlungen</div>
             </div>
-            <button class="ghost" onclick="loadTipPayouts()">Neu laden</button>
+            <span id="tipPayoutsArrow" style="font-size:18px; transition:transform .2s;">▼</span>
           </div>
-          <div style="margin-top:10px; overflow:auto;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Datum</th>
-                  <th>KW</th>
-                  <th>Mitarbeiter</th>
-                  <th style="text-align:right;">Betrag</th>
-                  <th>Ausgezahlt von</th>
-                </tr>
-              </thead>
-              <tbody id="tipPayoutsBody"><tr><td colspan="5" class="muted small">—</td></tr></tbody>
-            </table>
+          <div id="tipPayouts" class="hidden">
+            <div style="margin-top:10px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>KW</th>
+                    <th>Mitarbeiter</th>
+                    <th style="text-align:right;">Betrag</th>
+                    <th>Ausgezahlt von</th>
+                  </tr>
+                </thead>
+                <tbody id="tipPayoutsBody"><tr><td colspan="5" class="muted small">—</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
 

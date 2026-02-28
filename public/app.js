@@ -71,11 +71,6 @@ function openTab(tabId, btn){
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
     loadUsers();
-    mgmtReloadProducts();
-    loadStockLinks();
-    loadStaffConsumption();
-    loadBankHistory();
-    loadTipPayouts();
   }
 }
 
