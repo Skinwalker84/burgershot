@@ -221,6 +221,42 @@ body{
   padding:12px;
 }
 
+/* ===== NEW POS STYLE ===== */
+.posNew{
+  flex:1 1 auto;
+  display:flex;
+  gap:12px;
+  padding:12px;
+  overflow:hidden;
+}
+.posCartPanel{
+  width:280px;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.posCartBody{
+  flex:1 1 auto;
+  overflow-y:auto;
+  min-height:0;
+}
+.posProductsPanel{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.productsNew{
+  flex:1 1 auto;
+  overflow-y:auto;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
+  gap:16px;
+  padding:4px 2px;
+  align-content:start;
+}
+
 .counterPanel{
   width:300px;
   background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
@@ -766,8 +802,8 @@ select.input{ appearance:none; -webkit-appearance:none; }
 }
 
 /* Collapsible cart on mobile */
-.counterCollapsed .counterBody{ display:none; }
-.counterCollapsed .counterTotal{ display:none; }
+.counterCollapsed .posCartBody{ display:none; }
+.counterCollapsed .posCartPanel > div:last-child{ display:none; }
 
 /* Print helpers */
 .printOnly{ display:none; }

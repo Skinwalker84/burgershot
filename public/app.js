@@ -1361,7 +1361,7 @@ function flyToCart(imgEl, fromRect){
 }
 
 function pulseCart(){
-  const panel = document.querySelector('.counterPanel');
+  const panel = document.querySelector('.posCartPanel');
   if(!panel) return;
   panel.classList.remove('cartPulse');
   void panel.offsetWidth;
@@ -1406,7 +1406,7 @@ function removeItem(idx){ cart.splice(idx,1); renderCart(); saveCartsDebounced()
 
 // Mobile UX: collapse/expand cart panel
 function toggleCart(){
-  const panel = document.querySelector('.counterPanel');
+  const panel = document.querySelector('.posCartPanel');
   if(!panel) return;
   panel.classList.toggle('counterCollapsed');
 }

@@ -136,35 +136,33 @@
 
     <!-- ===== TAB: POS ===== -->
     <div id="tab_pos" class="tabPage">
-      <div class="posRetro">
-        <!-- LEFT: CART / COUNTER -->
-        <div class="counterPanel">
-          <div class="counterHead">
-            <div class="counterTitle" id="counterTitle">Counter</div>
-            <button class="counterIcon" type="button" onclick="toggleCart()" aria-label="Warenkorb ein-/ausklappen">🍴</button>
+      <div class="posNew">
+        <!-- LEFT: CART -->
+        <div class="panel posCartPanel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:900;" id="counterTitle">—</div>
+            <button class="ghost" style="padding:4px 10px;" onclick="toggleCart()">🍴</button>
           </div>
-          <div class="counterBody">
+          <div class="posCartBody">
             <div id="cart" class="cartRetro"></div>
           </div>
-          <div class="counterTotal">
-            <div class="totalLabel">Total</div>
-            <div class="totalValue" id="cartTotal">$0</div>
+          <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:10px;">
+            <div class="muted small">Total</div>
+            <div style="font-weight:900; font-size:26px;" id="cartTotal">$0</div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="ghost" style="flex:1;" onclick="openStaffOrder()">👨‍🍳 Mitarbeiter</button>
+            <button class="primary" style="flex:1;" onclick="openPay()">💳 Bezahlen</button>
           </div>
         </div>
 
         <!-- RIGHT: PRODUCTS -->
-        <div class="screenPanel">
-          <div class="screenHead">
-            <div class="screenTitle" id="screenTitle">Getränke</div>
-            <div class="screenClock" id="clockDisplay">—</div>
+        <div class="panel posProductsPanel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:900;" id="screenTitle">—</div>
+            <div class="muted small" id="clockDisplay">—</div>
           </div>
-          <div class="screenBody">
-            <div id="products" class="productsRetro"></div>
-          </div>
-          <div class="screenFoot" style="gap:10px; justify-content:flex-end;">
-            <button class="payBtn staffBtn" onclick="openStaffOrder()">MITARBEITER</button>
-            <button class="payBtn" onclick="openPay()">BEZAHLEN</button>
-          </div>
+          <div id="products" class="productsNew"></div>
         </div>
       </div>
     </div>
