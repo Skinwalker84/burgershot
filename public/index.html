@@ -493,7 +493,7 @@
         </div>
 
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('vkPreise')">
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('vkPreise'); if(!document.getElementById('vkPreise').classList.contains('hidden')) mgmtReloadProducts();">
             <div>
               <div style="font-weight:900;">VK-Preise (Items)</div>
               <div class="muted small">Speichert im Browser (LocalStorage).</div>
@@ -524,7 +524,7 @@
 
         <!-- Lager-Zuordnung -->
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('lagerZuordnung')">
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('lagerZuordnung'); if(!document.getElementById('lagerZuordnung').classList.contains('hidden')) loadStockLinks();">
             <div>
               <div style="font-weight:900;">Lager-Zuordnung</div>
               <div class="muted small">Welcher Lagerartikel wird pro Verkauf abgezogen?</div>
