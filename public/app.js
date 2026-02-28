@@ -1038,6 +1038,14 @@ async function saveBankBalance(){
   }
 }
 
+function toggleSection(id){
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id + "Arrow");
+  if(!el) return;
+  el.classList.toggle("hidden");
+  if(arrow) arrow.style.transform = el.classList.contains("hidden") ? "" : "rotate(180deg)";
+}
+
 async function loadStaffConsumption(){
   const body = document.getElementById("staffConsumptionBody");
   if(!body) return;

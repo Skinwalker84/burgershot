@@ -489,57 +489,63 @@
         </div>
 
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('vkPreise')">
             <div>
               <div style="font-weight:900;">VK-Preise (Items)</div>
               <div class="muted small">Speichert im Browser (LocalStorage).</div>
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <span id="vkPreiseArrow" style="font-size:18px; transition:transform .2s;">▼</span>
+          </div>
+          <div id="vkPreise" class="hidden">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
               <button class="ghost" onclick="mgmtReloadProducts()">Neu laden</button>
               <button class="ghost" onclick="mgmtResetProducts()">Reset</button>
               <button class="primary" onclick="mgmtSaveProducts()">Speichern</button>
             </div>
-          </div>
-          <div class="muted small" id="mgmtProductsMsg" style="margin-top:10px;">—</div>
-          <div style="margin-top:10px; overflow:auto;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Produkt</th>
-                  <th>Kategorie</th>
-                  <th style="text-align:right;">VK</th>
-                </tr>
-              </thead>
-              <tbody id="mgmtProductsBody"></tbody>
-            </table>
+            <div class="muted small" id="mgmtProductsMsg" style="margin-top:10px;">—</div>
+            <div style="margin-top:10px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Produkt</th>
+                    <th>Kategorie</th>
+                    <th style="text-align:right;">VK</th>
+                  </tr>
+                </thead>
+                <tbody id="mgmtProductsBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- Lager-Zuordnung -->
         <div class="panel" style="margin-top:14px;">
-          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('lagerZuordnung')">
             <div>
               <div style="font-weight:900;">Lager-Zuordnung</div>
               <div class="muted small">Welcher Lagerartikel wird pro Verkauf abgezogen?</div>
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <span id="lagerZuordnungArrow" style="font-size:18px; transition:transform .2s;">▼</span>
+          </div>
+          <div id="lagerZuordnung" class="hidden">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
               <button class="primary" onclick="openAddStockLink()">+ Zuordnung</button>
               <button class="primary" onclick="saveStockLinks()">Speichern</button>
             </div>
-          </div>
-          <div class="muted small" id="stockLinksMsg" style="margin-top:10px;">—</div>
-          <div style="margin-top:10px; overflow:auto;">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Produkt</th>
-                  <th>Lagerartikel</th>
-                  <th style="text-align:right;">Menge/Stk</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="stockLinksBody"></tbody>
-            </table>
+            <div class="muted small" id="stockLinksMsg" style="margin-top:10px;">—</div>
+            <div style="margin-top:10px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Produkt</th>
+                    <th>Lagerartikel</th>
+                    <th style="text-align:right;">Menge/Stk</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="stockLinksBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
