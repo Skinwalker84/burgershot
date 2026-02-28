@@ -1060,15 +1060,20 @@ async function openStaffOrder(){
 
   // Fill employee dropdown
   const sel = document.getElementById("staffOrderEmployee");
-  try{
-    const res = await fetch("/users");
-    const data = await res.json().catch(()=>({}));
-    const users = (data.users || []).filter(u => u.role !== "boss");
-    sel.innerHTML = users.length
-      ? users.map(u => `<option value="${escAttr(u.username)}">${esc(u.displayName||u.username)}</option>`).join("")
-      : `<option value="">— Keine Mitarbeiter —</option>`;
-  }catch(e){
-    sel.innerHTML = `<option value="${escAttr(me?.username||"")}">Ich (${esc(me?.displayName||"")})</option>`;
+  if(isBoss()){
+    try{
+      const res = await fetch("/users");
+      const data = await res.json().catch(()=>({}));
+      const users = data.users || [];
+      sel.innerHTML = users.length
+        ? users.map(u => `<option value="${escAttr(u.username)}">${esc(u.displayName||u.username)}</option>`).join("")
+        : `<option value="${escAttr(me?.username||"")}">Ich (${esc(me?.displayName||"")})</option>`;
+    }catch(e){
+      sel.innerHTML = `<option value="${escAttr(me?.username||"")}">Ich (${esc(me?.displayName||"")})</option>`;
+    }
+  } else {
+    // Mitarbeiter bucht für sich selbst
+    sel.innerHTML = `<option value="${escAttr(me?.username||"")}">${esc(me?.displayName||me?.username||"")}</option>`;
   }
 
   // Show cart items
