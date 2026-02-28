@@ -64,7 +64,7 @@ function openTab(tabId, btn){
 
   if(tabId==="tab_kitchen") { loadKitchen(); startKitchenTimers(); }
   else { stopKitchenTimers(); }
-  if(tabId==="tab_day") { initDayTab(); loadDayReport(); }
+  if(tabId==="tab_day") { initDayTab(); loadDayReport(); loadBankBalance(); }
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
@@ -480,6 +480,7 @@ async function login(){
   if(isBoss()){
     checkLowStockAlert();
     startLowStockMonitor();
+    loadBankBalance();
   }
 }
 
