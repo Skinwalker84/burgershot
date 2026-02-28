@@ -73,6 +73,7 @@ function openTab(tabId, btn){
     loadUsers();
     mgmtReloadProducts();
     loadStockLinks();
+    loadStaffConsumption();
     loadBankHistory();
     loadTipPayouts();
   }
@@ -1023,6 +1024,31 @@ async function saveBankBalance(){
     loadBankHistory();
   } else {
     if(msg) msg.innerText = data.message || "Fehler beim Speichern.";
+  }
+}
+
+async function loadStaffConsumption(){
+  const body = document.getElementById("staffConsumptionBody");
+  if(!body) return;
+  body.innerHTML = `<div class="muted small">Lade...</div>`;
+  try{
+    const res = await fetch("/reports/staff-consumption");
+    const data = await res.json().catch(()=>({}));
+    const entries = data.entries || [];
+    if(!entries.length){
+      body.innerHTML = `<div class="muted small">Noch kein Mitarbeiter-Verzehr gebucht.</div>`;
+      return;
+    }
+    body.innerHTML = entries.map(e => `
+      <div style="margin-bottom:12px; padding:10px; background:rgba(255,255,255,.04); border-radius:8px;">
+        <div style="font-weight:900; margin-bottom:6px;">${esc(e.name)} <span class="muted small">(${e.orders} Buchung${e.orders!==1?"en":""})</span></div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${e.items.map(it => `<span style="background:rgba(255,255,255,.08); border-radius:6px; padding:2px 8px; font-size:13px;">${esc(it.name)} ×${it.qty}</span>`).join("")}
+        </div>
+      </div>
+    `).join("");
+  }catch(e){
+    body.innerHTML = `<div class="muted small">Fehler beim Laden.</div>`;
   }
 }
 

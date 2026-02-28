@@ -988,8 +988,11 @@ app.post("/sale", requireAuth, (req, res) => {
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
   db.salesByDay[day].push(sale);
 
-  const kitchen = todaysKitchen();
-  kitchen.pending.push({ id: orderId, day, time, timeHM: sale.timeHM, employee: sale.employee, register, items, total });
+  // Staff orders skip kitchen
+  if (!isStaffOrder) {
+    const kitchen = todaysKitchen();
+    kitchen.pending.push({ id: orderId, day, time, timeHM: sale.timeHM, employee: sale.employee, register, items, total });
+  }
 
   // Lagerbestand reduzieren
   try {
@@ -1076,6 +1079,32 @@ app.post("/reset/all-data", requireAuth, requireBoss, (req, res) => {
   db.meta.nextOrderId = 1;
   saveDB(db);
   res.json({ success: true });
+});
+
+/* =========================
+   STAFF CONSUMPTION REPORT
+   ========================= */
+app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
+  const all = Object.values(db.salesByDay || {}).flat().filter(s => s.staffOrder);
+  // Group by staffEmployee
+  const byEmployee = {};
+  for (const s of all) {
+    const key = s.staffEmployee || s.employeeUsername || "—";
+    const name = s.staffEmployeeName || s.employee || key;
+    if (!byEmployee[key]) byEmployee[key] = { username: key, name, items: {}, total: 0, orders: 0 };
+    byEmployee[key].orders++;
+    for (const it of (s.items || [])) {
+      const n = String(it.name || "");
+      const qty = Number(it.qty) || 1;
+      if (!byEmployee[key].items[n]) byEmployee[key].items[n] = 0;
+      byEmployee[key].items[n] += qty;
+    }
+  }
+  const result = Object.values(byEmployee).map(e => ({
+    ...e,
+    items: Object.entries(e.items).map(([name, qty]) => ({ name, qty })).sort((a,b) => b.qty - a.qty)
+  })).sort((a,b) => b.orders - a.orders);
+  res.json({ success: true, entries: result });
 });
 
 /* =========================
