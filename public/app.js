@@ -1958,7 +1958,7 @@ async function loadDayReport(){
   if(_dayCloseBtn) _dayCloseBtn.style.display = isBoss() ? "" : "none";
   if(_bankEditBtn) _bankEditBtn.style.display = isBoss() ? "" : "none";
 
-  if(!isBoss()) return;
+  if(!isBossOrManager()) return;
   const date=document.getElementById("dayDate")?.value || serverDay;
   if(!date) return;
 
