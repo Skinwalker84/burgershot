@@ -390,12 +390,12 @@
         <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
           <div>
             <div style="font-weight:900; font-size:18px;">Lagerbestand</div>
-            <div class="muted small">Chef only · Bestände & Mindestbestand</div>
+            <div class="muted small" id="lagerSubtitle">Lagerbestand</div>
           </div>
 
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
             <button class="ghost" onclick="loadInventory()">Refresh</button>
-            <button class="primary" onclick="openInventoryEditor(null)">+ Artikel</button>
+            <button class="primary" id="lagerAddBtn" onclick="openInventoryEditor(null)">+ Artikel</button>
             <button class="ghost noPrint" onclick="printInventory()">PDF</button>
           </div>
         </div>

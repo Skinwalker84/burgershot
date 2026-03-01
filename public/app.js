@@ -41,15 +41,18 @@ function showApp(){
 function applyRoleVisibility(){
   const show = isBoss();
   // modern tab buttons removed; keep boss-only visibility via top icon buttons
-  const ids = ["iconBtnShop","iconBtnDay","iconBtnWeek","iconBtnMonth","iconBtnStock","iconBtnMgmt"];
-  ids.forEach(id=>{
+  const bossIds = ["iconBtnShop","iconBtnDay","iconBtnWeek","iconBtnMonth","iconBtnMgmt"];
+  bossIds.forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = show ? "" : "none";
   });
+  // Lager visible for all staff
+  const stockBtn = document.getElementById("iconBtnStock");
+  if(stockBtn) stockBtn.style.display = "";
 }
 
 function openTab(tabId, btn){
-  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month"||tabId==="tab_stock"||tabId==="tab_shop") && !isBoss()){
+  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month"||tabId==="tab_shop") && !isBoss()){
     alert("Nur Chef.");
     tabId="tab_pos";
     btn=null;
@@ -189,6 +192,12 @@ async function bookShopPurchases(){
    INVENTORY / LAGER
    ========================= */
 async function loadInventory(){
+  // Show/hide boss-only elements in Lager tab
+  const addBtn = document.getElementById("lagerAddBtn");
+  const subtitle = document.getElementById("lagerSubtitle");
+  if(addBtn) addBtn.style.display = isBoss() ? "" : "none";
+  if(subtitle) subtitle.innerText = isBoss() ? "Chef only · Bestände & Mindestbestand" : "Nur lesen";
+
   if(!isBoss()) return;
   const body = document.getElementById("inventoryBody");
   if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Lade…</td></tr>`;
@@ -356,8 +365,8 @@ function renderInventory(){
           <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', -1)">-1</button>
           <button class="ghost" onclick="adjustInventory('${escAttr(it.id)}', 1)">+1</button>
           <button class="ghost" onclick="adjustInventoryPrompt('${escAttr(it.id)}')">±</button>
-          <button class="primary" onclick="openInventoryEditor('${escAttr(it.id)}')">Bearbeiten</button>
-          <button class="ghost" onclick="deleteInventoryItem('${escAttr(it.id)}')">Löschen</button>
+          ${isBoss() ? `<button class="primary" onclick="openInventoryEditor('${escAttr(it.id)}')">Bearbeiten</button>
+          <button class="ghost" onclick="deleteInventoryItem('${escAttr(it.id)}')">Löschen</button>` : ''}
           <span class="muted small" style="margin-left:6px;">EK: $${Number(it.ekPrice||0).toFixed(2)}</span>
         </td>
       </tr>

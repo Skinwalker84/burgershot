@@ -600,7 +600,7 @@ app.put("/products", requireAuth, requireBoss, (req, res) => {
 /* =========================
    INVENTORY / LAGER
    ========================= */
-app.get("/inventory", requireAuth, requireBoss, (req, res) => {
+app.get("/inventory", requireAuth, (req, res) => {
   res.json({ success: true, items: db.inventory || [] });
 });
 
