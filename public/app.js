@@ -198,7 +198,6 @@ async function loadInventory(){
   if(addBtn) addBtn.style.display = isBoss() ? "" : "none";
   if(subtitle) subtitle.innerText = isBoss() ? "Chef only · Bestände & Mindestbestand" : "Nur lesen";
 
-  if(!isBoss()) return;
   const body = document.getElementById("inventoryBody");
   if(body) body.innerHTML = `<tr><td colspan="5" class="muted small">Lade…</td></tr>`;
 
