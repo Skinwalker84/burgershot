@@ -1750,8 +1750,8 @@ function applyDiscount(pct){
 
 function updatePayOverlay(){
   const original = cartTotal();
-  const discAmt = Math.round(original * _currentDiscount) / 100;
-  const total = Math.round((original - discAmt) * 100) / 100;
+  const discAmt = Math.round(original * _currentDiscount / 100);
+  const total = original - discAmt;
 
   document.getElementById("payOriginal").innerText = money(original);
   document.getElementById("payTotal").innerText = money(total);
@@ -1777,8 +1777,8 @@ function parseMoney(val){ const s=String(val||"").replace(/[^\d.-]/g,""); const 
 
 async function submitPay(){
   const original = cartTotal();
-  const discAmt = Math.round(original * _currentDiscount) / 100;
-  const total = Math.round((original - discAmt) * 100) / 100;
+  const discAmt = Math.round(original * _currentDiscount / 100);
+  const total = original - discAmt;
   const paid = parseMoney(document.getElementById("payAmount").value);
   if(!Number.isFinite(paid) || paid < total) return alert("Bezahlt muss >= Total sein.");
 
