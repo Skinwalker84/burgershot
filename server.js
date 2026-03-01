@@ -811,7 +811,7 @@ function normalizeKarten() {
   if (!Array.isArray(db.guthabenKarten)) db.guthabenKarten = [];
 }
 
-app.get("/guthaben-karten", requireAuth, requireBoss, (req, res) => {
+app.get("/guthaben-karten", requireAuth, (req, res) => {
   normalizeKarten();
   res.json({ success: true, karten: db.guthabenKarten.map(k => ({
     id: k.id, name: k.name, balance: k.balance, createdAt: k.createdAt, updatedAt: k.updatedAt
