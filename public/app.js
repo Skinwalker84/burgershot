@@ -71,6 +71,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
     loadUsers();
+    loadGuthabenKarten();
   }
 }
 

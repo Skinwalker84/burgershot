@@ -795,6 +795,98 @@ app.post("/purchases", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   GUTHABEN KARTEN
+   ========================= */
+
+function normalizeKarten() {
+  if (!Array.isArray(db.guthabenKarten)) db.guthabenKarten = [];
+}
+
+app.get("/guthaben-karten", requireAuth, requireBoss, (req, res) => {
+  normalizeKarten();
+  res.json({ success: true, karten: db.guthabenKarten.map(k => ({
+    id: k.id, name: k.name, balance: k.balance, createdAt: k.createdAt, updatedAt: k.updatedAt
+  }))});
+});
+
+app.get("/guthaben-karten/check", requireAuth, (req, res) => {
+  normalizeKarten();
+  const name = String(req.query.name || "").trim().toLowerCase();
+  if (!name) return res.status(400).json({ success: false, message: "Name fehlt." });
+  const karte = db.guthabenKarten.find(k => k.name.toLowerCase() === name);
+  if (!karte) return res.json({ success: true, found: false, balance: 0 });
+  res.json({ success: true, found: true, id: karte.id, name: karte.name, balance: karte.balance });
+});
+
+app.post("/guthaben-karten", requireAuth, requireBoss, (req, res) => {
+  normalizeKarten();
+  const name = String(req.body?.name || "").trim();
+  const betrag = Math.round(Number(req.body?.betrag) * 100) / 100;
+  if (!name) return res.status(400).json({ success: false, message: "Name fehlt." });
+  if (!Number.isFinite(betrag) || betrag <= 0) return res.status(400).json({ success: false, message: "Betrag muss > 0 sein." });
+
+  let karte = db.guthabenKarten.find(k => k.name.toLowerCase() === name.toLowerCase());
+  const isNew = !karte;
+  const ts = new Date().toISOString();
+
+  if (isNew) {
+    karte = { id: crypto.randomBytes(6).toString("hex"), name, balance: 0, history: [], createdAt: ts, updatedAt: ts };
+    db.guthabenKarten.push(karte);
+  }
+
+  karte.balance = Math.round((karte.balance + betrag) * 100) / 100;
+  karte.updatedAt = ts;
+  if (!Array.isArray(karte.history)) karte.history = [];
+  karte.history.push({ ts, type: "topup", amount: betrag, by: req.user.displayName || req.user.username });
+  if (karte.history.length > 200) karte.history = karte.history.slice(-200);
+
+  // Book topup as revenue entry
+  rotateDayIfNeeded();
+  const day = db.meta.currentDay;
+  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
+  const topupOrderId = db.meta.nextOrderId++;
+  db.salesByDay[day].push({
+    id: topupOrderId,
+    day,
+    time: ts,
+    timeHM: toHM(ts),
+    employee: req.user.displayName || req.user.username,
+    employeeUsername: req.user.username,
+    register: 0,
+    items: [{ name: `Guthaben-Aufladung: ${karte.name}`, price: betrag, qty: 1 }],
+    total: betrag,
+    paidAmount: betrag,
+    tip: 0,
+    paymentMethod: "guthabenTopup",
+    guthabenName: karte.name
+  });
+
+  saveDB(db);
+  res.json({ success: true, isNew, karte: { id: karte.id, name: karte.name, balance: karte.balance } });
+});
+
+app.post("/guthaben-karten/pay", requireAuth, (req, res) => {
+  normalizeKarten();
+  const name = String(req.body?.name || "").trim().toLowerCase();
+  const amount = Math.round(Number(req.body?.amount) * 100) / 100;
+  if (!name || !Number.isFinite(amount) || amount <= 0)
+    return res.status(400).json({ success: false, message: "Ungültige Daten." });
+
+  const karte = db.guthabenKarten.find(k => k.name.toLowerCase() === name);
+  if (!karte) return res.status(404).json({ success: false, message: "Karte nicht gefunden." });
+  if (karte.balance < amount) return res.status(400).json({ success: false, message: `Guthaben reicht nicht aus (${karte.balance.toFixed(2)} $).` });
+
+  const ts = new Date().toISOString();
+  karte.balance = Math.round((karte.balance - amount) * 100) / 100;
+  karte.updatedAt = ts;
+  if (!Array.isArray(karte.history)) karte.history = [];
+  karte.history.push({ ts, type: "pay", amount, by: req.user.displayName || req.user.username });
+
+  saveDB(db);
+  res.json({ success: true, balance: karte.balance, name: karte.name });
+});
+
+/* =========================
    TIP PAYOUTS
    ========================= */
 app.get("/tip-payouts", requireAuth, requireBoss, (req, res) => {
@@ -982,7 +1074,9 @@ app.post("/sale", requireAuth, (req, res) => {
     tip,
     staffOrder: isStaffOrder || false,
     staffEmployee: isStaffOrder ? String(body.staffEmployee||"").trim() : undefined,
-    staffEmployeeName: isStaffOrder ? String(body.staffEmployeeName||"").trim() : undefined
+    staffEmployeeName: isStaffOrder ? String(body.staffEmployeeName||"").trim() : undefined,
+    paymentMethod: String(body.paymentMethod || "cash"),
+    guthabenName: body.guthabenName ? String(body.guthabenName).trim() : undefined
   };
 
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
@@ -1134,6 +1228,7 @@ app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
   totals.purchases = getPurchaseCosts([dayKey]);
+  totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
   totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
