@@ -902,6 +902,141 @@ function confirmAddStockLink(){
   closeAddStockLink();
 }
 
+/* ===== GUTHABEN KARTEN ===== */
+
+async function loadGuthabenKarten(){
+  const body = document.getElementById("guthabenKartenBody");
+  if(!body) return;
+  try{
+    const res = await fetch("/guthaben-karten");
+    const data = await res.json().catch(()=>({}));
+    const karten = data.karten || [];
+    if(!karten.length){
+      body.innerHTML = `<tr><td colspan="3" class="muted small">Noch keine Karten.</td></tr>`;
+      return;
+    }
+    body.innerHTML = karten
+      .sort((a,b) => a.name.localeCompare(b.name))
+      .map(k => `<tr>
+        <td style="font-weight:900;">${esc(k.name)}</td>
+        <td style="text-align:right; font-weight:900; color:${k.balance>0?"#22c55e":"#ef4444"};">${money(k.balance)}</td>
+        <td class="muted small">${esc(fmtDateTime(k.updatedAt))}</td>
+      </tr>`).join("");
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="3" class="muted small">Fehler beim Laden.</td></tr>`;
+  }
+}
+
+async function saveGuthabenKarte(){
+  const name = document.getElementById("guthabenName")?.value?.trim();
+  const betrag = Number(document.getElementById("guthabenBetrag")?.value);
+  const msg = document.getElementById("guthabenMsg");
+  if(!name){ if(msg) msg.innerText = "Bitte einen Namen eingeben."; return; }
+  if(!betrag || betrag <= 0){ if(msg) msg.innerText = "Bitte einen gültigen Betrag eingeben."; return; }
+
+  const res = await fetch("/guthaben-karten", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ name, betrag })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(res.ok && data.success){
+    if(msg) msg.innerText = data.isNew
+      ? `✅ Neue Karte für "${data.karte.name}" erstellt — Guthaben: ${money(data.karte.balance)}`
+      : `✅ Guthaben aufgeladen — "${data.karte.name}" hat jetzt ${money(data.karte.balance)}`;
+    document.getElementById("guthabenName").value = "";
+    document.getElementById("guthabenBetrag").value = "";
+    loadGuthabenKarten();
+  } else {
+    if(msg) msg.innerText = data.message || "Fehler.";
+  }
+}
+
+let _guthabenPayData = null;
+
+function openGuthabenPay(){
+  if(!currentRegister) return alert("Bitte zuerst eine Kasse wählen.");
+  if(cart.length === 0) return alert("Warenkorb ist leer.");
+  _guthabenPayData = null;
+  document.getElementById("guthabenPayName").value = "";
+  document.getElementById("guthabenPayInfo").style.display = "none";
+  document.getElementById("guthabenPayMsg").innerText = "—";
+  document.getElementById("guthabenPayBtn").disabled = true;
+  document.getElementById("guthabenPayOverlay").classList.remove("hidden");
+  setTimeout(() => document.getElementById("guthabenPayName")?.focus(), 100);
+}
+
+function closeGuthabenPay(){
+  document.getElementById("guthabenPayOverlay").classList.add("hidden");
+  _guthabenPayData = null;
+}
+
+async function checkGuthabenBalance(){
+  const name = document.getElementById("guthabenPayName")?.value?.trim();
+  const msg = document.getElementById("guthabenPayMsg");
+  const info = document.getElementById("guthabenPayInfo");
+  const btn = document.getElementById("guthabenPayBtn");
+  if(!name){ msg.innerText = "Bitte einen Namen eingeben."; return; }
+
+  const res = await fetch(`/guthaben-karten/check?name=${encodeURIComponent(name)}`);
+  const data = await res.json().catch(()=>({}));
+
+  if(!data.success){ msg.innerText = "Fehler beim Abfragen."; return; }
+  if(!data.found){ msg.innerText = `❌ Keine Karte gefunden für "${name}".`; info.style.display="none"; btn.disabled=true; return; }
+
+  const total = cartTotal();
+  _guthabenPayData = data;
+  document.getElementById("guthabenPayBalance").innerText = money(data.balance);
+  document.getElementById("guthabenPaySummary").innerText =
+    `Warenkorb: ${money(total)} — Verbleibendes Guthaben: ${money(data.balance - total)}`;
+
+  if(data.balance < total){
+    msg.innerText = `❌ Guthaben reicht nicht aus (fehlen ${money(total - data.balance)}).`;
+    btn.disabled = true;
+  } else {
+    msg.innerText = "✅ Guthaben ausreichend.";
+    btn.disabled = false;
+  }
+  info.style.display = "block";
+}
+
+async function confirmGuthabenPay(){
+  if(!_guthabenPayData) return;
+  const total = cartTotal();
+  const name = _guthabenPayData.name;
+
+  const payRes = await fetch("/guthaben-karten/pay", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ name, amount: total })
+  });
+  const payData = await payRes.json().catch(()=>({}));
+  if(!payRes.ok || !payData.success){
+    document.getElementById("guthabenPayMsg").innerText = payData.message || "Fehler beim Bezahlen.";
+    return;
+  }
+
+  // $0 sale — Lagerabzug passiert, Umsatz wurde beim Aufladen gebucht
+  const salePayload = {
+    register: currentRegister,
+    items: cart.map(x => ({ name:x.name, price:0, qty:x.qty, productId:x.productId||null, components:x.components||null })),
+    total: 0,
+    paidAmount: 0,
+    time: new Date().toISOString(),
+    paymentMethod: "guthaben",
+    guthabenName: name,
+    staffOrder: true
+  };
+  await fetch("/sale", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(salePayload) });
+
+  closeGuthabenPay();
+  cartsByRegister[currentRegister] = [];
+  switchCartToRegister(currentRegister);
+  renderCart();
+  saveCartsDebounced();
+  alert(`✅ Bezahlt mit Guthaben von "${name}" — Verbleibendes Guthaben: ${money(payData.balance)}`);
+}
+
 /* ===== TIP PAYOUTS ===== */
 function openTipPayout(){
   if(!isBoss()) return;
