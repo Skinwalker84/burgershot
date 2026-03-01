@@ -316,6 +316,18 @@ body{
 .cartItem .name{ font-weight:700; }
 .cartItem .price{ font-variant-numeric:tabular-nums; }
 .cartEmpty{ color:#666; font-size:13px; }
+.guthabenSugItem{
+  padding:10px 14px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  font-size:14px;
+}
+.guthabenSugItem:last-child{ border-bottom:0; }
+.guthabenSugItem:hover{ background:rgba(255,255,255,.08); }
+
 .qtyBtn{
   width:26px; height:26px;
   border-radius:6px;

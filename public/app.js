@@ -954,16 +954,53 @@ async function saveGuthabenKarte(){
 
 let _guthabenPayData = null;
 
-function openGuthabenPay(){
+let _allGuthabenKarten = [];
+
+async function openGuthabenPay(){
   if(!currentRegister) return alert("Bitte zuerst eine Kasse wählen.");
   if(cart.length === 0) return alert("Warenkorb ist leer.");
   _guthabenPayData = null;
+
+  // Preload all cards for live search
+  try{
+    const res = await fetch("/guthaben-karten");
+    const data = await res.json().catch(()=>({}));
+    _allGuthabenKarten = data.karten || [];
+  }catch(e){ _allGuthabenKarten = []; }
+
   document.getElementById("guthabenPayName").value = "";
+  document.getElementById("guthabenPaySuggestions").innerHTML = "";
   document.getElementById("guthabenPayInfo").style.display = "none";
   document.getElementById("guthabenPayMsg").innerText = "—";
   document.getElementById("guthabenPayBtn").disabled = true;
   document.getElementById("guthabenPayOverlay").classList.remove("hidden");
   setTimeout(() => document.getElementById("guthabenPayName")?.focus(), 100);
+}
+
+function onGuthabenSearch(){
+  const q = document.getElementById("guthabenPayName")?.value?.toLowerCase().trim() || "";
+  const list = document.getElementById("guthabenPaySuggestions");
+  // Reset state when typing
+  _guthabenPayData = null;
+  document.getElementById("guthabenPayInfo").style.display = "none";
+  document.getElementById("guthabenPayBtn").disabled = true;
+  document.getElementById("guthabenPayMsg").innerText = "—";
+
+  if(!q){ list.innerHTML = ""; return; }
+  const matches = _allGuthabenKarten.filter(k => k.name.toLowerCase().includes(q));
+  if(!matches.length){ list.innerHTML = `<div class="guthabenSugItem muted small">Keine Karte gefunden.</div>`; return; }
+  list.innerHTML = matches.map(k => `
+    <div class="guthabenSugItem" onclick="selectGuthabenKarte(${JSON.stringify(k.name)})">
+      <span style="font-weight:900;">${esc(k.name)}</span>
+      <span style="color:${k.balance>0?"#22c55e":"#ef4444"}; font-weight:900;">${money(k.balance)}</span>
+    </div>
+  `).join("");
+}
+
+function selectGuthabenKarte(name){
+  document.getElementById("guthabenPayName").value = name;
+  document.getElementById("guthabenPaySuggestions").innerHTML = "";
+  checkGuthabenBalance();
 }
 
 function closeGuthabenPay(){
