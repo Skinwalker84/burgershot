@@ -152,7 +152,8 @@
           </div>
           <div style="display:flex; gap:8px; margin-top:12px;">
             <button class="ghost" style="flex:1; border-color:rgba(0,0,0,.2); color:#1b1b1b;" onclick="openStaffOrder()">👨‍🍳 Mitarbeiter</button>
-            <button class="primary" style="flex:1;" onclick="openPay()">💳 Bezahlen</button>
+            <button class="ghost" style="flex:1; border-color:rgba(0,0,0,.2); color:#1b1b1b;" onclick="openGuthabenPay()">💳 Guthaben</button>
+            <button class="primary" style="flex:1;" onclick="openPay()">Bezahlen</button>
           </div>
         </div>
 
@@ -553,6 +554,43 @@
           </div>
         </div>
 
+        <!-- Guthaben Karten -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('guthabenKarten'); if(!document.getElementById('guthabenKarten').classList.contains('hidden')) loadGuthabenKarten();">
+            <div>
+              <div style="font-weight:900;">💳 Guthaben Karten</div>
+              <div class="muted small">Guthaben aufladen und verwalten</div>
+            </div>
+            <span id="guthabenKartenArrow" style="font-size:18px; transition:transform .2s;">▼</span>
+          </div>
+          <div id="guthabenKarten" class="hidden">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; align-items:flex-end;">
+              <div style="flex:1; min-width:160px;">
+                <div class="muted small">Name</div>
+                <input id="guthabenName" class="input" type="text" placeholder="z.B. Max Mustermann" style="margin-top:4px;" />
+              </div>
+              <div style="flex:0 0 130px;">
+                <div class="muted small">Betrag ($)</div>
+                <input id="guthabenBetrag" class="input" type="number" min="1" step="1" placeholder="z.B. 500" style="margin-top:4px;" />
+              </div>
+              <button class="primary" onclick="saveGuthabenKarte()">Aufladen</button>
+            </div>
+            <div class="muted small" id="guthabenMsg" style="margin-top:8px;">—</div>
+            <div style="margin-top:12px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th style="text-align:right;">Guthaben</th>
+                    <th>Zuletzt geändert</th>
+                  </tr>
+                </thead>
+                <tbody id="guthabenKartenBody"><tr><td colspan="3" class="muted small">—</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Mitarbeiter-Verzehr -->
         <div class="panel" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('staffConsumption'); if(!document.getElementById('staffConsumption').classList.contains('hidden')) loadStaffConsumption();">
@@ -661,6 +699,33 @@
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
         <button class="ghost" onclick="closeAddStockLink()">Abbrechen</button>
         <button class="primary" onclick="confirmAddStockLink()">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GUTHABEN PAY OVERLAY ===== -->
+  <div id="guthabenPayOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:420px;">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">💳 Mit Guthaben bezahlen</div>
+        <button class="ghost" onclick="closeGuthabenPay()">X</button>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="muted small">Name auf der Karte</div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <input id="guthabenPayName" class="input" type="text" placeholder="Name eingeben..." style="flex:1;" onkeydown="if(event.key==='Enter') checkGuthabenBalance()" />
+          <button class="ghost" onclick="checkGuthabenBalance()">Prüfen</button>
+        </div>
+      </div>
+      <div id="guthabenPayInfo" style="margin-top:12px; padding:12px; background:rgba(255,255,255,.05); border-radius:8px; display:none;">
+        <div class="muted small">Guthaben verfügbar</div>
+        <div style="font-weight:900; font-size:22px; color:#22c55e;" id="guthabenPayBalance">—</div>
+        <div style="margin-top:8px;" id="guthabenPaySummary" class="muted small">—</div>
+      </div>
+      <div id="guthabenPayMsg" class="muted small" style="margin-top:8px;">—</div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="ghost" onclick="closeGuthabenPay()">Abbrechen</button>
+        <button class="primary" id="guthabenPayBtn" onclick="confirmGuthabenPay()" disabled>Bezahlen</button>
       </div>
     </div>
   </div>
