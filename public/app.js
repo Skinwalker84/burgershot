@@ -2216,7 +2216,7 @@ async function submitAddUser(){
   const msg=document.getElementById("addUserMsg");
 
   if(!u){ if(msg) msg.innerText="Username fehlt."; return; }
-  if(!["boss","staff"].includes(role)){ if(msg) msg.innerText="Ungültige Rolle."; return; }
+  if(!["boss","manager","staff"].includes(role)){ if(msg) msg.innerText="Ungültige Rolle."; return; }
 
   // optional: prevent spaces
   if(/\s/.test(u)){ if(msg) msg.innerText="Username darf keine Leerzeichen enthalten."; return; }
