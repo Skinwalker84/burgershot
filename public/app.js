@@ -990,11 +990,14 @@ function onGuthabenSearch(){
   const matches = _allGuthabenKarten.filter(k => k.name.toLowerCase().includes(q));
   if(!matches.length){ list.innerHTML = `<div class="guthabenSugItem muted small">Keine Karte gefunden.</div>`; return; }
   list.innerHTML = matches.map(k => `
-    <div class="guthabenSugItem" onmousedown="event.preventDefault(); selectGuthabenKarte(${JSON.stringify(k.name)})">
+    <div class="guthabenSugItem" data-name="${esc(k.name)}">
       <span style="font-weight:900;">${esc(k.name)}</span>
       <span style="color:${k.balance>0?"#22c55e":"#ef4444"}; font-weight:900;">${money(k.balance)}</span>
     </div>
   `).join("");
+  list.querySelectorAll(".guthabenSugItem[data-name]").forEach(el => {
+    el.addEventListener("mousedown", e => { e.preventDefault(); selectGuthabenKarte(el.dataset.name); });
+  });
 }
 
 function selectGuthabenKarte(name){
