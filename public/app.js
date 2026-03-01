@@ -25,6 +25,9 @@ let menuBuilderState = null;
 let kitchenTimerInterval = null;
 
 function isBoss(){ return me?.role === "boss"; }
+function localDateStr(){
+  return new Intl.DateTimeFormat("en-CA", { timeZone:"Europe/Berlin", year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
+}
 function isManager(){ return me?.role === "manager"; }
 function isBossOrManager(){ return me?.role === "boss" || me?.role === "manager"; }
 
@@ -97,7 +100,7 @@ function openTab(tabId, btn){
 async function loadShopTab(){
   if(!isBossOrManager()) return;
   const d = document.getElementById("shopDate");
-  if(d && !d.value) d.value = new Date().toISOString().slice(0,10);
+  if(d && !d.value) d.value = localDateStr();
 
   await ensureInventoryLoadedForPurchase();
   renderShopTable();
