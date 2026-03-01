@@ -1740,6 +1740,7 @@ function openPay(){
   _currentDiscount = 0;
   updatePayOverlay();
   document.getElementById("payAmount").value = "";
+  const cashCb = document.getElementById("payIsCash"); if(cashCb) cashCb.checked = false;
   document.getElementById("payOverlay").classList.remove("hidden");
 }
 
@@ -1798,15 +1799,17 @@ async function submitPay(){
     total,
     paidAmount: paid,
     time: new Date().toISOString(),
-    discount: _currentDiscount > 0 ? _currentDiscount : undefined
+    discount: _currentDiscount > 0 ? _currentDiscount : undefined,
+    isCash: document.getElementById("payIsCash")?.checked || false
   };
   const res = await fetch("/sale", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
   const data = await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Speichern.");
   closePay();
+  const cashMsg = payload.isCash ? " 💵 BAR" : "";
   const tipMsg = data.tip > 0 ? ` — Trinkgeld: ${money(data.tip)}` : "";
   const discMsg = _currentDiscount > 0 ? ` (${_currentDiscount}% Rabatt)` : "";
-  alert(`Order #${data.orderId||""} gespeichert${discMsg}${tipMsg}`);
+  alert(`Order #${data.orderId||""} gespeichert${discMsg}${cashMsg}${tipMsg}`);
   cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); saveCartsDebounced();
 }
 
@@ -1960,6 +1963,7 @@ async function loadDayReport(){
   document.getElementById("dayRevenue").innerText=money(data.totals?.revenue||0);
   document.getElementById("dayPurchases").innerText=money(data.totals?.purchases||0);
   document.getElementById("dayProfit").innerText=money(data.totals?.profit||0);
+  const cashEl=document.getElementById("dayCash"); if(cashEl) cashEl.innerText=money(data.totals?.cashRevenue||0);
 
   const tbody=document.getElementById("dayByEmployee");
   if(tbody){

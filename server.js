@@ -1076,7 +1076,9 @@ app.post("/sale", requireAuth, (req, res) => {
     staffEmployee: isStaffOrder ? String(body.staffEmployee||"").trim() : undefined,
     staffEmployeeName: isStaffOrder ? String(body.staffEmployeeName||"").trim() : undefined,
     paymentMethod: String(body.paymentMethod || "cash"),
-    guthabenName: body.guthabenName ? String(body.guthabenName).trim() : undefined
+    guthabenName: body.guthabenName ? String(body.guthabenName).trim() : undefined,
+    isCash: body.isCash === true || false,
+    discount: body.discount ? Number(body.discount) : undefined
   };
 
   if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
@@ -1229,6 +1231,7 @@ app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
   totals.purchases = getPurchaseCosts([dayKey]);
   totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
+  totals.cashRevenue = sales.filter(s => s.isCash).reduce((sum, s) => sum + Number(s.total||0), 0);
   totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
