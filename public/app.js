@@ -25,6 +25,8 @@ let menuBuilderState = null;
 let kitchenTimerInterval = null;
 
 function isBoss(){ return me?.role === "boss"; }
+function isManager(){ return me?.role === "manager"; }
+function isBossOrManager(){ return me?.role === "boss" || me?.role === "manager"; }
 
 function showLoginPage(msg="Bitte einloggen."){
   document.getElementById("loginPage")?.classList.remove("hidden");
@@ -39,23 +41,33 @@ function showApp(){
 }
 
 function applyRoleVisibility(){
-  const show = isBoss();
-  // modern tab buttons removed; keep boss-only visibility via top icon buttons
-  const bossIds = ["iconBtnShop","iconBtnDay","iconBtnWeek","iconBtnMonth","iconBtnMgmt"];
-  bossIds.forEach(id=>{
+  const boss = isBoss();
+  const mgr = isBossOrManager();
+
+  // Boss-only tabs
+  ["iconBtnWeek","iconBtnMonth","iconBtnMgmt"].forEach(id=>{
     const el = document.getElementById(id);
-    if(el) el.style.display = show ? "" : "none";
+    if(el) el.style.display = boss ? "" : "none";
   });
-  // Lager visible for all staff
+  // Boss + Manager tabs
+  ["iconBtnShop","iconBtnDay"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = mgr ? "" : "none";
+  });
+  // All staff: Lager
   const stockBtn = document.getElementById("iconBtnStock");
   if(stockBtn) stockBtn.style.display = "";
 }
 
 function openTab(tabId, btn){
-  if((tabId==="tab_mgmt"||tabId==="tab_day"||tabId==="tab_week"||tabId==="tab_month"||tabId==="tab_shop") && !isBoss()){
+  const bossOnlyTabs = ["tab_mgmt","tab_week","tab_month"];
+  const managerTabs   = ["tab_shop","tab_day"];
+  if(bossOnlyTabs.includes(tabId) && !isBoss()){
     alert("Nur Chef.");
-    tabId="tab_pos";
-    btn=null;
+    tabId="tab_pos"; btn=null;
+  } else if(managerTabs.includes(tabId) && !isBossOrManager()){
+    alert("Kein Zugriff.");
+    tabId="tab_pos"; btn=null;
   }
 
   document.querySelectorAll(".tabPage").forEach(p=>p.classList.add("hidden"));
@@ -67,7 +79,7 @@ function openTab(tabId, btn){
 
   if(tabId==="tab_kitchen") { loadKitchen(); startKitchenTimers(); }
   else { stopKitchenTimers(); }
-  if(tabId==="tab_day") { initDayTab(); loadDayReport(); loadBankBalance(); }
+  if(tabId==="tab_day") { initDayTab(); loadDayReport(); if(isBoss()) loadBankBalance(); }
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
@@ -1940,6 +1952,12 @@ function printDayReport(){
 }
 
 async function loadDayReport(){
+  // Manager: read-only — hide edit controls
+  const _dayCloseBtn = document.getElementById("dayCloseBtn");
+  const _bankEditBtn = document.querySelector('[onclick="openBankEdit()"]');
+  if(_dayCloseBtn) _dayCloseBtn.style.display = isBoss() ? "" : "none";
+  if(_bankEditBtn) _bankEditBtn.style.display = isBoss() ? "" : "none";
+
   if(!isBoss()) return;
   const date=document.getElementById("dayDate")?.value || serverDay;
   if(!date) return;
@@ -2164,7 +2182,7 @@ async function loadUsers(){
     <div class="userRow">
       <div>
         <div style="font-weight:900;">${esc(u.displayName)}</div>
-        <div class="muted small">${esc(u.username)} · ${esc(u.role)}</div>
+        <div class="muted small">${esc(u.username)} · ${{boss:"👑 Chef", manager:"⭐ Leitender Angestellter", staff:"👤 Mitarbeiter"}[u.role] || esc(u.role)}</div>
       </div>
       <button class="ghost" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
     </div>

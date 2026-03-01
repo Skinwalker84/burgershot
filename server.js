@@ -47,11 +47,14 @@ function safeWriteJSON(filePath, obj) {
 }
 
 function getDayKeyLocal(dateObj) {
+  // Always use Europe/Berlin timezone so midnight works correctly for German users
   const d = new Date(dateObj);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(d);
+  const get = type => parts.find(p => p.type === type)?.value || "00";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 function parseDateYYYYMMDD(s) {
@@ -124,9 +127,11 @@ function parseMonthYYYY_MM(s){
 function toHM(iso) {
   try {
     const d = new Date(iso);
-    const h = String(d.getHours()).padStart(2, "0");
-    const m = String(d.getMinutes()).padStart(2, "0");
-    return `${h}:${m}`;
+    const parts = new Intl.DateTimeFormat("de-DE", {
+      timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hour12: false
+    }).formatToParts(d);
+    const get = type => parts.find(p => p.type === type)?.value || "00";
+    return `${get("hour")}:${get("minute")}`;
   } catch {
     return "";
   }
@@ -503,6 +508,10 @@ function requireBoss(req, res, next) {
   if (req.user?.role !== "boss") return res.status(403).json({ success: false, message: "Nur Chef." });
   next();
 }
+function requireBossOrManager(req, res, next) {
+  if (!["boss","manager"].includes(req.user?.role)) return res.status(403).json({ success: false, message: "Kein Zugriff." });
+  next();
+}
 
 /* =========================
    ROUTES
@@ -676,7 +685,7 @@ function makePurchaseId(){
   return crypto.randomBytes(10).toString("hex");
 }
 
-app.get("/purchases", requireAuth, requireBoss, (req, res) => {
+app.get("/purchases", requireAuth, requireBossOrManager, (req, res) => {
   const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
   const list = (db.purchases || []).slice().reverse().slice(0, limit);
   res.json({ success:true, items: list });
@@ -685,7 +694,7 @@ app.get("/purchases", requireAuth, requireBoss, (req, res) => {
 // Body:
 //   Single: { inventoryId, qty, price?, note?, date? (YYYY-MM-DD) }
 //   Batch:  { items: [{ inventoryId, qty, price?, note? }...], note?, date? (YYYY-MM-DD) }
-app.post("/purchases", requireAuth, requireBoss, (req, res) => {
+app.post("/purchases", requireAuth, requireBossOrManager, (req, res) => {
   const body = req.body || {};
 
   const nowIso = new Date().toISOString();
@@ -1007,7 +1016,7 @@ app.post("/users", requireAuth, requireBoss, (req, res) => {
   const username = String(req.body?.username || "").trim().toLowerCase();
   const displayName = String(req.body?.displayName || "").trim() || username;
   let role = String(req.body?.role || "staff").toLowerCase();
-  if (!["boss", "staff"].includes(role)) role = "staff";
+  if (!["boss","manager","staff"].includes(role)) role = "staff";
   const password = String(req.body?.password || "admin");
 
   if (!username) return res.status(400).json({ success: false, message: "Username fehlt." });
@@ -1214,7 +1223,7 @@ function getPurchaseCosts(dayKeys) {
     .reduce((s, p) => s + (Number(p.price) > 0 ? Number(p.qty || 0) * Number(p.price) : 0), 0);
 }
 
-app.get("/reports/day-details", requireAuth, requireBoss, (req, res) => {
+app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) => {
   rotateDayIfNeeded();
   const dateStr = String(req.query?.date || db.meta.currentDay);
   const date = parseDateYYYYMMDD(dateStr);
