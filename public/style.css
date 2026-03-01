@@ -316,6 +316,19 @@ body{
 .cartItem .name{ font-weight:700; }
 .cartItem .price{ font-variant-numeric:tabular-nums; }
 .cartEmpty{ color:#666; font-size:13px; }
+.qtyBtn{
+  width:26px; height:26px;
+  border-radius:6px;
+  border:1px solid rgba(0,0,0,.2);
+  background:rgba(0,0,0,.08);
+  color:#1b1b1b;
+  font-size:16px; font-weight:900;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  padding:0; flex-shrink:0;
+}
+.qtyBtn:hover{ background:rgba(0,0,0,.15); }
+.qtyBtn:active{ transform:scale(.95); }
 
 .counterTotal{
   height:90px;

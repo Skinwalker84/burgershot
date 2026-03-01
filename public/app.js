@@ -1378,7 +1378,10 @@ function addToCart(p){
     return;
   }
   const productId = p.id || (PRODUCTS||[]).find(x=>x.name===p.name)?.id || slugKey(p);
-  cart.push({ name: p.name, price: p.price, qty: 1, productId: productId });
+  // Merge with existing cart item if same product
+  const existing = cart.find(x => x.productId === productId && !x.components);
+  if(existing){ existing.qty = (existing.qty||1) + 1; }
+  else { cart.push({ name: p.name, price: p.price, qty: 1, productId: productId }); }
   renderCart();
   saveCartsDebounced();
   sendPresencePing();
@@ -1399,13 +1402,37 @@ function renderCart(){
   box.innerHTML=cart.map((x,idx)=>`
     <div class="cartItem">
       <div class="name">${esc(x.name)}</div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <div class="price">${money(x.price)}</div>
-        <button class="pushBtn" style="width:26px; height:22px;" onclick="removeItem(${idx})">x</button>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="qtyBtn" onclick="changeQty(${idx},-1)">−</button>
+        <input class="qtyInput" type="number" min="1" value="${x.qty}"
+          onchange="setQty(${idx}, this.value)"
+          onclick="this.select()"
+          style="width:42px; text-align:center; padding:2px 4px; font-size:13px;
+                 background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.2);
+                 border-radius:6px; color:#1b1b1b; font-weight:900;" />
+        <button class="qtyBtn" onclick="changeQty(${idx},1)">+</button>
+        <div class="price">${money(x.price * x.qty)}</div>
+        <button class="pushBtn" style="width:26px; height:22px;" onclick="removeItem(${idx})">×</button>
       </div>
     </div>`).join("");
 }
 function removeItem(idx){ cart.splice(idx,1); renderCart(); saveCartsDebounced(); }
+
+function changeQty(idx, delta){
+  if(!cart[idx]) return;
+  const newQty = (cart[idx].qty || 1) + delta;
+  if(newQty <= 0){ cart.splice(idx,1); }
+  else { cart[idx].qty = newQty; }
+  renderCart(); saveCartsDebounced();
+}
+
+function setQty(idx, val){
+  if(!cart[idx]) return;
+  const n = parseInt(val);
+  if(!Number.isFinite(n) || n <= 0){ cart.splice(idx,1); }
+  else { cart[idx].qty = n; }
+  renderCart(); saveCartsDebounced();
+}
 
 // Mobile UX: collapse/expand cart panel
 function toggleCart(){
