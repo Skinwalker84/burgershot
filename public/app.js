@@ -1725,32 +1725,88 @@ function confirmMenuBuilder(){
 }
 
 
+let _currentDiscount = 0; // percent
+
+const DISCOUNTS = {
+  0:  { label: "Kein Rabatt", id: "discBtn0" },
+  15: { label: "LSPD −15%",  id: "discBtn15" },
+  20: { label: "LSMD −20%",  id: "discBtn20" },
+  10: { label: "DOJ −10%",   id: "discBtn10" }
+};
+
 function openPay(){
   if(!currentRegister) return alert("Bitte zuerst eine Kasse wählen.");
   if(cart.length===0) return alert("Warenkorb ist leer.");
-  document.getElementById("payTotal").innerText=money(cartTotal());
-  document.getElementById("payAmount").value="";
+  _currentDiscount = 0;
+  updatePayOverlay();
+  document.getElementById("payAmount").value = "";
   document.getElementById("payOverlay").classList.remove("hidden");
 }
+
+function applyDiscount(pct){
+  _currentDiscount = pct;
+  updatePayOverlay();
+}
+
+function updatePayOverlay(){
+  const original = cartTotal();
+  const discAmt = Math.round(original * _currentDiscount) / 100;
+  const total = Math.round((original - discAmt) * 100) / 100;
+
+  document.getElementById("payOriginal").innerText = money(original);
+  document.getElementById("payTotal").innerText = money(total);
+
+  const discRow = document.getElementById("payDiscountRow");
+  if(_currentDiscount > 0){
+    discRow.style.display = "flex";
+    document.getElementById("payDiscountLabel").innerText = `Rabatt ${_currentDiscount}%`;
+    document.getElementById("payDiscountAmt").innerText = `−${money(discAmt)}`;
+  } else {
+    discRow.style.display = "none";
+  }
+
+  // Highlight active button
+  Object.keys(DISCOUNTS).forEach(p => {
+    const btn = document.getElementById(DISCOUNTS[p].id);
+    if(btn) btn.classList.toggle("discountBtnActive", Number(p) === _currentDiscount);
+  });
+}
+
 function closePay(){ document.getElementById("payOverlay").classList.add("hidden"); }
 function parseMoney(val){ const s=String(val||"").replace(/[^\d.-]/g,""); const n=Number(s); return Number.isFinite(n)?n:NaN; }
 
 async function submitPay(){
-  const total=cartTotal();
-  const paid=parseMoney(document.getElementById("payAmount").value);
-  if(!Number.isFinite(paid) || paid<total) return alert("Bezahlt muss >= Total sein.");
-  const payload={
+  const original = cartTotal();
+  const discAmt = Math.round(original * _currentDiscount) / 100;
+  const total = Math.round((original - discAmt) * 100) / 100;
+  const paid = parseMoney(document.getElementById("payAmount").value);
+  if(!Number.isFinite(paid) || paid < total) return alert("Bezahlt muss >= Total sein.");
+
+  // Apply discount to item prices proportionally
+  const discountFactor = total / (original || 1);
+  const items = cart.map(x => ({
+    name: x.name,
+    price: _currentDiscount > 0 ? Math.round(x.price * discountFactor * 100) / 100 : x.price,
+    qty: x.qty,
+    productId: x.productId || null,
+    components: x.components || null
+  }));
+
+  const payload = {
     register: currentRegister,
-    items: cart.map(x=>({ name:x.name, price:x.price, qty:x.qty, productId: x.productId||null, components: x.components||null })),
+    items,
     total,
     paidAmount: paid,
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    discount: _currentDiscount > 0 ? _currentDiscount : undefined
   };
-  const res=await fetch("/sale",{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-  const data=await res.json().catch(()=>({}));
+  const res = await fetch("/sale", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+  const data = await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Speichern.");
   closePay();
-  alert("Order #" + String(data.orderId||"") + " gespeichert. Trinkgeld: " + money(data.tip||0));
+  const tipMsg = data.tip > 0 ? ` — Trinkgeld: ${money(data.tip)}` : "";
+  const discMsg = _currentDiscount > 0 ? ` (${_currentDiscount}% Rabatt)` : "";
+  alert(`Order #${data.orderId||""} gespeichert${discMsg}${tipMsg}`);
   cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); saveCartsDebounced();
 }
 

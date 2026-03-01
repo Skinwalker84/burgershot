@@ -812,16 +812,38 @@
         <button class="ghost" onclick="closePay()">X</button>
       </div>
 
-      <div class="muted small" style="margin-top:8px;">Total: <b id="payTotal">$0</b></div>
+      <!-- Rabatt -->
+      <div style="margin-top:12px;">
+        <div class="muted small" style="margin-bottom:6px;">Rabatt</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="discountBtn" onclick="applyDiscount(0)" id="discBtn0">Kein Rabatt</button>
+          <button class="discountBtn" onclick="applyDiscount(15)" id="discBtn15">🚔 LSPD −15%</button>
+          <button class="discountBtn" onclick="applyDiscount(20)" id="discBtn20">🏥 LSMD −20%</button>
+          <button class="discountBtn" onclick="applyDiscount(10)" id="discBtn10">⚖️ DOJ −10%</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; padding:10px; background:rgba(255,255,255,.05); border-radius:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="muted small">Originalbetrag</span>
+          <span id="payOriginal">$0</span>
+        </div>
+        <div id="payDiscountRow" style="display:none; justify-content:space-between; align-items:center; margin-top:4px;">
+          <span class="muted small" id="payDiscountLabel">Rabatt</span>
+          <span style="color:#22c55e; font-weight:900;" id="payDiscountAmt">−$0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; border-top:1px solid rgba(255,255,255,.1); padding-top:6px;">
+          <span style="font-weight:900;">Total</span>
+          <span style="font-weight:900; font-size:20px;" id="payTotal">$0</span>
+        </div>
+      </div>
 
       <div style="margin-top:10px;">
         <div class="muted small">Bezahlt</div>
         <input id="payAmount" class="input" placeholder="z.B. 250" />
       </div>
 
-      <div class="muted small" style="margin-top:10px;">
-        Trinkgeld = Bezahlt − Total
-      </div>
+      <div class="muted small" style="margin-top:8px;">Trinkgeld = Bezahlt − Total</div>
 
       <button class="primary" style="margin-top:12px; width:100%;" onclick="submitPay()">OK</button>
     </div>
