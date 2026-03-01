@@ -95,7 +95,7 @@ function openTab(tabId, btn){
    ========================= */
 
 async function loadShopTab(){
-  if(!isBoss()) return;
+  if(!isBossOrManager()) return;
   const d = document.getElementById("shopDate");
   if(d && !d.value) d.value = new Date().toISOString().slice(0,10);
 
@@ -228,7 +228,7 @@ async function loadInventory(){
    ========================= */
 
 async function initPurchaseUI(){
-  if(!isBoss()) return;
+  if(!isBossOrManager()) return;
   const d = document.getElementById("purchaseDate");
   if(d && !d.value){
     d.value = new Date().toISOString().slice(0,10);
