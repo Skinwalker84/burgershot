@@ -111,7 +111,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_kitchen") { loadKitchen(); startKitchenTimers(); }
   else { stopKitchenTimers(); }
   if(tabId==="tab_day") { initDayTab(); loadDayReport(); if(isBoss()) loadBankBalance(); }
-  if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); }
+  if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); const p=document.getElementById("weekPdfBtn"); const t=document.getElementById("weekTipBtn"); const show=isBossOrManager(); if(p) p.style.display=show?"":"none"; if(t) t.style.display=show?"":"none"; }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_shop") { loadShopTab(); }
