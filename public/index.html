@@ -486,7 +486,7 @@
           </div>
         </div>
 
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_mgmtMitarbeiter" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('mgmtMitarbeiter')">
             <div style="font-weight:900;">Mitarbeiter</div>
             <span id="mgmtMitarbeiterArrow" style="font-size:18px; transition:transform .2s;">▼</span>
@@ -499,7 +499,7 @@
           </div>
         </div>
 
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_vkPreise" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('vkPreise'); if(!document.getElementById('vkPreise').classList.contains('hidden')) mgmtReloadProducts();">
             <div>
               <div style="font-weight:900;">VK-Preise (Items)</div>
@@ -530,7 +530,7 @@
         </div>
 
         <!-- Lager-Zuordnung -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_lagerZuordnung" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer;" onclick="toggleSection('lagerZuordnung'); if(!document.getElementById('lagerZuordnung').classList.contains('hidden')) loadStockLinks();">
             <div>
               <div style="font-weight:900;">Lager-Zuordnung</div>
@@ -561,7 +561,7 @@
         </div>
 
         <!-- Guthaben Karten -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_guthabenKarten" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('guthabenKarten'); if(!document.getElementById('guthabenKarten').classList.contains('hidden')) loadGuthabenKarten();">
             <div>
               <div style="font-weight:900;">💳 Guthaben Karten</div>
@@ -598,7 +598,7 @@
         </div>
 
         <!-- Mitarbeiter-Umsatz -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_mitarbeiterUmsatz" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('mitarbeiterUmsatz'); if(!document.getElementById('mitarbeiterUmsatz').classList.contains('hidden')) loadMitarbeiterUmsatz();">
             <div>
               <div style="font-weight:900;">📊 Mitarbeiter-Umsatz</div>
@@ -624,7 +624,7 @@
         </div>
 
         <!-- Bestseller -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_bestseller" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('bestseller'); if(!document.getElementById('bestseller').classList.contains('hidden')) loadBestseller();">
             <div>
               <div style="font-weight:900;">🏆 Bestseller</div>
@@ -650,7 +650,7 @@
         </div>
 
         <!-- Mitarbeiter-Verzehr -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_staffConsumption" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('staffConsumption'); if(!document.getElementById('staffConsumption').classList.contains('hidden')) loadStaffConsumption();">
             <div>
               <div style="font-weight:900;">Mitarbeiter-Verzehr</div>
@@ -666,7 +666,7 @@
         </div>
 
         <!-- Kontostand-Verlauf -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_bankHistory" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('bankHistory'); if(!document.getElementById('bankHistory').classList.contains('hidden')) loadBankHistory();">
             <div>
               <div style="font-weight:900;">Kontostand-Verlauf</div>
@@ -693,7 +693,7 @@
         </div>
 
         <!-- Trinkgeld Auszahlungshistorie -->
-        <div class="panel" style="margin-top:14px;">
+        <div class="panel" id="panel_tipPayouts" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('tipPayouts'); if(!document.getElementById('tipPayouts').classList.contains('hidden')) loadTipPayouts();">
             <div>
               <div style="font-weight:900;">Trinkgeld-Auszahlungen</div>

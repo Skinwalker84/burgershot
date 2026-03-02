@@ -44,25 +44,27 @@ function showApp(){
 }
 
 function applyMgmtRoleVisibility(){
-  // Each collapsible section id → the panel is its parentElement.parentElement
-  const bossOnlyIds = [
-    "mgmtMitarbeiter","vkPreise","lagerZuordnung",
-    "staffConsumption","bankHistory","tipPayouts"
+  const bossOnly = [
+    "panel_mgmtMitarbeiter","panel_vkPreise","panel_lagerZuordnung",
+    "panel_staffConsumption","panel_bankHistory","panel_tipPayouts"
   ];
-  const managerIds = [
-    "guthabenKarten","mitarbeiterUmsatz","bestseller"
+  const managerOk = [
+    "panel_guthabenKarten","panel_mitarbeiterUmsatz","panel_bestseller"
   ];
-  bossOnlyIds.forEach(id => {
+  bossOnly.forEach(id => {
     const el = document.getElementById(id);
-    if(el && el.parentElement) el.parentElement.style.display = isBoss() ? "" : "none";
+    if(el) el.style.display = isBoss() ? "block" : "none";
   });
-  managerIds.forEach(id => {
+  managerOk.forEach(id => {
     const el = document.getElementById(id);
-    if(el && el.parentElement) el.parentElement.style.display = isBossOrManager() ? "" : "none";
+    if(el) el.style.display = isBossOrManager() ? "block" : "none";
   });
-  // Testdaten panel
-  document.querySelectorAll("#tab_mgmt .panel").forEach(p => {
-    if(p.textContent.includes("Testdaten")) p.style.display = isBoss() ? "" : "none";
+  // Testdaten panel — find by heading text
+  document.querySelectorAll("#tab_mgmt > .panel, #tab_mgmt .panel").forEach(p => {
+    const heading = p.querySelector("div[style*='font-weight:900']");
+    if(heading && heading.textContent.includes("Testdaten")) {
+      p.style.display = isBoss() ? "block" : "none";
+    }
   });
 }
 
