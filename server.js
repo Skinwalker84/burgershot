@@ -1280,7 +1280,7 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
   totals.purchases = getPurchaseCosts([dayKey]);
   totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
-  totals.cashRevenue = sales.filter(s => s.isCash).reduce((sum, s) => sum + Number(s.total||0), 0);
+  totals.cashRevenue = sales.filter(s => s.isCash).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
   totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
