@@ -44,22 +44,25 @@ function showApp(){
 }
 
 function applyMgmtRoleVisibility(){
-  // Sections only boss can see — hide for manager
-  const bossOnlySections = [
+  // Each collapsible section id → the panel is its parentElement.parentElement
+  const bossOnlyIds = [
     "mgmtMitarbeiter","vkPreise","lagerZuordnung",
     "staffConsumption","bankHistory","tipPayouts"
   ];
-  bossOnlySections.forEach(id => {
-    // Hide the whole panel (parent of the collapsible)
+  const managerIds = [
+    "guthabenKarten","mitarbeiterUmsatz","bestseller"
+  ];
+  bossOnlyIds.forEach(id => {
     const el = document.getElementById(id);
-    if(el) {
-      const panel = el.closest(".panel");
-      if(panel) panel.style.display = isBoss() ? "" : "none";
-    }
+    if(el && el.parentElement) el.parentElement.style.display = isBoss() ? "" : "none";
   });
-  // Also hide Testdaten panel
+  managerIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el && el.parentElement) el.parentElement.style.display = isBossOrManager() ? "" : "none";
+  });
+  // Testdaten panel
   document.querySelectorAll("#tab_mgmt .panel").forEach(p => {
-    if(p.innerText.includes("Testdaten löschen")) p.style.display = isBoss() ? "" : "none";
+    if(p.textContent.includes("Testdaten")) p.style.display = isBoss() ? "" : "none";
   });
 }
 
