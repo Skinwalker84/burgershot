@@ -2163,15 +2163,8 @@ async function loadWeekReport(){
 
   const tbody=document.getElementById("weekByEmployee");
   if(tbody){
-    const myDisplayName = (me?.displayName || "").toLowerCase();
-    const myUsername = (me?.username || "").toLowerCase();
     const isPrivileged = isBoss() || isManager();
-    const rows = (data.byEmployee||[]).filter(x => {
-      if(isPrivileged) return true;
-      const emp = (x.employee||"").toLowerCase();
-      const empU = (x.employeeUsername||"").toLowerCase();
-      return emp === myDisplayName || empU === myUsername || emp === myUsername;
-    });
+    const rows = data.byEmployee || [];
     tbody.innerHTML = rows.map(x=>`
         <tr>
           <td>${esc(x.employee||x.employeeUsername||"")}</td>
