@@ -2037,6 +2037,20 @@ function printDayReport(){
   document.body.classList.remove("printDay");
 }
 
+async function markCashTransferred(day, employeeUsername, employeeName){
+  if(!day || !employeeUsername) return;
+  if(!confirm(`BAR-Betrag von "${employeeName||employeeUsername}" für ${day} als verbucht markieren?`)) return;
+  const res = await fetch("/cash-transferred", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ day, employeeUsername })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success) return alert(data.message || "Fehler.");
+  alert(`✅ Verbucht! ${data.count} Buchung${data.count!==1?"en":""} markiert.`);
+  loadDayReport();
+}
+
 async function loadDayReport(){
   // Manager: read-only — hide edit controls
   const _dayCloseBtn = document.getElementById("dayCloseBtn");
@@ -2084,7 +2098,17 @@ async function loadDayReport(){
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
         <td style="text-align:right;">${money(x.tips||0)}</td>
-        <td style="text-align:right; color:${(x.cashRevenue||0)>0?"#fbbf24":""}; font-weight:${(x.cashRevenue||0)>0?"900":"normal"};">${(x.cashRevenue||0)>0 ? money(x.cashRevenue) : "—"}</td>
+        <td style="text-align:right;">
+          ${(x.cashRevenue||0)>0
+            ? `<div style="display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+                <span style="color:#fbbf24; font-weight:900;">${money(x.cashRevenue)}</span>
+                <button onclick="markCashTransferred('${escAttr(currentDayReport?.day||"")}','${escAttr(x.employeeUsername||x.employee||"")}','${escAttr(x.employee||"")}')"
+                  style="padding:2px 8px; font-size:11px; background:#22c55e; color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:900;">
+                  ✓ Verbucht
+                </button>
+              </div>`
+            : "—"}
+        </td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
     `).join("") || `<tr><td colspan="5" class="muted">Keine Daten.</td></tr>`;

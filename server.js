@@ -942,6 +942,26 @@ app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   CASH TRANSFER
+   ========================= */
+app.post("/cash-transferred", requireAuth, requireBoss, (req, res) => {
+  const { day, employeeUsername } = req.body || {};
+  if (!day || !employeeUsername) return res.status(400).json({ success: false, message: "day und employeeUsername erforderlich." });
+  // Mark all isCash sales for this employee on this day as transferred
+  const sales = db.salesByDay[day] || [];
+  let count = 0;
+  for (const s of sales) {
+    const empKey = String(s.employeeUsername || s.employee || "—");
+    if (s.isCash && empKey === employeeUsername) {
+      s.cashTransferred = true;
+      count++;
+    }
+  }
+  saveDB(db);
+  res.json({ success: true, count });
+});
+
+/* =========================
    STATS ENDPOINTS
    ========================= */
 
@@ -1280,7 +1300,7 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
   totals.purchases = getPurchaseCosts([dayKey]);
   totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
-  totals.cashRevenue = sales.filter(s => s.isCash).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
+  totals.cashRevenue = sales.filter(s => s.isCash && !s.cashTransferred).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
   totals.profit = totals.revenue - totals.purchases;
 
   const byEmployeeMap = {};
@@ -1290,7 +1310,8 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
     byEmployeeMap[empKey].revenue += Number(s.total || 0);
     byEmployeeMap[empKey].tips += Number(s.tip || 0);
     byEmployeeMap[empKey].orders += 1;
-    if (s.isCash) byEmployeeMap[empKey].cashRevenue += Number(s.total || 0) + Number(s.tip || 0);
+    if (s.isCash && !s.cashTransferred) byEmployeeMap[empKey].cashRevenue += Number(s.total || 0) + Number(s.tip || 0);
+    if (s.isCash && !s.cashTransferred) byEmployeeMap[empKey].hasPendingCash = true;
   }
   const byEmployee = Object.values(byEmployeeMap).map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
     .sort((a, b) => b.revenue - a.revenue);
