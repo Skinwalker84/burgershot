@@ -1286,10 +1286,11 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
   const byEmployeeMap = {};
   for (const s of sales) {
     const empKey = String(s.employeeUsername || s.employee || "—");
-    if (!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue: 0, tips: 0, orders: 0, avg: 0 };
+    if (!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue: 0, tips: 0, orders: 0, avg: 0, cashRevenue: 0 };
     byEmployeeMap[empKey].revenue += Number(s.total || 0);
     byEmployeeMap[empKey].tips += Number(s.tip || 0);
     byEmployeeMap[empKey].orders += 1;
+    if (s.isCash) byEmployeeMap[empKey].cashRevenue += Number(s.total || 0) + Number(s.tip || 0);
   }
   const byEmployee = Object.values(byEmployeeMap).map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
     .sort((a, b) => b.revenue - a.revenue);

@@ -2077,9 +2077,10 @@ async function loadDayReport(){
         <td>${esc(x.employee||x.employeeUsername||"")}</td>
         <td style="text-align:right;">${money(x.revenue||0)}</td>
         <td style="text-align:right;">${money(x.tips||0)}</td>
+        <td style="text-align:right; color:${(x.cashRevenue||0)>0?"#fbbf24":""}; font-weight:${(x.cashRevenue||0)>0?"900":"normal"};">${(x.cashRevenue||0)>0 ? money(x.cashRevenue) : "—"}</td>
         <td style="text-align:right;">${x.orders||0}</td>
       </tr>
-    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
+    `).join("") || `<tr><td colspan="5" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
