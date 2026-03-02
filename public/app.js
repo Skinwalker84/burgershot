@@ -2161,15 +2161,21 @@ async function loadWeekReport(){
 
   const tbody=document.getElementById("weekByEmployee");
   if(tbody){
-    const myName = me?.displayName || me?.username || "";
-    tbody.innerHTML=(data.byEmployee||[])
-      .filter(x => isBoss() || isManager() || (x.employee||x.employeeUsername||"").toLowerCase() === myName.toLowerCase())
-      .map(x=>`
+    const myDisplayName = (me?.displayName || "").toLowerCase();
+    const myUsername = (me?.username || "").toLowerCase();
+    const isPrivileged = isBoss() || isManager();
+    const rows = (data.byEmployee||[]).filter(x => {
+      if(isPrivileged) return true;
+      const emp = (x.employee||"").toLowerCase();
+      const empU = (x.employeeUsername||"").toLowerCase();
+      return emp === myDisplayName || empU === myUsername || emp === myUsername;
+    });
+    tbody.innerHTML = rows.map(x=>`
         <tr>
           <td>${esc(x.employee||x.employeeUsername||"")}</td>
-          <td style="text-align:right;">${isBoss()||isManager() ? money(x.revenue||0) : "—"}</td>
+          <td style="text-align:right;">${isPrivileged ? money(x.revenue||0) : "—"}</td>
           <td style="text-align:right; font-weight:900; color:#22c55e;">${money(x.tips||0)}</td>
-          <td style="text-align:right;">${isBoss()||isManager() ? (x.orders||0) : "—"}</td>
+          <td style="text-align:right;">${isPrivileged ? (x.orders||0) : "—"}</td>
         </tr>
       `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
