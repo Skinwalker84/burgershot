@@ -942,6 +942,46 @@ app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
 });
 
 /* =========================
+   STATS ENDPOINTS
+   ========================= */
+
+app.get("/reports/employee-totals", requireAuth, requireBoss, (req, res) => {
+  const byEmployee = {};
+  for (const [, sales] of Object.entries(db.salesByDay || {})) {
+    for (const s of sales) {
+      if (s.staffOrder || s.paymentMethod === "guthaben") continue;
+      const name = s.employee || s.employeeUsername || "Unbekannt";
+      if (!byEmployee[name]) byEmployee[name] = { name, revenue: 0, orders: 0 };
+      byEmployee[name].revenue += Number(s.total || 0);
+      byEmployee[name].orders++;
+    }
+  }
+  const result = Object.values(byEmployee)
+    .sort((a, b) => b.revenue - a.revenue)
+    .map(e => ({ ...e, avg: e.orders > 0 ? Math.round(e.revenue / e.orders) : 0 }));
+  res.json({ success: true, employees: result });
+});
+
+app.get("/reports/bestseller", requireAuth, requireBoss, (req, res) => {
+  const byItem = {};
+  for (const [, sales] of Object.entries(db.salesByDay || {})) {
+    for (const s of sales) {
+      if (!Array.isArray(s.items)) continue;
+      for (const it of s.items) {
+        const name = it.name || "Unbekannt";
+        if (!byItem[name]) byItem[name] = { name, qty: 0, revenue: 0 };
+        byItem[name].qty += Number(it.qty || 1);
+        byItem[name].revenue += Number(it.price || 0) * Number(it.qty || 1);
+      }
+    }
+  }
+  const result = Object.values(byItem)
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 50);
+  res.json({ success: true, items: result });
+});
+
+/* =========================
    BANK BALANCE
    ========================= */
 app.get("/bank-balance", requireAuth, requireBoss, (req, res) => {

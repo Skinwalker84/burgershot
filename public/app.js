@@ -925,6 +925,51 @@ function confirmAddStockLink(){
   closeAddStockLink();
 }
 
+/* ===== MITARBEITER-UMSATZ & BESTSELLER ===== */
+
+async function loadMitarbeiterUmsatz(){
+  const body = document.getElementById("mitarbeiterUmsatzBody");
+  if(!body) return;
+  body.innerHTML = `<tr><td colspan="4" class="muted small">Lade…</td></tr>`;
+  try{
+    const res = await fetch("/reports/employee-totals");
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.success){ body.innerHTML=`<tr><td colspan="4" class="muted small">Fehler.</td></tr>`; return; }
+    const emps = data.employees || [];
+    if(!emps.length){ body.innerHTML=`<tr><td colspan="4" class="muted small">Keine Daten.</td></tr>`; return; }
+    body.innerHTML = emps.map((e,i) => `<tr>
+      <td><b>${esc(e.name)}</b></td>
+      <td style="text-align:right; font-weight:900; color:#22c55e;">${money(e.revenue)}</td>
+      <td style="text-align:right;">${e.orders}</td>
+      <td style="text-align:right; color:#60a5fa;">${money(e.avg)}</td>
+    </tr>`).join("");
+  }catch(e){
+    body.innerHTML=`<tr><td colspan="4" class="muted small">Fehler beim Laden.</td></tr>`;
+  }
+}
+
+async function loadBestseller(){
+  const body = document.getElementById("bestsellerBody");
+  if(!body) return;
+  body.innerHTML = `<tr><td colspan="4" class="muted small">Lade…</td></tr>`;
+  const medals = ["🥇","🥈","🥉"];
+  try{
+    const res = await fetch("/reports/bestseller");
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.success){ body.innerHTML=`<tr><td colspan="4" class="muted small">Fehler.</td></tr>`; return; }
+    const items = data.items || [];
+    if(!items.length){ body.innerHTML=`<tr><td colspan="4" class="muted small">Keine Daten.</td></tr>`; return; }
+    body.innerHTML = items.map((it,i) => `<tr>
+      <td style="text-align:center; font-size:18px;">${medals[i] || String(i+1)}</td>
+      <td><b>${esc(it.name)}</b></td>
+      <td style="text-align:right; font-weight:900;">${it.qty}×</td>
+      <td style="text-align:right; color:#22c55e;">${money(it.revenue)}</td>
+    </tr>`).join("");
+  }catch(e){
+    body.innerHTML=`<tr><td colspan="4" class="muted small">Fehler beim Laden.</td></tr>`;
+  }
+}
+
 /* ===== GUTHABEN KARTEN ===== */
 
 async function loadGuthabenKarten(){

@@ -597,6 +597,58 @@
           </div>
         </div>
 
+        <!-- Mitarbeiter-Umsatz -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('mitarbeiterUmsatz'); if(!document.getElementById('mitarbeiterUmsatz').classList.contains('hidden')) loadMitarbeiterUmsatz();">
+            <div>
+              <div style="font-weight:900;">📊 Mitarbeiter-Umsatz</div>
+              <div class="muted small">Gesamtumsatz je Mitarbeiter (alle Zeiten)</div>
+            </div>
+            <span id="mitarbeiterUmsatzArrow" style="font-size:18px; transition:transform .2s;">▼</span>
+          </div>
+          <div id="mitarbeiterUmsatz" class="hidden">
+            <div style="margin-top:10px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Mitarbeiter</th>
+                    <th style="text-align:right;">Umsatz</th>
+                    <th style="text-align:right;">Bestellungen</th>
+                    <th style="text-align:right;">Ø pro Bestellung</th>
+                  </tr>
+                </thead>
+                <tbody id="mitarbeiterUmsatzBody"><tr><td colspan="4" class="muted small">—</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bestseller -->
+        <div class="panel" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('bestseller'); if(!document.getElementById('bestseller').classList.contains('hidden')) loadBestseller();">
+            <div>
+              <div style="font-weight:900;">🏆 Bestseller</div>
+              <div class="muted small">Meistverkaufte Artikel (alle Zeiten)</div>
+            </div>
+            <span id="bestsellerArrow" style="font-size:18px; transition:transform .2s;">▼</span>
+          </div>
+          <div id="bestseller" class="hidden">
+            <div style="margin-top:10px; overflow:auto;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Rang</th>
+                    <th>Artikel</th>
+                    <th style="text-align:right;">Verkauft</th>
+                    <th style="text-align:right;">Umsatz</th>
+                  </tr>
+                </thead>
+                <tbody id="bestsellerBody"><tr><td colspan="4" class="muted small">—</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Mitarbeiter-Verzehr -->
         <div class="panel" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('staffConsumption'); if(!document.getElementById('staffConsumption').classList.contains('hidden')) loadStaffConsumption();">
