@@ -1308,7 +1308,7 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
 
 // Week report by employee (Calendar Week)
 // GET /reports/week-employee?week=YYYY-Www
-app.get("/reports/week-employee", requireAuth, requireBoss, (req, res) => {
+app.get("/reports/week-employee", requireAuth, (req, res) => {
   rotateDayIfNeeded();
 
   const weekStr = String(req.query?.week || "");

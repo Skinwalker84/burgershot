@@ -73,10 +73,13 @@ function applyRoleVisibility(){
   const mgr = isBossOrManager();
 
   // Boss-only tabs
-  ["iconBtnWeek","iconBtnMonth"].forEach(id=>{
+  ["iconBtnMonth"].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = boss ? "" : "none";
   });
+  // Week visible for all staff (but limited content)
+  const weekBtn = document.getElementById("iconBtnWeek");
+  if(weekBtn) weekBtn.style.display = "";
   // Boss + Manager tabs
   ["iconBtnShop","iconBtnDay","iconBtnMgmt"].forEach(id=>{
     const el = document.getElementById(id);
@@ -88,7 +91,7 @@ function applyRoleVisibility(){
 }
 
 function openTab(tabId, btn){
-  const bossOnlyTabs = ["tab_week","tab_month"];
+  const bossOnlyTabs = ["tab_month"];
   const managerTabs   = ["tab_shop","tab_day"];
   if(bossOnlyTabs.includes(tabId) && !isBoss()){
     alert("Nur Chef.");
@@ -2127,7 +2130,7 @@ function printWeekReport(){
 }
 
 async function loadWeekReport(){
-  if(!isBoss()) return;
+  if(!isBoss() && !isManager() && me?.role !== "staff") return;
   const kw=document.getElementById("weekKW")?.value;
   if(!kw) return;
   // kw format: YYYY-Www
@@ -2143,21 +2146,32 @@ async function loadWeekReport(){
   document.getElementById("weekRange").innerText=range;
   document.getElementById("weekPrintRange").innerText=range;
 
-  document.getElementById("weekRevenue").innerText=money(data.totals?.revenue||0);
-  document.getElementById("weekPurchases").innerText=money(data.totals?.purchases||0);
-  document.getElementById("weekProfit").innerText=money(data.totals?.profit||0);
-  document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
+  if(isBoss() || isManager()){
+    document.getElementById("weekRevenue").innerText=money(data.totals?.revenue||0);
+    document.getElementById("weekPurchases").innerText=money(data.totals?.purchases||0);
+    document.getElementById("weekProfit").innerText=money(data.totals?.profit||0);
+    document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
+  } else {
+    // Staff: mask all totals
+    document.getElementById("weekRevenue").innerText="—";
+    document.getElementById("weekPurchases").innerText="—";
+    document.getElementById("weekProfit").innerText="—";
+    document.getElementById("weekOrders").innerText="—";
+  }
 
   const tbody=document.getElementById("weekByEmployee");
   if(tbody){
-    tbody.innerHTML=(data.byEmployee||[]).map(x=>`
-      <tr>
-        <td>${esc(x.employee||x.employeeUsername||"")}</td>
-        <td style="text-align:right;">${money(x.revenue||0)}</td>
-        <td style="text-align:right;">${money(x.tips||0)}</td>
-        <td style="text-align:right;">${x.orders||0}</td>
-      </tr>
-    `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
+    const myName = me?.displayName || me?.username || "";
+    tbody.innerHTML=(data.byEmployee||[])
+      .filter(x => isBoss() || isManager() || (x.employee||x.employeeUsername||"").toLowerCase() === myName.toLowerCase())
+      .map(x=>`
+        <tr>
+          <td>${esc(x.employee||x.employeeUsername||"")}</td>
+          <td style="text-align:right;">${isBoss()||isManager() ? money(x.revenue||0) : "—"}</td>
+          <td style="text-align:right; font-weight:900; color:#22c55e;">${money(x.tips||0)}</td>
+          <td style="text-align:right;">${isBoss()||isManager() ? (x.orders||0) : "—"}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="4" class="muted">Keine Daten.</td></tr>`;
   }
 }
 
