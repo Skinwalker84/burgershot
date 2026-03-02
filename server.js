@@ -827,7 +827,7 @@ app.get("/guthaben-karten/check", requireAuth, (req, res) => {
   res.json({ success: true, found: true, id: karte.id, name: karte.name, balance: karte.balance });
 });
 
-app.post("/guthaben-karten", requireAuth, requireBoss, (req, res) => {
+app.post("/guthaben-karten", requireAuth, requireBossOrManager, (req, res) => {
   normalizeKarten();
   const name = String(req.body?.name || "").trim();
   const betrag = Math.round(Number(req.body?.betrag) * 100) / 100;
@@ -945,7 +945,7 @@ app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
    STATS ENDPOINTS
    ========================= */
 
-app.get("/reports/employee-totals", requireAuth, requireBoss, (req, res) => {
+app.get("/reports/employee-totals", requireAuth, requireBossOrManager, (req, res) => {
   const byEmployee = {};
   for (const [, sales] of Object.entries(db.salesByDay || {})) {
     for (const s of sales) {
@@ -962,7 +962,7 @@ app.get("/reports/employee-totals", requireAuth, requireBoss, (req, res) => {
   res.json({ success: true, employees: result });
 });
 
-app.get("/reports/bestseller", requireAuth, requireBoss, (req, res) => {
+app.get("/reports/bestseller", requireAuth, requireBossOrManager, (req, res) => {
   const byItem = {};
   for (const [, sales] of Object.entries(db.salesByDay || {})) {
     for (const s of sales) {

@@ -43,17 +43,37 @@ function showApp(){
   document.getElementById("appRoot")?.classList.remove("hidden");
 }
 
+function applyMgmtRoleVisibility(){
+  // Sections only boss can see — hide for manager
+  const bossOnlySections = [
+    "mgmtMitarbeiter","vkPreise","lagerZuordnung",
+    "staffConsumption","bankHistory","tipPayouts"
+  ];
+  bossOnlySections.forEach(id => {
+    // Hide the whole panel (parent of the collapsible)
+    const el = document.getElementById(id);
+    if(el) {
+      const panel = el.closest(".panel");
+      if(panel) panel.style.display = isBoss() ? "" : "none";
+    }
+  });
+  // Also hide Testdaten panel
+  document.querySelectorAll("#tab_mgmt .panel").forEach(p => {
+    if(p.innerText.includes("Testdaten löschen")) p.style.display = isBoss() ? "" : "none";
+  });
+}
+
 function applyRoleVisibility(){
   const boss = isBoss();
   const mgr = isBossOrManager();
 
   // Boss-only tabs
-  ["iconBtnWeek","iconBtnMonth","iconBtnMgmt"].forEach(id=>{
+  ["iconBtnWeek","iconBtnMonth"].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = boss ? "" : "none";
   });
   // Boss + Manager tabs
-  ["iconBtnShop","iconBtnDay"].forEach(id=>{
+  ["iconBtnShop","iconBtnDay","iconBtnMgmt"].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = mgr ? "" : "none";
   });
@@ -63,7 +83,7 @@ function applyRoleVisibility(){
 }
 
 function openTab(tabId, btn){
-  const bossOnlyTabs = ["tab_mgmt","tab_week","tab_month"];
+  const bossOnlyTabs = ["tab_week","tab_month"];
   const managerTabs   = ["tab_shop","tab_day"];
   if(bossOnlyTabs.includes(tabId) && !isBoss()){
     alert("Nur Chef.");
@@ -88,7 +108,8 @@ function openTab(tabId, btn){
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
-    loadUsers();
+    applyMgmtRoleVisibility();
+    if(isBoss()) loadUsers();
     loadGuthabenKarten();
   }
 }
