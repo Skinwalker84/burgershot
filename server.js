@@ -1231,23 +1231,23 @@ app.post("/reset/all-data", requireAuth, requireBoss, (req, res) => {
    ========================= */
 app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
   const all = Object.values(db.salesByDay || {}).flat().filter(s => s.staffOrder);
-  // Group by staffEmployee
+  // Group by staffEmployee, track individual bookings with date
   const byEmployee = {};
   for (const s of all) {
     const key = s.staffEmployee || s.employeeUsername || "—";
     const name = s.staffEmployeeName || s.employee || key;
-    if (!byEmployee[key]) byEmployee[key] = { username: key, name, items: {}, total: 0, orders: 0 };
+    if (!byEmployee[key]) byEmployee[key] = { username: key, name, bookings: [], total: 0, orders: 0 };
     byEmployee[key].orders++;
-    for (const it of (s.items || [])) {
-      const n = String(it.name || "");
-      const qty = Number(it.qty) || 1;
-      if (!byEmployee[key].items[n]) byEmployee[key].items[n] = 0;
-      byEmployee[key].items[n] += qty;
-    }
+    byEmployee[key].bookings.push({
+      date: s.day || String(s.time || "").slice(0, 10),
+      time: s.timeHM || String(s.time || "").slice(11, 16),
+      items: (s.items || []).map(it => ({ name: String(it.name||""), qty: Number(it.qty)||1 }))
+    });
   }
+  // Sort bookings newest first
   const result = Object.values(byEmployee).map(e => ({
     ...e,
-    items: Object.entries(e.items).map(([name, qty]) => ({ name, qty })).sort((a,b) => b.qty - a.qty)
+    bookings: e.bookings.sort((a,b) => String(b.date+b.time).localeCompare(String(a.date+a.time)))
   })).sort((a,b) => b.orders - a.orders);
   res.json({ success: true, entries: result });
 });

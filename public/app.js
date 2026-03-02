@@ -1329,11 +1329,18 @@ async function loadStaffConsumption(){
       return;
     }
     body.innerHTML = entries.map(e => `
-      <div style="margin-bottom:12px; padding:10px; background:rgba(255,255,255,.04); border-radius:8px;">
-        <div style="font-weight:900; margin-bottom:6px;">${esc(e.name)} <span class="muted small">(${e.orders} Buchung${e.orders!==1?"en":""})</span></div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${e.items.map(it => `<span style="background:rgba(255,255,255,.08); border-radius:6px; padding:2px 8px; font-size:13px;">${esc(it.name)} ×${it.qty}</span>`).join("")}
-        </div>
+      <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,.04); border-radius:8px;">
+        <div style="font-weight:900; margin-bottom:8px; font-size:15px;">${esc(e.name)} <span class="muted small">(${e.orders} Buchung${e.orders!==1?"en":""})</span></div>
+        ${(e.bookings||[]).map(b => `
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06);">
+            <div style="min-width:110px; color:#60a5fa; font-size:12px; font-weight:700; padding-top:2px;">
+              📅 ${esc(b.date||"—")}<br><span class="muted" style="font-size:11px;">${esc(b.time||"")}</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+              ${b.items.map(it => `<span style="background:rgba(255,255,255,.08); border-radius:6px; padding:2px 8px; font-size:13px;">${esc(it.name)} ×${it.qty}</span>`).join("")}
+            </div>
+          </div>
+        `).join("")}
       </div>
     `).join("");
   }catch(e){
