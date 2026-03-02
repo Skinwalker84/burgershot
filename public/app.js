@@ -511,6 +511,8 @@ async function login(){
   if(!res.ok || !data.success) return showLoginPage(data.message || "Login fehlgeschlagen.");
   me = data.user;
   serverDay = data.currentDay;
+  weekTabInited = false;
+  monthTabInited = false;
   showApp();
   applyRoleVisibility();
   updateRegisterDisplay();
@@ -2130,7 +2132,7 @@ function printWeekReport(){
 }
 
 async function loadWeekReport(){
-  if(!isBoss() && !isManager() && me?.role !== "staff") return;
+  if(!me) return;
   const kw=document.getElementById("weekKW")?.value;
   if(!kw) return;
   // kw format: YYYY-Www
