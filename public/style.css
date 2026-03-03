@@ -918,3 +918,22 @@ select.input{ appearance:none; -webkit-appearance:none; }
   from { transform: translateX(120%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
+
+/* ===== SCHWARZES BRETT ===== */
+.boardCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+}
+.boardCard.prio-important { border-left: 4px solid #f59e0b; }
+.boardCard.prio-urgent    { border-left: 4px solid #ef4444; background: rgba(239,68,68,.06); }
+.boardCard .boardMeta     { font-size: 12px; color: var(--muted); margin-top:8px; }
+.boardCard .boardDelete   { position:absolute; top:12px; right:12px; }
+.boardPrioBtn {
+  padding: 6px 12px; border-radius:8px; border:1px solid var(--border);
+  background:rgba(255,255,255,.06); color:var(--text); cursor:pointer; font-size:13px;
+}
+.boardPrioBtn.active { background:rgba(99,179,237,.25); border-color:#63b3ed; }

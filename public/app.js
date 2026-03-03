@@ -114,6 +114,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); const p=document.getElementById("weekPdfBtn"); const t=document.getElementById("weekTipBtn"); const show=isBossOrManager(); if(p) p.style.display=show?"":"none"; if(t) t.style.display=show?"":"none"; }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
+  if(tabId==="tab_board") { _lastBoardCount = 0; loadBoard(); const badge=document.getElementById("boardBadge"); if(badge) badge.style.display="none"; }
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
     applyMgmtRoleVisibility();
@@ -955,6 +956,100 @@ function confirmAddStockLink(){
   renderStockLinks();
   closeAddStockLink();
 }
+
+/* ===== SCHWARZES BRETT ===== */
+
+let _boardPrio = "normal";
+let _lastBoardCount = 0;
+
+function selectPrio(p){
+  _boardPrio = p;
+  ["normal","important","urgent"].forEach(x => {
+    const btn = document.getElementById("prioBtnNormal".replace("Normal", x.charAt(0).toUpperCase()+x.slice(1)));
+    if(btn) btn.classList.toggle("active", x === p);
+  });
+  document.getElementById("prioBtnNormal").classList.toggle("active", p==="normal");
+  document.getElementById("prioBtnImportant").classList.toggle("active", p==="important");
+  document.getElementById("prioBtnUrgent").classList.toggle("active", p==="urgent");
+}
+
+function openNewPost(){
+  document.getElementById("boardPostTitle").value = "";
+  document.getElementById("boardPostBody").value = "";
+  document.getElementById("boardPostMsg").innerText = "—";
+  selectPrio("normal");
+  document.getElementById("boardPostOverlay").classList.remove("hidden");
+  setTimeout(() => document.getElementById("boardPostTitle")?.focus(), 100);
+}
+function closeBoardPost(){ document.getElementById("boardPostOverlay").classList.add("hidden"); }
+
+async function submitBoardPost(){
+  const title = document.getElementById("boardPostTitle").value.trim();
+  const body  = document.getElementById("boardPostBody").value.trim();
+  const msg   = document.getElementById("boardPostMsg");
+  if(!title){ msg.innerText = "Bitte Titel eingeben."; return; }
+  const res = await fetch("/board", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ title, body, prio: _boardPrio })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){ msg.innerText = data.message||"Fehler."; return; }
+  closeBoardPost();
+  loadBoard();
+}
+
+async function deletePost(id){
+  if(!confirm("Beitrag löschen?")) return;
+  await fetch(`/board/${id}`, { method:"DELETE" });
+  loadBoard();
+}
+
+const PRIO_LABEL = { normal:"📌 Normal", important:"⚠️ Wichtig", urgent:"🚨 Dringend" };
+const PRIO_COLOR = { normal:"var(--muted)", important:"#f59e0b", urgent:"#ef4444" };
+
+async function loadBoard(){
+  const container = document.getElementById("boardPosts");
+  if(!container) return;
+  const res = await fetch("/board").catch(()=>null);
+  const data = res ? await res.json().catch(()=>({})) : {};
+  const posts = data.posts || [];
+
+  // Badge: new posts since last visit
+  const badge = document.getElementById("boardBadge");
+  if(badge) badge.style.display = posts.length > _lastBoardCount ? "" : "none";
+
+  if(!posts.length){
+    container.innerHTML = `<div class="panel muted small" style="text-align:center; padding:32px;">Noch keine Beiträge. Sei der Erste! 📋</div>`;
+    return;
+  }
+
+  container.innerHTML = posts.map(p => `
+    <div class="boardCard prio-${p.prio||"normal"}">
+      <div class="row" style="justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div>
+          <span style="font-size:11px; font-weight:900; color:${PRIO_COLOR[p.prio]||"var(--muted)"}; text-transform:uppercase; letter-spacing:1px;">${PRIO_LABEL[p.prio]||""}</span>
+          <div style="font-weight:900; font-size:16px; margin-top:4px;">${esc(p.title)}</div>
+        </div>
+        <button class="ghost boardDelete" onclick="deletePost('${escAttr(p.id)}')" style="padding:2px 8px; font-size:12px;">🗑</button>
+      </div>
+      ${p.body ? `<div style="margin-top:10px; line-height:1.6; white-space:pre-wrap;">${esc(p.body)}</div>` : ""}
+      <div class="boardMeta">✍️ ${esc(p.author)} · ${esc(fmtDateTime(p.createdAt))}</div>
+    </div>
+  `).join("");
+}
+
+// Poll for new posts every 60s
+setInterval(() => {
+  if(document.getElementById("tab_board") && !document.getElementById("tab_board").classList.contains("hidden")){
+    loadBoard();
+  } else {
+    // Check badge silently
+    fetch("/board").then(r=>r.json()).then(data => {
+      const badge = document.getElementById("boardBadge");
+      if(badge) badge.style.display = (data.posts||[]).length > _lastBoardCount ? "" : "none";
+    }).catch(()=>{});
+  }
+}, 60000);
 
 /* ===== MITARBEITER-UMSATZ & BESTSELLER ===== */
 

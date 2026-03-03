@@ -297,6 +297,7 @@ function normalizeDB(db) {
   if (!db || typeof db !== "object") return makeFreshDB();
   if (!db.meta) db.meta = {};
   if (!db.meta.currentDay) db.meta.currentDay = getDayKeyLocal(new Date());
+  if (!db.board) db.board = [];
   if (!db.meta.nextOrderId) db.meta.nextOrderId = 1;
   if (!Array.isArray(db.users)) db.users = [];
   if (!db.sessions || typeof db.sessions !== "object") db.sessions = {};
@@ -939,6 +940,44 @@ app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
 
   saveDB(db);
   res.json({ success: true, payout });
+});
+
+/* =========================
+   SCHWARZES BRETT
+   ========================= */
+app.get("/board", requireAuth, (req, res) => {
+  res.json({ success: true, posts: db.board || [] });
+});
+
+app.post("/board", requireAuth, (req, res) => {
+  const title = String(req.body?.title || "").trim();
+  const body  = String(req.body?.body  || "").trim();
+  const prio  = ["normal","important","urgent"].includes(req.body?.prio) ? req.body.prio : "normal";
+  if (!title) return res.status(400).json({ success: false, message: "Titel fehlt." });
+  if (!db.board) db.board = [];
+  const post = {
+    id: Date.now().toString(),
+    title, body, prio,
+    author: req.user.displayName || req.user.username,
+    authorUsername: req.user.username,
+    createdAt: new Date().toISOString()
+  };
+  db.board.unshift(post);
+  saveDB(db);
+  res.json({ success: true, post });
+});
+
+app.delete("/board/:id", requireAuth, (req, res) => {
+  if (!db.board) return res.json({ success: true });
+  const before = db.board.length;
+  // Any role can delete own post; boss/manager can delete all
+  db.board = db.board.filter(p => {
+    if (p.id !== req.params.id) return true;
+    if (["boss","manager"].includes(req.user.role)) return false;
+    return p.authorUsername !== req.user.username;
+  });
+  if (db.board.length < before) saveDB(db);
+  res.json({ success: true });
 });
 
 /* =========================

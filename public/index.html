@@ -85,6 +85,12 @@
           <span>Küche</span>
         </button>
 
+        <button class="iconBtn" onclick="openTab('tab_board', null)" id="iconBtnBoard" title="Schwarzes Brett" style="position:relative;">
+          <span style="font-size:22px;">📋</span>
+          <span>Brett</span>
+          <span id="boardBadge" style="display:none; position:absolute; top:4px; right:4px; background:#ef4444; color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; font-weight:900; line-height:16px; text-align:center;">!</span>
+        </button>
+
         <button class="iconBtn" onclick="openTab('tab_shop', null)" id="iconBtnShop" title="Einkauf">
           <img src="/icons/einkauf.png" alt="Einkauf" />
           <span>Einkauf</span>
@@ -382,6 +388,19 @@
     </div>
 
     <!-- ===== TAB: STOCK / LAGER ===== -->
+    <div id="tab_board" class="tabPage hidden">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-weight:900; font-size:18px;">📋 Schwarzes Brett</div>
+            <div class="muted small">Infos für alle Mitarbeiter</div>
+          </div>
+          <button class="primary" onclick="openNewPost()">+ Neuer Beitrag</button>
+        </div>
+      </div>
+      <div id="boardPosts" style="margin-top:14px;"></div>
+    </div>
+
     <div id="tab_stock" class="tabPage hidden">
       <div class="panel">
         <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
@@ -1043,5 +1062,57 @@
     </div>
   </div>
 
+  <!-- BOARD POST OVERLAY -->
+  <div id="boardPostOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:500px;">
+      <div class="row" style="justify-content:space-between;">
+        <div style="font-weight:900;">📋 Neuer Beitrag</div>
+        <button class="ghost" onclick="closeBoardPost()">X</button>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="muted small">Titel</div>
+        <input id="boardPostTitle" class="input" placeholder="z.B. Achtung: Gerät defekt" style="width:100%; margin-top:6px;" />
+      </div>
+      <div style="margin-top:12px;">
+        <div class="muted small">Nachricht</div>
+        <textarea id="boardPostBody" class="input" rows="5" placeholder="Nachricht..." style="width:100%; margin-top:6px; resize:vertical;"></textarea>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="muted small">Priorität</div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button class="boardPrioBtn active" id="prioBtnNormal" onclick="selectPrio('normal')">📌 Normal</button>
+          <button class="boardPrioBtn" id="prioBtnImportant" onclick="selectPrio('important')">⚠️ Wichtig</button>
+          <button class="boardPrioBtn" id="prioBtnUrgent" onclick="selectPrio('urgent')">🚨 Dringend</button>
+        </div>
+      </div>
+      <div id="boardPostMsg" class="muted small" style="margin-top:8px;">—</div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="ghost" onclick="closeBoardPost()">Abbrechen</button>
+        <button class="primary" onclick="submitBoardPost()">Veröffentlichen</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Disable right-click
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    // Disable F12, Ctrl+U, Ctrl+S, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+    document.addEventListener('keydown', e => {
+      if (e.key === 'F12') { e.preventDefault(); return false; }
+      if (e.ctrlKey && ['u','U','s','S'].includes(e.key)) { e.preventDefault(); return false; }
+      if (e.ctrlKey && e.shiftKey && ['i','I','j','J','c','C'].includes(e.key)) { e.preventDefault(); return false; }
+    });
+    // Disable drag & drop of page content
+    document.addEventListener('dragstart', e => e.preventDefault());
+    // Blur page if DevTools likely open (window size trick)
+    setInterval(() => {
+      const threshold = 160;
+      if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
+        document.body.style.filter = 'blur(10px)';
+      } else {
+        document.body.style.filter = '';
+      }
+    }, 1000);
+  </script>
 </body>
 </html>
