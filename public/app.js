@@ -1626,7 +1626,7 @@ function renderProducts(){
     box.style.display = "flex";
     box.style.flexWrap = "wrap";
     box.style.alignContent = "start";
-    const regular = list.filter(p=>!p.chickenBox && !p.donutBox);
+    const regular = list.filter(p=>!p.chickenBox && !p.donutBox && !p.germanBox);
     const chicken = list.filter(p=>p.chickenBox && !p.donutBox && !p.germanBox);
 
     if(regular.length){
