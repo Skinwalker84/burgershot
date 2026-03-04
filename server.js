@@ -195,7 +195,13 @@ const DEFAULT_PRODUCTS = [
   { id:"cbox_small",  name:"Chicken Box Small",       price:28,  cat:"Menü", icon:"chicken_small.png",  groupSize:1,  chickenBox:true, desc:"1× Chicken Burger, 1× Nuggets Box, 1 Getränk" },
   { id:"cbox_medium", name:"Chicken Box Medium",      price:55,  cat:"Menü", icon:"chicken_medium.png", groupSize:2,  chickenBox:true, desc:"2× Chicken Burger, 2× Nuggets Box, 2 Getränke" },
   { id:"cbox_large",  name:"Chicken Box Large",       price:135, cat:"Menü", icon:"chicken_large.png",  groupSize:5,  chickenBox:true, desc:"5× Chicken Burger, 5× Nuggets Box, 5 Getränke" },
-  { id:"cbox_xl",     name:"Chicken Box X-tra Large", price:265, cat:"Menü", icon:"chicken_xl.png",     groupSize:10, chickenBox:true, desc:"10× Chicken Burger, 10× Nuggets Box, 10 Getränke" }
+  { id:"cbox_xl",     name:"Chicken Box X-tra Large", price:265, cat:"Menü", icon:"chicken_xl.png",     groupSize:10, chickenBox:true, desc:"10× Chicken Burger, 10× Nuggets Box, 10 Getränke" },
+
+  // Donut Boxes — nur Anzahl, keine Auswahl
+  { id:"dbox_small",  name:"Donut Box Small",       price:30,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
+  { id:"dbox_medium", name:"Donut Box Medium",      price:45,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },
+  { id:"dbox_large",  name:"Donut Box Large",       price:89,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:12, desc:"12× Donut" },
+  { id:"dbox_xl",     name:"Donut Box X-tra Large", price:145, cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:20, desc:"20× Donut" }
 ];
 
 /* =========================
@@ -281,6 +287,7 @@ function normalizeProducts(list) {
     if (p.desc) extra.desc = String(p.desc);
     if (p.groupSize) extra.groupSize = Number(p.groupSize);
     if (p.chickenBox) extra.chickenBox = true;
+    if (p.donutBox) extra.donutBox = true;
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
@@ -295,6 +302,7 @@ function normalizeProducts(list) {
     if (dp.desc) extra.desc = String(dp.desc);
     if (dp.groupSize) extra.groupSize = Number(dp.groupSize);
     if (dp.chickenBox) extra.chickenBox = true;
+    if (dp.donutBox) extra.donutBox = true;
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {

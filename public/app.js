@@ -741,7 +741,7 @@ async function hydrateProducts(){
     if(res.ok){
       const data = await res.json().catch(()=>({}));
       if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false }));
         saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
@@ -824,7 +824,7 @@ async function mgmtSaveProducts(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
       if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false }));
       }else{
         PRODUCTS = list;
       }
@@ -1626,8 +1626,8 @@ function renderProducts(){
     box.style.display = "flex";
     box.style.flexWrap = "wrap";
     box.style.alignContent = "start";
-    const regular = list.filter(p=>!p.chickenBox);
-    const chicken = list.filter(p=>p.chickenBox);
+    const regular = list.filter(p=>!p.chickenBox && !p.donutBox);
+    const chicken = list.filter(p=>p.chickenBox && !p.donutBox);
 
     if(regular.length){
       const row1 = document.createElement("div");
@@ -1643,6 +1643,16 @@ function renderProducts(){
       row2.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
       box.appendChild(row2);
       renderProductList(chicken, row2);
+    }
+    const donuts = list.filter(p=>p.donutBox);
+    if(donuts.length){
+      const divider2 = document.createElement("div");
+      divider2.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
+      box.appendChild(divider2);
+      const row3 = document.createElement("div");
+      row3.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
+      box.appendChild(row3);
+      renderProductList(donuts, row3);
     }
     return;
   }
@@ -1778,6 +1788,15 @@ function pulseCart(){
 /* Cart */
 function addToCart(p){
   if(String(p?.cat||p?.category||"")==="Menü"){
+    if(p.donutBox){
+      // No selection needed — just add qty of donuts
+      const size = p.groupSize || 1;
+      const displayName = `${p.name} | 🍩 ${size}× Donut`;
+      cart.push({ name: displayName, price: p.price, qty:1, productId: p.id,
+        components:[{ productId:"donut", qty: size }] });
+      renderCart(); saveCartsDebounced(); sendPresencePing(); renderPresenceWarning();
+      return;
+    }
     openGroupMenu(p);
     return;
   }
