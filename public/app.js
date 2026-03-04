@@ -1597,7 +1597,10 @@ function getIconForProduct(p){
   const cat = String(p?.cat||p?.category||"");
   const lower = name.toLowerCase();
 
-  // 1) exact match
+  // 0) product has its own icon field (Gruppen-Menü etc.)
+  if(p.icon) return `/icons/${p.icon}`;
+
+  // 1) exact match in PRODUCT_ICON map
   if(PRODUCT_ICON[name]) return `/icons/${PRODUCT_ICON[name]}`;
 
   // 2) case-insensitive match
@@ -1605,29 +1608,9 @@ function getIconForProduct(p){
   const ciMatch = keys.find(k => k.toLowerCase() === lower);
   if(ciMatch) return `/icons/${PRODUCT_ICON[ciMatch]}`;
 
-  // 3) partial match (name contains key or key contains name)
+  // 3) partial match
   const partialMatch = keys.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
   if(partialMatch) return `/icons/${PRODUCT_ICON[partialMatch]}`;
-
-  // 4) Gruppen-Menü: use dedicated icons
-  if(cat === "Gruppen-Menü"){
-    if(p.icon) return `/icons/${p.icon}`;
-    const idMap = { "menu_small":"small.png", "menu_medium":"medium.png", "menu_large":"large.png", "menu_xlarge":"x-tra_large.png" };
-    if(idMap[p.id]) return `/icons/${idMap[p.id]}`;
-  }
-
-  // 5) Menü: reuse burger icons
-  if(cat === "Menü"){
-    const burgerNames = keys.filter(k => {
-      const c = (PRODUCTS||[]).find(x => x.name===k)?.cat;
-      return c === "Burger";
-    });
-    for(const bn of burgerNames){
-      if(lower.includes(bn.toLowerCase())) return `/icons/${PRODUCT_ICON[bn]}`;
-    }
-    const fallback = PRODUCT_ICON["The Bleeder"] || PRODUCT_ICON[burgerNames[0]];
-    if(fallback) return `/icons/${fallback}`;
-  }
 
   return "";
 }
