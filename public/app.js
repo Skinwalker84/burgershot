@@ -1924,7 +1924,7 @@ function openGroupMenu(p){
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else {
     const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
-    const fries   = (PRODUCTS||[]).filter(x => x.id === "fries" || x.id === "cheesy_fries");
+    const fries   = (PRODUCTS||[]).filter(x => x.id === "fries" || x.id === "cheesy_fries" || x.id === "onion_rings");
     document.getElementById("groupBurgerSection").style.display = "";
     document.getElementById("groupFriesSection").style.display = "";
     renderGroupSection("groupBurgerList", burgers, "burgers", size);
