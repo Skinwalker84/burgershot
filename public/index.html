@@ -137,7 +137,6 @@
           <button class="catBtn" onclick="setCategory('Süßes', this)">DESSERT</button>
           <button class="catBtn" onclick="setCategory('Getränke', this)">DRINKS</button>
           <button class="catBtn" onclick="setCategory('Menü', this)">MENÜ</button>
-          <button class="catBtn" onclick="setCategory('Gruppen-Menü', this)">GRUPPEN</button>
         </div>
     </div>
 
@@ -1087,33 +1086,40 @@
         </div>
       </div>
       <div id="boardPostMsg" class="muted small" style="margin-top:8px;">—</div>
+      <!-- ===== GRUPPEN-MENÜ BUILDER ===== -->
+  <div id="groupMenuOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:560px; max-height:90vh; overflow-y:auto;">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:900; font-size:18px;" id="groupMenuTitle">Menü zusammenstellen</div>
+          <div class="muted small" id="groupMenuDesc">—</div>
+        </div>
+        <button class="ghost" onclick="closeGroupMenu()">X</button>
+      </div>
+
+      <!-- Burger -->
+      <div style="margin-top:16px;">
+        <div style="font-weight:900; margin-bottom:8px;">🍔 Burger <span class="muted small" id="groupBurgerCounter">0 / 0</span></div>
+        <div id="groupBurgerList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+
+      <!-- Fries -->
+      <div style="margin-top:16px;">
+        <div style="font-weight:900; margin-bottom:8px;">🍟 Fries / Cheesy Fries <span class="muted small" id="groupFriesCounter">0 / 0</span></div>
+        <div id="groupFriesList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+
+      <!-- Getränke -->
+      <div style="margin-top:16px;">
+        <div style="font-weight:900; margin-bottom:8px;">🥤 Getränke <span class="muted small" id="groupDrinkCounter">0 / 0</span></div>
+        <div id="groupDrinkList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+
+      <div id="groupMenuMsg" class="muted small" style="margin-top:12px; min-height:18px;"></div>
+
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-        <button class="ghost" onclick="closeBoardPost()">Abbrechen</button>
-        <button class="primary" onclick="submitBoardPost()">Veröffentlichen</button>
+        <button class="ghost" onclick="closeGroupMenu()">Abbrechen</button>
+        <button class="primary" id="groupMenuConfirmBtn" onclick="confirmGroupMenu()" disabled>In den Warenkorb</button>
       </div>
     </div>
   </div>
-
-  <script>
-    // Disable right-click
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    // Disable F12, Ctrl+U, Ctrl+S, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
-    document.addEventListener('keydown', e => {
-      if (e.key === 'F12') { e.preventDefault(); return false; }
-      if (e.ctrlKey && ['u','U','s','S'].includes(e.key)) { e.preventDefault(); return false; }
-      if (e.ctrlKey && e.shiftKey && ['i','I','j','J','c','C'].includes(e.key)) { e.preventDefault(); return false; }
-    });
-    // Disable drag & drop of page content
-    document.addEventListener('dragstart', e => e.preventDefault());
-    // Blur page if DevTools likely open (window size trick)
-    setInterval(() => {
-      const threshold = 160;
-      if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
-        document.body.style.filter = 'blur(10px)';
-      } else {
-        document.body.style.filter = '';
-      }
-    }, 1000);
-  </script>
-</body>
-</html>
