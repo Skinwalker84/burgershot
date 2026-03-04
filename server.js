@@ -193,9 +193,9 @@ const DEFAULT_PRODUCTS = [
 
   // Chicken Boxes — fixer Chicken Burger + Nuggets, nur Getränk wählbar
   { id:"cbox_small",  name:"Chicken Box Small",       price:28,  cat:"Menü", icon:"chicken_small.png",  groupSize:1,  chickenBox:true, desc:"1× Chicken Burger, 1× Nuggets Box, 1 Getränk" },
-  { id:"cbox_medium", name:"Chicken Box Medium",      price:54,  cat:"Menü", icon:"chicken_medium.png", groupSize:2,  chickenBox:true, desc:"2× Chicken Burger, 2× Nuggets Box, 2 Getränke" },
-  { id:"cbox_large",  name:"Chicken Box Large",       price:129, cat:"Menü", icon:"chicken_large.png",  groupSize:5,  chickenBox:true, desc:"5× Chicken Burger, 5× Nuggets Box, 5 Getränke" },
-  { id:"cbox_xl",     name:"Chicken Box X-tra Large", price:245, cat:"Menü", icon:"chicken_xl.png",     groupSize:10, chickenBox:true, desc:"10× Chicken Burger, 10× Nuggets Box, 10 Getränke" }
+  { id:"cbox_medium", name:"Chicken Box Medium",      price:55,  cat:"Menü", icon:"chicken_medium.png", groupSize:2,  chickenBox:true, desc:"2× Chicken Burger, 2× Nuggets Box, 2 Getränke" },
+  { id:"cbox_large",  name:"Chicken Box Large",       price:135, cat:"Menü", icon:"chicken_large.png",  groupSize:5,  chickenBox:true, desc:"5× Chicken Burger, 5× Nuggets Box, 5 Getränke" },
+  { id:"cbox_xl",     name:"Chicken Box X-tra Large", price:265, cat:"Menü", icon:"chicken_xl.png",     groupSize:10, chickenBox:true, desc:"10× Chicken Burger, 10× Nuggets Box, 10 Getränke" }
 ];
 
 /* =========================

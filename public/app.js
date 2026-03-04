@@ -1621,28 +1621,34 @@ function renderProducts(){
   box.innerHTML="";
   let list = PRODUCTS.filter(p=>p.cat===currentCategory);
 
-  // For Menü: split into regular menus (top row) and chicken boxes (bottom row)
+  // For Menü: regular menus top row, chicken boxes second row
   if(currentCategory === "Menü" && list.some(p=>p.chickenBox)){
+    box.style.display = "flex";
+    box.style.flexWrap = "wrap";
+    box.style.alignContent = "start";
     const regular = list.filter(p=>!p.chickenBox);
     const chicken = list.filter(p=>p.chickenBox);
 
     if(regular.length){
       const row1 = document.createElement("div");
-      row1.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;";
+      row1.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
       box.appendChild(row1);
       renderProductList(regular, row1);
     }
     if(chicken.length){
       const divider = document.createElement("div");
-      divider.style.cssText = "width:100%; border-top:1px solid var(--border); margin:4px 0 10px;";
+      divider.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px; flex-basis:100%;";
       box.appendChild(divider);
       const row2 = document.createElement("div");
-      row2.style.cssText = "display:flex; flex-wrap:wrap; gap:8px;";
+      row2.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
       box.appendChild(row2);
       renderProductList(chicken, row2);
     }
     return;
   }
+  box.style.display = "";
+  box.style.flexWrap = "";
+  box.style.alignContent = "";
   renderProductList(list, box);
 }
 
