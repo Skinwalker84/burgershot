@@ -277,14 +277,21 @@ function normalizeProducts(list) {
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
-  // Ensure defaults always exist (prevents accidental deletion e.g. Menüs)
+  // Ensure defaults always exist and always have up-to-date extra fields
   const map = new Map(out.map(p => [p.id, p]));
   for (const dp of DEFAULT_PRODUCTS) {
     if (!dp || typeof dp !== "object") continue;
     const id = String(dp.id || "").trim();
     if (!id) continue;
+    const extra = {};
+    if (dp.icon) extra.icon = String(dp.icon);
+    if (dp.desc) extra.desc = String(dp.desc);
+    if (dp.groupSize) extra.groupSize = Number(dp.groupSize);
     if (!map.has(id)) {
-      map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0) });
+      map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
+    } else {
+      // Always sync extra fields from defaults (groupSize, icon, desc)
+      Object.assign(map.get(id), extra);
     }
   }
   // Remove products that no longer exist in DEFAULT_PRODUCTS (e.g. renamed/deleted defaults)
