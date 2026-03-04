@@ -1986,7 +1986,8 @@ function groupAdjust(key, id, name, delta){
 }
 
 function updateGroupCounters(size){
-  const isChicken = _groupMenuProduct?.chickenBox || _groupMenuProduct?.germanBox;
+  const isFixedMenu = _groupMenuProduct?.chickenBox || _groupMenuProduct?.germanBox;
+  const isChicken = isFixedMenu;
   const b = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
   const f = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
   const d = Object.values(_groupSelections.drinks).reduce((s,v)=>s+v,0);
@@ -2015,7 +2016,7 @@ function confirmGroupMenu(){
   const p = _groupMenuProduct;
   const size = p.groupSize || 1;
 
-  const isChicken = p.chickenBox || p.germanBox;
+  const isFixedMenu = p.chickenBox || p.germanBox;
   // Build components for inventory deduction
   const components = [];
   for(const [id, qty] of Object.entries(_groupSelections.burgers)) if(qty>0) components.push({productId:id, qty});
@@ -2028,7 +2029,7 @@ function confirmGroupMenu(){
   }).join(", ");
 
   let displayName;
-  if(isChicken){
+  if(p.chickenBox){
     displayName = `${p.name} | 🍗 ${size}× The Chicken | 🍗 ${size}× Chicken Nuggets | 🥤 ${drinkNames}`;
   } else if(p.germanBox){
     displayName = `${p.name} | 🇩🇪 ${size}× The German | 🥗 ${size}× Coleslaw | 🥤 ${drinkNames}`;
