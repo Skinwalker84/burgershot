@@ -270,7 +270,11 @@ function normalizeProducts(list) {
     if (!Number.isFinite(price) || price < 0) continue;
     if (seen.has(id)) continue;
     seen.add(id);
-    out.push({ id, name, cat, price: Math.round(price) });
+    const extra = {};
+    if (p.icon) extra.icon = String(p.icon);
+    if (p.desc) extra.desc = String(p.desc);
+    if (p.groupSize) extra.groupSize = Number(p.groupSize);
+    out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
   // Ensure defaults always exist (prevents accidental deletion e.g. Menüs)
