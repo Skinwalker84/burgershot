@@ -741,7 +741,7 @@ async function hydrateProducts(){
     if(res.ok){
       const data = await res.json().catch(()=>({}));
       if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0 }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null }));
         saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
@@ -824,7 +824,7 @@ async function mgmtSaveProducts(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
       if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0 }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null }));
       }else{
         PRODUCTS = list;
       }
@@ -1609,7 +1609,14 @@ function getIconForProduct(p){
   const partialMatch = keys.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
   if(partialMatch) return `/icons/${PRODUCT_ICON[partialMatch]}`;
 
-  // 4) Menü: reuse burger icons
+  // 4) Gruppen-Menü: use dedicated icons
+  if(cat === "Gruppen-Menü"){
+    if(p.icon) return `/icons/${p.icon}`;
+    const idMap = { "menu_small":"small.png", "menu_medium":"medium.png", "menu_large":"large.png", "menu_xlarge":"x-tra_large.png" };
+    if(idMap[p.id]) return `/icons/${idMap[p.id]}`;
+  }
+
+  // 5) Menü: reuse burger icons
   if(cat === "Menü"){
     const burgerNames = keys.filter(k => {
       const c = (PRODUCTS||[]).find(x => x.name===k)?.cat;
@@ -1687,6 +1694,12 @@ function renderProducts(){
     pr.className='dispPrice';
     pr.textContent=money(p.price);
     meta.appendChild(n);
+    if(p.desc){
+      const desc=document.createElement('div');
+      desc.style.cssText='font-size:10px; color:var(--muted); line-height:1.3; margin-top:2px; text-align:center;';
+      desc.textContent=p.desc;
+      meta.appendChild(desc);
+    }
     meta.appendChild(pr);
 
     wrap.appendChild(imgWrap);

@@ -191,7 +191,13 @@ const DEFAULT_PRODUCTS = [
   { id:"menu_chicken", name:"Menü: The Chicken", price:24, cat:"Menü" },
   { id:"menu_vegan", name:"Menü: Vegan Burger", price:22, cat:"Menü" },
   { id:"menu_chozzo", name:"Menü: The Chozzo", price:24, cat:"Menü" },
-  { id:"menu_german", name:"Menü: The German", price:28, cat:"Menü" }
+  { id:"menu_german", name:"Menü: The German", price:28, cat:"Menü" },
+
+  // Gruppen-Menüs
+  { id:"menu_small",       name:"Small Menü",       price:28,  cat:"Gruppen-Menü", icon:"small.png",        desc:"1 Burger, 1 Fries/Cheesy Fries, 1 Getränk" },
+  { id:"menu_medium",      name:"Medium Menü",      price:54,  cat:"Gruppen-Menü", icon:"medium.png",       desc:"2 Burger, 2 Fries/Cheesy Fries, 2 Getränke" },
+  { id:"menu_large",       name:"Large Menü",       price:129, cat:"Gruppen-Menü", icon:"large.png",        desc:"5 Burger, 5 Fries/Cheesy Fries, 5 Getränke" },
+  { id:"menu_xlarge",      name:"X-tra Large Menü", price:245, cat:"Gruppen-Menü", icon:"x-tra_large.png",  desc:"10 Burger, 10 Fries/Cheesy Fries, 10 Getränke" }
 ];
 
 /* =========================
