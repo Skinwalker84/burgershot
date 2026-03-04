@@ -189,7 +189,7 @@ const DEFAULT_PRODUCTS = [
   { id:"menu_small",   name:"Small Menü",       price:28,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Fries/Cheesy Fries & Getränk" },
   { id:"menu_medium",  name:"Medium Menü",      price:54,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Fries/Cheesy Fries & Getränk" },
   { id:"menu_large",   name:"Large Menü",       price:129, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_xlarge",  name:"X-tra Large Menü", price:245, cat:"Menü", icon:"x-tra_large.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" }
+  { id:"menu_xlarge",  name:"X-tra Large Menü", price:245, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" }
 ];
 
 /* =========================
