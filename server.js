@@ -189,7 +189,13 @@ const DEFAULT_PRODUCTS = [
   { id:"menu_small",   name:"Small Menü",       price:28,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Fries/Cheesy Fries & Getränk" },
   { id:"menu_medium",  name:"Medium Menü",      price:54,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Fries/Cheesy Fries & Getränk" },
   { id:"menu_large",   name:"Large Menü",       price:129, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_xlarge",  name:"X-tra Large Menü", price:245, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" }
+  { id:"menu_xlarge",  name:"X-tra Large Menü", price:245, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" },
+
+  // Chicken Boxes — fixer Chicken Burger + Nuggets, nur Getränk wählbar
+  { id:"cbox_small",  name:"Chicken Box Small",       price:28,  cat:"Menü", icon:"chicken_small.png",  groupSize:1,  chickenBox:true, desc:"1× Chicken Burger, 1× Nuggets Box, 1 Getränk" },
+  { id:"cbox_medium", name:"Chicken Box Medium",      price:54,  cat:"Menü", icon:"chicken_medium.png", groupSize:2,  chickenBox:true, desc:"2× Chicken Burger, 2× Nuggets Box, 2 Getränke" },
+  { id:"cbox_large",  name:"Chicken Box Large",       price:129, cat:"Menü", icon:"chicken_large.png",  groupSize:5,  chickenBox:true, desc:"5× Chicken Burger, 5× Nuggets Box, 5 Getränke" },
+  { id:"cbox_xl",     name:"Chicken Box X-tra Large", price:245, cat:"Menü", icon:"chicken_xl.png",     groupSize:10, chickenBox:true, desc:"10× Chicken Burger, 10× Nuggets Box, 10 Getränke" }
 ];
 
 /* =========================
@@ -274,6 +280,7 @@ function normalizeProducts(list) {
     if (p.icon) extra.icon = String(p.icon);
     if (p.desc) extra.desc = String(p.desc);
     if (p.groupSize) extra.groupSize = Number(p.groupSize);
+    if (p.chickenBox) extra.chickenBox = true;
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
@@ -287,6 +294,7 @@ function normalizeProducts(list) {
     if (dp.icon) extra.icon = String(dp.icon);
     if (dp.desc) extra.desc = String(dp.desc);
     if (dp.groupSize) extra.groupSize = Number(dp.groupSize);
+    if (dp.chickenBox) extra.chickenBox = true;
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {

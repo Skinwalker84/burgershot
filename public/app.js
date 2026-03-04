@@ -741,7 +741,7 @@ async function hydrateProducts(){
     if(res.ok){
       const data = await res.json().catch(()=>({}));
       if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false }));
         saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
@@ -824,7 +824,7 @@ async function mgmtSaveProducts(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
       if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false }));
       }else{
         PRODUCTS = list;
       }
@@ -1619,7 +1619,34 @@ function renderProducts(){
   const box=document.getElementById("products");
   if(!box) return;
   box.innerHTML="";
-  const list = PRODUCTS.filter(p=>p.cat===currentCategory);
+  let list = PRODUCTS.filter(p=>p.cat===currentCategory);
+
+  // For Menü: split into regular menus (top row) and chicken boxes (bottom row)
+  if(currentCategory === "Menü" && list.some(p=>p.chickenBox)){
+    const regular = list.filter(p=>!p.chickenBox);
+    const chicken = list.filter(p=>p.chickenBox);
+
+    if(regular.length){
+      const row1 = document.createElement("div");
+      row1.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;";
+      box.appendChild(row1);
+      renderProductList(regular, row1);
+    }
+    if(chicken.length){
+      const divider = document.createElement("div");
+      divider.style.cssText = "width:100%; border-top:1px solid var(--border); margin:4px 0 10px;";
+      box.appendChild(divider);
+      const row2 = document.createElement("div");
+      row2.style.cssText = "display:flex; flex-wrap:wrap; gap:8px;";
+      box.appendChild(row2);
+      renderProductList(chicken, row2);
+    }
+    return;
+  }
+  renderProductList(list, box);
+}
+
+function renderProductList(list, box){
   list.forEach(p=>{
     const wrap=document.createElement("div");
     wrap.className="disp";
@@ -1861,14 +1888,24 @@ function openGroupMenu(p){
   document.getElementById("groupMenuTitle").innerText = p.name + " — " + money(p.price);
   document.getElementById("groupMenuDesc").innerText = p.desc || "";
 
-  // Burger list
-  const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
-  const fries   = (PRODUCTS||[]).filter(x => x.id === "fries" || x.id === "cheesy_fries");
-  const drinks  = (PRODUCTS||[]).filter(x => x.cat === "Getränke");
+  const drinks = (PRODUCTS||[]).filter(x => x.cat === "Getränke");
 
-  renderGroupSection("groupBurgerList", burgers, "burgers", size);
-  renderGroupSection("groupFriesList",  fries,   "fries",   size);
-  renderGroupSection("groupDrinkList",  drinks,  "drinks",  size);
+  if(p.chickenBox){
+    // Pre-fill burger + nuggets, only show drinks
+    _groupSelections.burgers["chicken"] = size;
+    _groupSelections.fries["chicken_nuggets"] = size;
+    document.getElementById("groupBurgerSection").style.display = "none";
+    document.getElementById("groupFriesSection").style.display = "none";
+    renderGroupSection("groupDrinkList", drinks, "drinks", size);
+  } else {
+    const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
+    const fries   = (PRODUCTS||[]).filter(x => x.id === "fries" || x.id === "cheesy_fries");
+    document.getElementById("groupBurgerSection").style.display = "";
+    document.getElementById("groupFriesSection").style.display = "";
+    renderGroupSection("groupBurgerList", burgers, "burgers", size);
+    renderGroupSection("groupFriesList",  fries,   "fries",   size);
+    renderGroupSection("groupDrinkList",  drinks,  "drinks",  size);
+  }
 
   updateGroupCounters(size);
   document.getElementById("groupMenuOverlay").classList.remove("hidden");
@@ -1903,16 +1940,23 @@ function groupAdjust(key, id, name, delta){
 }
 
 function updateGroupCounters(size){
+  const isChicken = _groupMenuProduct?.chickenBox;
   const b = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
   const f = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
   const d = Object.values(_groupSelections.drinks).reduce((s,v)=>s+v,0);
-  document.getElementById("groupBurgerCounter").innerText = `${b} / ${size}`;
-  document.getElementById("groupFriesCounter").innerText  = `${f} / ${size}`;
-  document.getElementById("groupDrinkCounter").innerText  = `${d} / ${size}`;
-  const ok = b===size && f===size && d===size;
+  if(!isChicken){
+    document.getElementById("groupBurgerCounter").innerText = `${b} / ${size}`;
+    document.getElementById("groupFriesCounter").innerText  = `${f} / ${size}`;
+  }
+  document.getElementById("groupDrinkCounter").innerText = `${d} / ${size}`;
+  const ok = isChicken ? d===size : (b===size && f===size && d===size);
   document.getElementById("groupMenuConfirmBtn").disabled = !ok;
   const msg = document.getElementById("groupMenuMsg");
-  if(msg) msg.innerText = ok ? "✅ Auswahl vollständig" : `Noch: ${size-b} Burger, ${size-f} Fries, ${size-d} Getränke`;
+  if(msg){
+    if(ok) msg.innerText = "✅ Auswahl vollständig";
+    else if(isChicken) msg.innerText = `Noch: ${size-d} Getränke`;
+    else msg.innerText = `Noch: ${size-b} Burger, ${size-f} Fries, ${size-d} Getränke`;
+  }
 }
 
 function closeGroupMenu(){
@@ -1925,27 +1969,32 @@ function confirmGroupMenu(){
   const p = _groupMenuProduct;
   const size = p.groupSize || 1;
 
+  const isChicken = p.chickenBox;
   // Build components for inventory deduction
   const components = [];
   for(const [id, qty] of Object.entries(_groupSelections.burgers)) if(qty>0) components.push({productId:id, qty});
   for(const [id, qty] of Object.entries(_groupSelections.fries))   if(qty>0) components.push({productId:id, qty});
   for(const [id, qty] of Object.entries(_groupSelections.drinks))  if(qty>0) components.push({productId:id, qty});
 
-  // Build readable name
-  const burgerNames = Object.entries(_groupSelections.burgers).filter(([,q])=>q>0).map(([id,q])=>{
-    const prod = (PRODUCTS||[]).find(x=>x.id===id);
-    return (q>1?q+"× ":"")+(prod?.name||id);
-  }).join(", ");
-  const friesNames = Object.entries(_groupSelections.fries).filter(([,q])=>q>0).map(([id,q])=>{
-    const prod = (PRODUCTS||[]).find(x=>x.id===id);
-    return (q>1?q+"× ":"")+(prod?.name||id);
-  }).join(", ");
   const drinkNames = Object.entries(_groupSelections.drinks).filter(([,q])=>q>0).map(([id,q])=>{
     const prod = (PRODUCTS||[]).find(x=>x.id===id);
     return (q>1?q+"× ":"")+(prod?.name||id);
   }).join(", ");
 
-  const displayName = `${p.name} | 🍔 ${burgerNames} | 🍟 ${friesNames} | 🥤 ${drinkNames}`;
+  let displayName;
+  if(isChicken){
+    displayName = `${p.name} | 🍗 ${size}× The Chicken | 🍗 ${size}× Chicken Nuggets | 🥤 ${drinkNames}`;
+  } else {
+    const burgerNames = Object.entries(_groupSelections.burgers).filter(([,q])=>q>0).map(([id,q])=>{
+      const prod = (PRODUCTS||[]).find(x=>x.id===id);
+      return (q>1?q+"× ":"")+(prod?.name||id);
+    }).join(", ");
+    const friesNames = Object.entries(_groupSelections.fries).filter(([,q])=>q>0).map(([id,q])=>{
+      const prod = (PRODUCTS||[]).find(x=>x.id===id);
+      return (q>1?q+"× ":"")+(prod?.name||id);
+    }).join(", ");
+    displayName = `${p.name} | 🍔 ${burgerNames} | 🍟 ${friesNames} | 🥤 ${drinkNames}`;
+  }
   cart.push({ name: displayName, price: p.price, qty:1, productId: p.id, components });
   closeGroupMenu();
   renderCart(); saveCartsDebounced();
