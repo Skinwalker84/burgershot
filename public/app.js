@@ -741,7 +741,7 @@ async function hydrateProducts(){
     if(res.ok){
       const data = await res.json().catch(()=>({}));
       if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false }));
         saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
@@ -824,7 +824,7 @@ async function mgmtSaveProducts(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
       if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false }));
       }else{
         PRODUCTS = list;
       }
@@ -1627,7 +1627,7 @@ function renderProducts(){
     box.style.flexWrap = "wrap";
     box.style.alignContent = "start";
     const regular = list.filter(p=>!p.chickenBox && !p.donutBox);
-    const chicken = list.filter(p=>p.chickenBox && !p.donutBox);
+    const chicken = list.filter(p=>p.chickenBox && !p.donutBox && !p.germanBox);
 
     if(regular.length){
       const row1 = document.createElement("div");
@@ -1644,15 +1644,25 @@ function renderProducts(){
       box.appendChild(row2);
       renderProductList(chicken, row2);
     }
-    const donuts = list.filter(p=>p.donutBox);
-    if(donuts.length){
+    const german = list.filter(p=>p.germanBox);
+    if(german.length){
       const divider2 = document.createElement("div");
       divider2.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
       box.appendChild(divider2);
       const row3 = document.createElement("div");
       row3.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
       box.appendChild(row3);
-      renderProductList(donuts, row3);
+      renderProductList(german, row3);
+    }
+    const donuts = list.filter(p=>p.donutBox);
+    if(donuts.length){
+      const divider3 = document.createElement("div");
+      divider3.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
+      box.appendChild(divider3);
+      const row4 = document.createElement("div");
+      row4.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
+      box.appendChild(row4);
+      renderProductList(donuts, row4);
     }
     return;
   }
@@ -1788,6 +1798,10 @@ function pulseCart(){
 /* Cart */
 function addToCart(p){
   if(String(p?.cat||p?.category||"")==="Menü"){
+    if(p.germanBox){
+      openGroupMenu(p);
+      return;
+    }
     if(p.donutBox){
       // No selection needed — just add qty of donuts
       const size = p.groupSize || 1;
@@ -1922,6 +1936,13 @@ function openGroupMenu(p){
     document.getElementById("groupBurgerSection").style.display = "none";
     document.getElementById("groupFriesSection").style.display = "none";
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
+  } else if(p.germanBox){
+    // Pre-fill german + coleslaw, only show drinks
+    _groupSelections.burgers["german"] = size;
+    _groupSelections.fries["coleslaw"] = size;
+    document.getElementById("groupBurgerSection").style.display = "none";
+    document.getElementById("groupFriesSection").style.display = "none";
+    renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else {
     const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
     const fries   = (PRODUCTS||[]).filter(x => x.id === "fries" || x.id === "cheesy_fries" || x.id === "onion_rings");
@@ -1965,7 +1986,7 @@ function groupAdjust(key, id, name, delta){
 }
 
 function updateGroupCounters(size){
-  const isChicken = _groupMenuProduct?.chickenBox;
+  const isChicken = _groupMenuProduct?.chickenBox || _groupMenuProduct?.germanBox;
   const b = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
   const f = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
   const d = Object.values(_groupSelections.drinks).reduce((s,v)=>s+v,0);
@@ -1994,7 +2015,7 @@ function confirmGroupMenu(){
   const p = _groupMenuProduct;
   const size = p.groupSize || 1;
 
-  const isChicken = p.chickenBox;
+  const isChicken = p.chickenBox || p.germanBox;
   // Build components for inventory deduction
   const components = [];
   for(const [id, qty] of Object.entries(_groupSelections.burgers)) if(qty>0) components.push({productId:id, qty});
@@ -2009,6 +2030,8 @@ function confirmGroupMenu(){
   let displayName;
   if(isChicken){
     displayName = `${p.name} | 🍗 ${size}× The Chicken | 🍗 ${size}× Chicken Nuggets | 🥤 ${drinkNames}`;
+  } else if(p.germanBox){
+    displayName = `${p.name} | 🇩🇪 ${size}× The German | 🥗 ${size}× Coleslaw | 🥤 ${drinkNames}`;
   } else {
     const burgerNames = Object.entries(_groupSelections.burgers).filter(([,q])=>q>0).map(([id,q])=>{
       const prod = (PRODUCTS||[]).find(x=>x.id===id);
