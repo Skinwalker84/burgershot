@@ -1016,7 +1016,7 @@ app.delete("/board/:id", requireAuth, (req, res) => {
 /* =========================
    CASH TRANSFER
    ========================= */
-app.post("/cash-transferred", requireAuth, requireBoss, (req, res) => {
+app.post("/cash-transferred", requireAuth, requireBossOrManager, (req, res) => {
   const { day, employeeUsername } = req.body || {};
   if (!day || !employeeUsername) return res.status(400).json({ success: false, message: "day und employeeUsername erforderlich." });
   // Mark all isCash sales for this employee on this day as transferred
