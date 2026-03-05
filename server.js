@@ -979,7 +979,9 @@ app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
    SCHWARZES BRETT
    ========================= */
 app.get("/board", requireAuth, (req, res) => {
-  res.json({ success: true, posts: db.board || [] });
+  const user = db.users.find(u => u.username === req.user.username);
+  const lastRead = user?.boardLastRead || null;
+  res.json({ success: true, posts: db.board || [], lastRead });
 });
 
 app.post("/board", requireAuth, (req, res) => {
@@ -998,6 +1000,12 @@ app.post("/board", requireAuth, (req, res) => {
   db.board.unshift(post);
   saveDB(db);
   res.json({ success: true, post });
+});
+
+app.post("/board/mark-read", requireAuth, (req, res) => {
+  const user = db.users.find(u => u.username === req.user.username);
+  if(user) { user.boardLastRead = new Date().toISOString(); saveDB(db); }
+  res.json({ success: true });
 });
 
 app.delete("/board/:id", requireAuth, (req, res) => {
