@@ -1027,13 +1027,14 @@ function setBoardLastSeen(ts){ localStorage.setItem(getBoardSeenKey(), ts); }
 async function loadBoard(fromPoll=false){
   const container = document.getElementById("boardPosts");
   if(!container) return;
+  // Capture BEFORE async fetch — user might switch tabs while fetching
+  const wasOpen = !document.getElementById("tab_board")?.classList.contains("hidden");
   const res = await fetch("/board").catch(()=>null);
   const data = res ? await res.json().catch(()=>({})) : {};
   const posts = data.posts || [];
 
-  // Only update badge when board tab is NOT open
-  const boardTabOpen = !document.getElementById("tab_board")?.classList.contains("hidden");
-  if(!boardTabOpen){
+  // Only update badge if board was NOT open when we started loading
+  if(!wasOpen){
     const badge = document.getElementById("boardBadge");
     if(badge){
       const lastSeen = getBoardLastSeen();
@@ -1062,17 +1063,10 @@ async function loadBoard(fromPoll=false){
   `).join("");
 }
 
-// Poll for new posts every 60s
+// Refresh board content if tab is open every 60s (no badge update)
 setInterval(() => {
-  if(document.getElementById("tab_board") && !document.getElementById("tab_board").classList.contains("hidden")){
-    loadBoard();
-  } else {
-    // Check badge silently
-    fetch("/board").then(r=>r.json()).then(data => {
-      const badge = document.getElementById("boardBadge");
-      if(badge) badge.style.display = (data.posts||[]).length > _lastBoardCount ? "" : "none";
-    }).catch(()=>{});
-  }
+  const boardOpen = document.getElementById("tab_board") && !document.getElementById("tab_board").classList.contains("hidden");
+  if(boardOpen) loadBoard();
 }, 60000);
 
 /* ===== MITARBEITER-UMSATZ & BESTSELLER ===== */
