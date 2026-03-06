@@ -754,7 +754,7 @@ async function hydrateProducts(){
     if(res.ok){
       const data = await res.json().catch(()=>({}));
       if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false, noSidesBox:p.noSidesBox||false }));
         saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
@@ -837,7 +837,7 @@ async function mgmtSaveProducts(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
       if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false, noSidesBox:p.noSidesBox||false }));
       }else{
         PRODUCTS = list;
       }
@@ -1644,7 +1644,7 @@ function renderProducts(){
     box.style.display = "flex";
     box.style.flexWrap = "wrap";
     box.style.alignContent = "start";
-    const regular = list.filter(p=>!p.chickenBox && !p.donutBox && !p.germanBox);
+    const regular = list.filter(p=>!p.chickenBox && !p.donutBox && !p.germanBox && !p.noSidesBox);
     const chicken = list.filter(p=>p.chickenBox && !p.donutBox && !p.germanBox);
 
     if(regular.length){
@@ -1652,6 +1652,16 @@ function renderProducts(){
       row1.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
       box.appendChild(row1);
       renderProductList(regular, row1);
+    }
+    const noSides = list.filter(p=>p.noSidesBox);
+    if(noSides.length){
+      const dividerNS = document.createElement("div");
+      dividerNS.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
+      box.appendChild(dividerNS);
+      const rowNS = document.createElement("div");
+      rowNS.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
+      box.appendChild(rowNS);
+      renderProductList(noSides, rowNS);
     }
     if(chicken.length){
       const divider = document.createElement("div");
@@ -1816,7 +1826,7 @@ function pulseCart(){
 /* Cart */
 function addToCart(p){
   if(String(p?.cat||p?.category||"")==="Menü"){
-    if(p.germanBox){
+    if(p.germanBox || p.noSidesBox){
       openGroupMenu(p);
       return;
     }
@@ -1954,6 +1964,14 @@ function openGroupMenu(p){
     document.getElementById("groupBurgerSection").style.display = "none";
     document.getElementById("groupFriesSection").style.display = "none";
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
+  } else if(p.noSidesBox){
+    // Only burger and drink selection
+    document.getElementById("groupBurgerSection").style.display = "";
+    document.getElementById("groupFriesSection").style.display = "none";
+    _groupSelections.fries = { "__none": 0 }; // skip fries requirement
+    const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
+    renderGroupSection("groupBurgerList", burgers, "burgers", size);
+    renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else if(p.germanBox){
     // Pre-fill german + coleslaw, only show drinks
     _groupSelections.burgers["german"] = size;
@@ -2005,6 +2023,7 @@ function groupAdjust(key, id, name, delta){
 
 function updateGroupCounters(size){
   const isFixedMenu = _groupMenuProduct?.chickenBox || _groupMenuProduct?.germanBox;
+  const isNoSides = _groupMenuProduct?.noSidesBox;
   const isChicken = isFixedMenu;
   const b = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
   const f = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
@@ -2014,12 +2033,13 @@ function updateGroupCounters(size){
     document.getElementById("groupFriesCounter").innerText  = `${f} / ${size}`;
   }
   document.getElementById("groupDrinkCounter").innerText = `${d} / ${size}`;
-  const ok = isChicken ? d===size : (b===size && f===size && d===size);
+  const ok = isChicken ? d===size : isNoSides ? (b===size && d===size) : (b===size && f===size && d===size);
   document.getElementById("groupMenuConfirmBtn").disabled = !ok;
   const msg = document.getElementById("groupMenuMsg");
   if(msg){
     if(ok) msg.innerText = "✅ Auswahl vollständig";
     else if(isChicken) msg.innerText = `Noch: ${size-d} Getränke`;
+    else if(isNoSides) msg.innerText = `Noch: ${size-b} Burger, ${size-d} Getränke`;
     else msg.innerText = `Noch: ${size-b} Burger, ${size-f} Fries, ${size-d} Getränke`;
   }
 }
@@ -2035,6 +2055,7 @@ function confirmGroupMenu(){
   const size = p.groupSize || 1;
 
   const isFixedMenu = p.chickenBox || p.germanBox;
+  const _isNoSides = p.noSidesBox;
   // Build components for inventory deduction
   const components = [];
   for(const [id, qty] of Object.entries(_groupSelections.burgers)) if(qty>0) components.push({productId:id, qty});
@@ -2051,6 +2072,9 @@ function confirmGroupMenu(){
     displayName = `${p.name} | 🍗 ${size}× The Chicken | 🍗 ${size}× Chicken Nuggets | 🥤 ${drinkNames}`;
   } else if(p.germanBox){
     displayName = `${p.name} | 🇩🇪 ${size}× The German | 🥗 ${size}× Coleslaw | 🥤 ${drinkNames}`;
+  } else if(p.noSidesBox){
+    const burgerNames2 = Object.entries(_groupSelections.burgers).filter(([,q])=>q>0).map(([id,q])=>{ const pr=(PRODUCTS||[]).find(x=>x.id===id); return (q>1?q+'× ':'')+( pr?.name||id); }).join(', ');
+    displayName = `${p.name} | 🍔 ${burgerNames2} | 🥤 ${drinkNames}`;
   } else {
     const burgerNames = Object.entries(_groupSelections.burgers).filter(([,q])=>q>0).map(([id,q])=>{
       const prod = (PRODUCTS||[]).find(x=>x.id===id);

@@ -191,6 +191,12 @@ const DEFAULT_PRODUCTS = [
   { id:"menu_large",   name:"Large Menü",       price:129, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Fries/Cheesy Fries & Getränk" },
   { id:"menu_xlarge",  name:"X-tra Large Menü", price:245, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" },
 
+  // No Sides — Burger + Getränk, keine Beilage
+  { id:"ns_small",  name:"No Sides Small",       price:28,  cat:"Menü", icon:"no_sides_small.png",  groupSize:1,  noSidesBox:true, desc:"1× Burger & 1 Getränk nach Wahl" },
+  { id:"ns_medium", name:"No Sides Medium",      price:55,  cat:"Menü", icon:"no_sides_medium.png", groupSize:2,  noSidesBox:true, desc:"2× Burger & 2 Getränke nach Wahl" },
+  { id:"ns_large",  name:"No Sides Large",       price:138, cat:"Menü", icon:"no_sides_large.png",  groupSize:5,  noSidesBox:true, desc:"5× Burger & 5 Getränke nach Wahl" },
+  { id:"ns_xl",     name:"No Sides X-tra Large", price:276, cat:"Menü", icon:"no_sides_xl.png",     groupSize:10, noSidesBox:true, desc:"10× Burger & 10 Getränke nach Wahl" },
+
   // Chicken Boxes — fixer Chicken Burger + Nuggets, nur Getränk wählbar
   { id:"cbox_small",  name:"Chicken Box Small",       price:28,  cat:"Menü", icon:"chicken_small.png",  groupSize:1,  chickenBox:true, desc:"1× Chicken Burger, 1× Nuggets Box, 1 Getränk" },
   { id:"cbox_medium", name:"Chicken Box Medium",      price:55,  cat:"Menü", icon:"chicken_medium.png", groupSize:2,  chickenBox:true, desc:"2× Chicken Burger, 2× Nuggets Box, 2 Getränke" },
@@ -295,6 +301,7 @@ function normalizeProducts(list) {
     if (p.chickenBox) extra.chickenBox = true;
     if (p.donutBox) extra.donutBox = true;
     if (p.germanBox) extra.germanBox = true;
+    if (dp.noSidesBox || p.noSidesBox) extra.noSidesBox = true;
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
@@ -311,6 +318,7 @@ function normalizeProducts(list) {
     if (dp.chickenBox) extra.chickenBox = true;
     if (dp.donutBox) extra.donutBox = true;
     if (dp.germanBox) extra.germanBox = true;
+    if (dp.noSidesBox || p.noSidesBox) extra.noSidesBox = true;
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {
