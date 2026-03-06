@@ -115,13 +115,11 @@ function openTab(tabId, btn){
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_board") {
-    fetch("/board/mark-read", { method:"POST" })
-      .catch(()=>{})
-      .finally(async () => {
-        await loadBoard();
-        const badge=document.getElementById("boardBadge");
-        if(badge) badge.style.display="none";
-      });
+    // Mark seen: store current time so all existing posts are considered read
+    setBoardLastSeen(new Date().toISOString());
+    const badge=document.getElementById("boardBadge");
+    if(badge) badge.style.display="none";
+    loadBoard();
   }
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
@@ -1015,19 +1013,22 @@ async function deletePost(id){
 const PRIO_LABEL = { normal:"📌 Normal", important:"⚠️ Wichtig", urgent:"🚨 Dringend" };
 const PRIO_COLOR = { normal:"var(--muted)", important:"#f59e0b", urgent:"#ef4444" };
 
+function getBoardSeenKey(){ return `boardSeen_${me?.username||"x"}`; }
+function getBoardLastSeen(){ return localStorage.getItem(getBoardSeenKey()) || ""; }
+function setBoardLastSeen(ts){ localStorage.setItem(getBoardSeenKey(), ts); }
+
 async function loadBoard(fromPoll=false){
   const container = document.getElementById("boardPosts");
   if(!container) return;
   const res = await fetch("/board").catch(()=>null);
   const data = res ? await res.json().catch(()=>({})) : {};
   const posts = data.posts || [];
-  const lastRead = data.lastRead || null;
 
-  // Only update badge from background poll, not when tab is open
-  if(fromPoll){
-    const badge = document.getElementById("boardBadge");
-    const hasNew = posts.some(p => !lastRead || new Date(p.createdAt) > new Date(lastRead));
-    if(badge) badge.style.display = hasNew ? "" : "none";
+  const badge = document.getElementById("boardBadge");
+  if(badge){
+    const lastSeen = getBoardLastSeen();
+    const hasNew = posts.some(p => p.createdAt > lastSeen);
+    badge.style.display = hasNew ? "" : "none";
   }
 
   if(!posts.length){
