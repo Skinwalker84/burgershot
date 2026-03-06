@@ -522,6 +522,13 @@ async function login(){
   monthTabInited = false;
   showApp();
   applyRoleVisibility();
+  // Check for unread board posts after login
+  fetch("/board").then(r=>r.json()).then(data => {
+    const lastSeen = getBoardLastSeen();
+    const hasNew = (data.posts||[]).some(p => p.createdAt > lastSeen);
+    const badge = document.getElementById("boardBadge");
+    if(badge) badge.style.display = hasNew ? "" : "none";
+  }).catch(()=>{});
   updateRegisterDisplay();
   syncActiveRegisterButton(null);
   await initProducts();
