@@ -115,10 +115,13 @@ function openTab(tabId, btn){
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_board") {
-    loadBoard();
-    fetch("/board/mark-read", { method:"POST" }).catch(()=>{});
-    const badge=document.getElementById("boardBadge");
-    if(badge) badge.style.display="none";
+    fetch("/board/mark-read", { method:"POST" })
+      .catch(()=>{})
+      .finally(async () => {
+        await loadBoard();
+        const badge=document.getElementById("boardBadge");
+        if(badge) badge.style.display="none";
+      });
   }
   if(tabId==="tab_shop") { loadShopTab(); }
   if(tabId==="tab_mgmt") {
@@ -1012,7 +1015,7 @@ async function deletePost(id){
 const PRIO_LABEL = { normal:"📌 Normal", important:"⚠️ Wichtig", urgent:"🚨 Dringend" };
 const PRIO_COLOR = { normal:"var(--muted)", important:"#f59e0b", urgent:"#ef4444" };
 
-async function loadBoard(){
+async function loadBoard(fromPoll=false){
   const container = document.getElementById("boardPosts");
   if(!container) return;
   const res = await fetch("/board").catch(()=>null);
@@ -1020,10 +1023,12 @@ async function loadBoard(){
   const posts = data.posts || [];
   const lastRead = data.lastRead || null;
 
-  // Badge: show if any post is newer than lastRead
-  const badge = document.getElementById("boardBadge");
-  const hasNew = posts.some(p => !lastRead || new Date(p.createdAt) > new Date(lastRead));
-  if(badge) badge.style.display = hasNew ? "" : "none";
+  // Only update badge from background poll, not when tab is open
+  if(fromPoll){
+    const badge = document.getElementById("boardBadge");
+    const hasNew = posts.some(p => !lastRead || new Date(p.createdAt) > new Date(lastRead));
+    if(badge) badge.style.display = hasNew ? "" : "none";
+  }
 
   if(!posts.length){
     container.innerHTML = `<div class="panel muted small" style="text-align:center; padding:32px;">Noch keine Beiträge. Sei der Erste! 📋</div>`;
