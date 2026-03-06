@@ -1024,11 +1024,15 @@ async function loadBoard(fromPoll=false){
   const data = res ? await res.json().catch(()=>({})) : {};
   const posts = data.posts || [];
 
-  const badge = document.getElementById("boardBadge");
-  if(badge){
-    const lastSeen = getBoardLastSeen();
-    const hasNew = posts.some(p => p.createdAt > lastSeen);
-    badge.style.display = hasNew ? "" : "none";
+  // Only update badge when board tab is NOT open
+  const boardTabOpen = !document.getElementById("tab_board")?.classList.contains("hidden");
+  if(!boardTabOpen){
+    const badge = document.getElementById("boardBadge");
+    if(badge){
+      const lastSeen = getBoardLastSeen();
+      const hasNew = posts.some(p => p.createdAt > lastSeen);
+      badge.style.display = hasNew ? "" : "none";
+    }
   }
 
   if(!posts.length){
