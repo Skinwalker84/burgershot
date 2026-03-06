@@ -2069,27 +2069,31 @@ function confirmGroupMenu(){
 }
 
 
-let _currentDiscount = 0; // percent
+let _currentDiscount = 0;
+let _currentDiscountId = null; // percent
 
 const DISCOUNTS = {
   0:  { label: "Kein Rabatt", id: "discBtn0" },
   15: { label: "LSPD −15%",  id: "discBtn15" },
   20: { label: "LSMD −20%",  id: "discBtn20" },
-  10: { label: "DOJ −10%",   id: "discBtn10" }
+  10: { label: "DOJ −10%",   id: "discBtn10" },
+  "taxi10": { label: "Taxi −10%", id: "discBtnTaxi", pct: 10 }
 };
 
 function openPay(){
   if(!currentRegister) return alert("Bitte zuerst eine Kasse wählen.");
   if(cart.length===0) return alert("Warenkorb ist leer.");
   _currentDiscount = 0;
+  _currentDiscountId = null;
   updatePayOverlay();
   document.getElementById("payAmount").value = "";
   const cashCb = document.getElementById("payIsCash"); if(cashCb) cashCb.checked = false;
   document.getElementById("payOverlay").classList.remove("hidden");
 }
 
-function applyDiscount(pct){
+function applyDiscount(pct, id){
   _currentDiscount = pct;
+  _currentDiscountId = id || null;
   updatePayOverlay();
 }
 
@@ -2112,8 +2116,13 @@ function updatePayOverlay(){
 
   // Highlight active button
   Object.keys(DISCOUNTS).forEach(p => {
-    const btn = document.getElementById(DISCOUNTS[p].id);
-    if(btn) btn.classList.toggle("discountBtnActive", Number(p) === _currentDiscount);
+    const d = DISCOUNTS[p];
+    const btn = document.getElementById(d.id);
+    if(!btn) return;
+    const isActive = _currentDiscountId
+      ? d.id === (_currentDiscountId === "taxi" ? "discBtnTaxi" : `discBtn${_currentDiscount}`)
+      : (Number(p) === _currentDiscount && p !== "taxi10");
+    btn.classList.toggle("discountBtnActive", isActive);
   });
 }
 
