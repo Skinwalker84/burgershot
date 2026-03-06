@@ -301,7 +301,7 @@ function normalizeProducts(list) {
     if (p.chickenBox) extra.chickenBox = true;
     if (p.donutBox) extra.donutBox = true;
     if (p.germanBox) extra.germanBox = true;
-    if (dp.noSidesBox || p.noSidesBox) extra.noSidesBox = true;
+    if (p.noSidesBox) extra.noSidesBox = true;
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
@@ -318,7 +318,7 @@ function normalizeProducts(list) {
     if (dp.chickenBox) extra.chickenBox = true;
     if (dp.donutBox) extra.donutBox = true;
     if (dp.germanBox) extra.germanBox = true;
-    if (dp.noSidesBox || p.noSidesBox) extra.noSidesBox = true;
+    if (dp.noSidesBox) extra.noSidesBox = true;
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {
