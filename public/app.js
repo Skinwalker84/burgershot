@@ -424,9 +424,23 @@ function renderInventory(){
   }).join("");
 }
 
-function openInventoryEditor(id){
+async function openInventoryEditor(id){
   if(!isBoss()) return;
-  const existing = id ? inventoryItems.find(x=>x.id===id) : null;
+  // BUGFIX: Immer frische Daten vom Server laden, nie veralteten Cache verwenden
+  // Verhindert dass Bestand beim Bearbeiten auf alten Wert zurückgesetzt wird
+  let existing = null;
+  if(id){
+    try {
+      const freshRes = await fetch("/inventory");
+      const freshData = freshRes.ok ? await freshRes.json().catch(()=>({})) : {};
+      if(freshData.success && Array.isArray(freshData.items)){
+        inventoryItems = freshData.items; // Cache auch aktualisieren
+        existing = freshData.items.find(x=>x.id===id) || null;
+      }
+    } catch(e) {
+      existing = inventoryItems.find(x=>x.id===id) || null;
+    }
+  }
   const name = prompt("Artikelname:", existing?.name || "");
   if(name===null) return;
   const unit = prompt("Einheit (z.B. Stk, l, kg):", existing?.unit || "Stk");

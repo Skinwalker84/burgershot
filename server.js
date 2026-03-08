@@ -38,7 +38,9 @@ function safeReadJSON(filePath) {
 function safeWriteJSON(filePath, obj) {
   try {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(obj, null, 2), "utf-8");
+    const tmp = filePath + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(obj, null, 2), "utf-8");
+    fs.renameSync(tmp, filePath); // Atomic: kein korruptes JSON bei Absturz
     return true;
   } catch (e) {
     console.error("DB write error:", e);
@@ -1250,8 +1252,6 @@ app.post("/sale", requireAuth, (req, res) => {
   // Lagerbestand reduzieren
   try {
     const links = db.saleInventoryLinks || [];
-    console.log("[LAGER] Links:", JSON.stringify(links));
-    console.log("[LAGER] Items:", JSON.stringify(items));
     for (const saleItem of items) {
       const productIds = [];
       // Einzelne Komponenten (Menü hat components-Array)
