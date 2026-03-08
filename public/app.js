@@ -2126,6 +2126,7 @@ function openPay(){
   updatePayOverlay();
   document.getElementById("payAmount").value = "";
   const cashCb = document.getElementById("payIsCash"); if(cashCb) cashCb.checked = false;
+  const delivCb = document.getElementById("payIsDelivery"); if(delivCb) delivCb.checked = false;
   document.getElementById("payOverlay").classList.remove("hidden");
 }
 
@@ -2138,7 +2139,8 @@ function applyDiscount(pct, id){
 function updatePayOverlay(){
   const original = cartTotal();
   const discAmt = Math.round(original * _currentDiscount / 100);
-  const total = original - discAmt;
+  const deliveryFee = document.getElementById("payIsDelivery")?.checked ? 50 : 0;
+  const total = original - discAmt + deliveryFee;
 
   document.getElementById("payOriginal").innerText = money(original);
   document.getElementById("payTotal").innerText = money(total);
@@ -2151,6 +2153,8 @@ function updatePayOverlay(){
   } else {
     discRow.style.display = "none";
   }
+  const delivRow = document.getElementById("payDeliveryRow");
+  if(delivRow) delivRow.style.display = deliveryFee > 0 ? "flex" : "none";
 
   // Highlight active button
   Object.keys(DISCOUNTS).forEach(p => {
@@ -2175,7 +2179,9 @@ async function submitPay(){
   if(!Number.isFinite(paid) || paid < total) return alert("Bezahlt muss >= Total sein.");
 
   // Apply discount to item prices proportionally
-  const discountFactor = total / (original || 1);
+  const isDelivery = document.getElementById("payIsDelivery")?.checked || false;
+  const deliveryFee = isDelivery ? 50 : 0;
+  const discountFactor = (total - deliveryFee) / (original || 1);
   const items = cart.map(x => ({
     name: x.name,
     price: _currentDiscount > 0 ? Math.round(x.price * discountFactor * 100) / 100 : x.price,
@@ -2183,6 +2189,7 @@ async function submitPay(){
     productId: x.productId || null,
     components: x.components || null
   }));
+  if(isDelivery) items.push({ name: "🛵 Liefergebühr", price: 50, qty: 1, productId: null, components: null });
 
   const payload = {
     register: currentRegister,
@@ -2191,16 +2198,18 @@ async function submitPay(){
     paidAmount: paid,
     time: new Date().toISOString(),
     discount: _currentDiscount > 0 ? _currentDiscount : undefined,
-    isCash: document.getElementById("payIsCash")?.checked || false
+    isCash: document.getElementById("payIsCash")?.checked || false,
+    isDelivery
   };
   const res = await fetch("/sale", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
   const data = await res.json().catch(()=>({}));
   if(!res.ok || !data.success) return alert(data.message || "Fehler beim Speichern.");
   closePay();
   const cashMsg = payload.isCash ? " 💵 BAR" : "";
+  const delivMsg = payload.isDelivery ? " 🛵 Lieferung" : "";
   const tipMsg = data.tip > 0 ? ` — Trinkgeld: ${money(data.tip)}` : "";
   const discMsg = _currentDiscount > 0 ? ` (${_currentDiscount}% Rabatt)` : "";
-  alert(`Order #${data.orderId||""} gespeichert${discMsg}${cashMsg}${tipMsg}`);
+  alert(`Order #${data.orderId||""} gespeichert${discMsg}${cashMsg}${delivMsg}${tipMsg}`);
   cartsByRegister[currentRegister]=[]; switchCartToRegister(currentRegister); renderCart(); saveCartsDebounced();
 }
 
