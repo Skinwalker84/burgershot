@@ -453,6 +453,12 @@ const presenceClients = new Set();
 let presenceState = { "1": {users:{}}, "2": {users:{}}, "3": {users:{}}, "4": {users:{}} };
 // Global online tracking (no register required)
 let onlineUsers = {}; // { username: { name, at } }
+// Debounced lastSeen save — avoid saveDB on every heartbeat (race conditions)
+let _lastSeenSaveTimer = null;
+function scheduleLastSeenSave(){
+  if(_lastSeenSaveTimer) clearTimeout(_lastSeenSaveTimer);
+  _lastSeenSaveTimer = setTimeout(()=>{ _lastSeenSaveTimer = null; saveDB(db); }, 10000); // save after 10s quiet
+}
 
 function prunePresence(){
   const now = Date.now();
@@ -1670,7 +1676,7 @@ app.post("/presence/heartbeat", requireAuth, (req, res) => {
     onlineUsers[username] = { name, at: now };
     // Persist lastSeen in db.users
     const dbUser = db.users.find(u => u.username === username);
-    if(dbUser){ dbUser.lastSeen = new Date(now).toISOString(); saveDB(db); }
+    if(dbUser){ dbUser.lastSeen = new Date(now).toISOString(); scheduleLastSeenSave(); }
     broadcastPresence();
     return res.json({ success:true });
   }catch(e){ return res.status(400).json({ success:false }); }
