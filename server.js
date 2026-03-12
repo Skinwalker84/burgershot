@@ -1173,7 +1173,7 @@ app.put("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
    USERS (Management)
    ========================= */
 app.get("/users", requireAuth, requireBoss, (req, res) => {
-  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role })) });
+  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, lastSeen: u.lastSeen || null })) });
 });
 
 app.post("/users", requireAuth, requireBoss, (req, res) => {
@@ -1666,7 +1666,11 @@ app.post("/presence/heartbeat", requireAuth, (req, res) => {
     const username = String(req.user?.username || req.body?.username || "").trim();
     const name = String(req.body?.name || req.user?.displayName || username).trim() || username;
     if(!username) return res.status(400).json({ success:false });
-    onlineUsers[username] = { name, at: Date.now() };
+    const now = Date.now();
+    onlineUsers[username] = { name, at: now };
+    // Persist lastSeen in db.users
+    const dbUser = db.users.find(u => u.username === username);
+    if(dbUser){ dbUser.lastSeen = new Date(now).toISOString(); saveDB(db); }
     broadcastPresence();
     return res.json({ success:true });
   }catch(e){ return res.status(400).json({ success:false }); }

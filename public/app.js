@@ -2617,18 +2617,43 @@ async function loadUsers(){
       background:${isOnline ? '#22c55e' : '#ef4444'};
       box-shadow:0 0 0 2px ${isOnline ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.2)'};
       flex-shrink:0;
-      margin-right:2px;
     "></span>`;
+
+    // Format lastSeen timestamp
+    let lastSeenStr = "Noch nie aktiv";
+    if(isOnline){
+      lastSeenStr = "Gerade online";
+    } else if(u.lastSeen){
+      const d = new Date(u.lastSeen);
+      const now = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      const sameDay = d.toDateString() === now.toDateString();
+      const dateStr = sameDay
+        ? `Heute ${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`
+        : `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`;
+      lastSeenStr = dateStr;
+    }
+
     return `
     <div class="userRow">
-      <div style="display:flex; align-items:center; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px; flex:1;">
         ${dot}
-        <div>
+        <div style="flex:1;">
           <div style="font-weight:900;">${esc(u.displayName)}</div>
           <div class="muted small">${esc(u.username)} · ${{boss:"👑 Chef", manager:"⭐ Leitender Angestellter", staff:"👤 Mitarbeiter"}[u.role] || esc(u.role)}</div>
         </div>
+        <div style="
+          font-size:11px;
+          color:${isOnline ? '#22c55e' : 'var(--muted)'};
+          background:${isOnline ? 'rgba(34,197,94,.1)' : 'rgba(255,255,255,.05)'};
+          border:1px solid ${isOnline ? 'rgba(34,197,94,.25)' : 'rgba(255,255,255,.1)'};
+          border-radius:6px;
+          padding:3px 8px;
+          white-space:nowrap;
+          flex-shrink:0;
+        ">🕐 ${lastSeenStr}</div>
       </div>
-      <button class="ghost" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
+      <button class="ghost" style="margin-left:8px;" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
     </div>
   `}).join("");
 }
