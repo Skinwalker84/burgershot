@@ -2593,15 +2593,39 @@ async function loadUsers(){
   const box=document.getElementById("usersList");
   if(!box) return;
   const users=data.users||data.staff||[];
-  box.innerHTML=users.map(u=>`
+
+  // Collect all online usernames from presenceData (any register)
+  const onlineSet = new Set();
+  if(presenceData){
+    for(const regKey of Object.keys(presenceData)){
+      const usersObj = presenceData[regKey]?.users || {};
+      for(const uname of Object.keys(usersObj)) onlineSet.add(uname);
+    }
+  }
+
+  box.innerHTML=users.map(u=>{
+    const isOnline = onlineSet.has(u.username);
+    const dot = `<span title="${isOnline ? 'Online' : 'Offline'}" style="
+      display:inline-block;
+      width:10px; height:10px;
+      border-radius:50%;
+      background:${isOnline ? '#22c55e' : '#ef4444'};
+      box-shadow:0 0 0 2px ${isOnline ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.2)'};
+      flex-shrink:0;
+      margin-right:2px;
+    "></span>`;
+    return `
     <div class="userRow">
-      <div>
-        <div style="font-weight:900;">${esc(u.displayName)}</div>
-        <div class="muted small">${esc(u.username)} · ${{boss:"👑 Chef", manager:"⭐ Leitender Angestellter", staff:"👤 Mitarbeiter"}[u.role] || esc(u.role)}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${dot}
+        <div>
+          <div style="font-weight:900;">${esc(u.displayName)}</div>
+          <div class="muted small">${esc(u.username)} · ${{boss:"👑 Chef", manager:"⭐ Leitender Angestellter", staff:"👤 Mitarbeiter"}[u.role] || esc(u.role)}</div>
+        </div>
       </div>
       <button class="ghost" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
     </div>
-  `).join("");
+  `}).join("");
 }
 
 function openAddUser(){
@@ -2910,6 +2934,8 @@ function startPresenceSSE(){
         const data = JSON.parse(ev.data||"{}");
         presenceData = data.presence || null;
         renderPresenceWarning();
+        // Live-Update der Online-Punkte im Mitarbeiter-Panel
+        if(document.getElementById("usersList")) loadUsers();
         // If current register is now occupied by someone else, show block popup
         if(currentRegister){
           const others = getOtherUsersOnRegister(currentRegister);
