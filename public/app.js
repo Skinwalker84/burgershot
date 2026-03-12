@@ -2594,8 +2594,9 @@ async function loadUsers(){
   if(!box) return;
   const users=data.users||data.staff||[];
 
-  // Collect all online usernames from presenceData (any register)
+  // Collect all online usernames — onlineData = auf der Seite, presenceData = an Kasse
   const onlineSet = new Set();
+  if(onlineData){ for(const uname of Object.keys(onlineData)) onlineSet.add(uname); }
   if(presenceData){
     for(const regKey of Object.keys(presenceData)){
       const usersObj = presenceData[regKey]?.users || {};
@@ -2785,6 +2786,7 @@ function startCartsSSE(){
 
 /* ===== Soft Lock / Presence (SSE) ===== */
 let presenceData = null;
+let onlineData = {}; // { username: { name, at } } — alle die auf der Seite sind
 let presenceInterval = null;
 let presenceES = null;
 
@@ -2908,6 +2910,17 @@ async function sendPresenceLeave(){
   }catch(e){}
 }
 
+async function sendHeartbeat(){
+  try{
+    if(!me) return;
+    await fetch("/presence/heartbeat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ name: String(me.displayName||me.username||"") })
+    });
+  }catch(e){}
+}
+
 async function sendPresencePing(){
   try{
     if(!me) return;
@@ -2933,6 +2946,7 @@ function startPresenceSSE(){
       try{
         const data = JSON.parse(ev.data||"{}");
         presenceData = data.presence || null;
+        onlineData = data.online || {};
         renderPresenceWarning();
         // Live-Update der Online-Punkte im Mitarbeiter-Panel
         if(document.getElementById("usersList")) loadUsers();

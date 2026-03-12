@@ -451,10 +451,16 @@ app.use(express.json());
 const presenceClients = new Set();
 // { "1": { users: { "username": { name, at } } } }
 let presenceState = { "1": {users:{}}, "2": {users:{}}, "3": {users:{}}, "4": {users:{}} };
+// Global online tracking (no register required)
+let onlineUsers = {}; // { username: { name, at } }
 
 function prunePresence(){
   const now = Date.now();
   let changed = false;
+  // Prune global online users (30s timeout)
+  for(const u of Object.keys(onlineUsers)){
+    if(now - (onlineUsers[u].at||0) > 30000){ delete onlineUsers[u]; changed = true; }
+  }
   for(const k of ["1","2","3","4"]){
     const users = presenceState[k]?.users || {};
     for(const u of Object.keys(users)){
@@ -468,7 +474,7 @@ function prunePresence(){
 }
 
 function broadcastPresence(){
-  const payload = JSON.stringify({ presence: presenceState, ts: Date.now() });
+  const payload = JSON.stringify({ presence: presenceState, online: onlineUsers, ts: Date.now() });
   for(const res of Array.from(presenceClients)){
     try{ res.write("data: " + payload + "\n\n"); }
     catch(e){ try{ presenceClients.delete(res); }catch(_){} }
@@ -1623,7 +1629,7 @@ app.get("/events/presence", (req, res) => {
   if(res.flushHeaders) res.flushHeaders();
 
   presenceClients.add(res);
-  try{ res.write("data: " + JSON.stringify({ presence: presenceState, ts: Date.now() }) + "\n\n"); }catch(e){}
+  try{ res.write("data: " + JSON.stringify({ presence: presenceState, online: onlineUsers, ts: Date.now() }) + "\n\n"); }catch(e){}
 
   req.on("close", () => {
     try{ presenceClients.delete(res); }catch(e){}
@@ -1653,6 +1659,18 @@ if(!["1","2","3","4"].includes(register) || !username){
   }
 });
 
+
+// Heartbeat — nur online melden, keine Kasse nötig
+app.post("/presence/heartbeat", requireAuth, (req, res) => {
+  try{
+    const username = String(req.user?.username || req.body?.username || "").trim();
+    const name = String(req.body?.name || req.user?.displayName || username).trim() || username;
+    if(!username) return res.status(400).json({ success:false });
+    onlineUsers[username] = { name, at: Date.now() };
+    broadcastPresence();
+    return res.json({ success:true });
+  }catch(e){ return res.status(400).json({ success:false }); }
+});
 
 // Presence leave (remove user immediately)
 app.post("/presence/leave", (req, res) => {
