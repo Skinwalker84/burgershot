@@ -2349,6 +2349,59 @@ async function markCashTransferred(day, employeeUsername, employeeName){
   loadDayReport();
 }
 
+function openOrdersDetail(empUsername, empName){
+  if(!currentDayReport || !isBoss()) return;
+  const sales = (currentDayReport.sales || []).filter(s =>
+    (s.employeeUsername || s.employee || "—") === empUsername
+  ).sort((a,b) => String(a.time).localeCompare(String(b.time)));
+
+  const ov = document.getElementById("ordersDetailOverlay");
+  const title = document.getElementById("ordersDetailTitle");
+  const body = document.getElementById("ordersDetailBody");
+  if(!ov || !body) return;
+
+  if(title) title.innerText = `Bestellungen — ${empName || empUsername}`;
+
+  if(sales.length === 0){
+    body.innerHTML = `<div class="muted small" style="padding:16px;">Keine Bestellungen.</div>`;
+  } else {
+    body.innerHTML = sales.map(s => {
+      const d = new Date(s.time);
+      const pad = n => String(n).padStart(2,'0');
+      const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`;
+      const isStaff = s.staffOrder || s.paymentMethod === "guthaben";
+      const typeBadge = isStaff
+        ? `<span style="background:rgba(251,191,36,.15); color:#fbbf24; border:1px solid rgba(251,191,36,.3); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:900;">🍽️ Mitarbeiter-Verzehr</span>`
+        : `<span style="background:rgba(34,197,94,.12); color:#22c55e; border:1px solid rgba(34,197,94,.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:900;">👤 Kunde</span>`;
+      const items = (s.items || []).map(it =>
+        `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.05);">
+          <span>${esc(it.name)}${it.qty > 1 ? ` <span class="muted small">×${it.qty}</span>` : ''}</span>
+          <span style="color:var(--muted); font-size:12px;">${money(it.price * it.qty)}</span>
+        </div>`
+      ).join('');
+      const discount = s.discount ? `<div class="muted small" style="margin-top:4px;">Rabatt: ${s.discount}%</div>` : '';
+      return `
+        <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px; background:rgba(255,255,255,.03);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:900; font-size:15px;">🕐 ${timeStr}</div>
+            ${typeBadge}
+          </div>
+          <div style="margin-bottom:8px;">${items}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.1);">
+            <span style="font-weight:900;">Total</span>
+            <span style="font-weight:900; color:#22c55e;">${money(s.total)}</span>
+          </div>
+          ${discount}
+        </div>`;
+    }).join('');
+  }
+  ov.classList.remove('hidden');
+}
+
+function closeOrdersDetail(){
+  document.getElementById("ordersDetailOverlay")?.classList.add("hidden");
+}
+
 async function loadDayReport(){
   // Manager: read-only — hide edit controls
   const _dayCloseBtn = document.getElementById("dayCloseBtn");
@@ -2407,7 +2460,10 @@ async function loadDayReport(){
               </div>`
             : "—"}
         </td>
-        <td style="text-align:right;">${x.orders||0}</td>
+        <td style="text-align:right;">
+          ${isBoss() ? `<span onclick="openOrdersDetail('${escAttr(x.employeeUsername||x.employee||"")}','${escAttr(x.employee||"")}')"
+            style="cursor:pointer; color:#60a5fa; text-decoration:underline; font-weight:900;">${x.orders||0}</span>` : (x.orders||0)}
+        </td>
       </tr>
     `).join("") || `<tr><td colspan="5" class="muted">Keine Daten.</td></tr>`;
   }

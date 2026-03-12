@@ -942,6 +942,17 @@
     </div>
   </div>
 
+  <!-- ===== ORDERS DETAIL OVERLAY ===== -->
+  <div id="ordersDetailOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:520px; width:95%; max-height:80vh; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-shrink:0;">
+        <div style="font-weight:900; font-size:17px;" id="ordersDetailTitle">Bestellungen</div>
+        <button class="ghost" onclick="closeOrdersDetail()" style="padding:4px 10px;">✕</button>
+      </div>
+      <div id="ordersDetailBody" style="overflow-y:auto; flex:1; padding-right:4px;"></div>
+    </div>
+  </div>
+
   <!-- ===== CHANGE PASSWORD OVERLAY ===== -->
   <div id="pwOverlay" class="overlay hidden">
     <div class="overlayCard">
