@@ -551,6 +551,8 @@ async function login(){
   startCartsSSE();
   startPresenceSSE();
   startPresenceLoop();
+  sendHeartbeat();
+  if(!window._heartbeatInterval){ window._heartbeatInterval = setInterval(sendHeartbeat, 15000); }
   renderPresenceWarning();
   await loadCartsFromServer();
   startCartsSSE();
@@ -646,6 +648,8 @@ async function loadMe(){
   startCartsSSE();
   startPresenceSSE();
   startPresenceLoop();
+  sendHeartbeat();
+  if(!window._heartbeatInterval){ window._heartbeatInterval = setInterval(sendHeartbeat, 15000); }
   renderPresenceWarning();
   updateDayInfo();
 }
