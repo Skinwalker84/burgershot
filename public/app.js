@@ -49,7 +49,7 @@ function applyMgmtRoleVisibility(){
     "panel_staffConsumption","panel_bankHistory","panel_tipPayouts"
   ];
   const managerOk = [
-    "panel_guthabenKarten","panel_mitarbeiterUmsatz","panel_bestseller"
+    "panel_guthabenKarten","panel_mitarbeiterUmsatz","panel_bestseller","panel_firmenausgaben"
   ];
   bossOnly.forEach(id => {
     const el = document.getElementById(id);
@@ -2403,6 +2403,55 @@ function closeOrdersDetail(){
   document.getElementById("ordersDetailOverlay")?.classList.add("hidden");
 }
 
+async function loadExpenses(){
+  const res = await fetch("/expenses").catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  const tbody = document.getElementById("expenseBody");
+  if(!tbody) return;
+  const list = data.expenses || [];
+  // Set date default
+  const dateInput = document.getElementById("expenseDate");
+  if(dateInput && !dateInput.value) dateInput.value = serverDay || new Date().toISOString().slice(0,10);
+
+  if(list.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6" class="muted small">Keine Einträge.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(e => `
+    <tr>
+      <td class="muted small">${esc(String(e.date||"").slice(0,10))}</td>
+      <td style="font-weight:900;">${esc(e.category||"")}</td>
+      <td class="muted small">${esc(e.note||"—")}</td>
+      <td style="text-align:right; font-weight:900; color:#ef4444;">-${money(e.amount)}</td>
+      <td class="muted small">${esc(e.createdBy||"")}</td>
+      <td><button class="ghost" style="font-size:11px; padding:2px 8px; color:#ef4444;" onclick="deleteExpense('${escAttr(e.id||"")}')">Löschen</button></td>
+    </tr>
+  `).join("");
+}
+
+async function submitExpense(){
+  const category = document.getElementById("expenseCategory")?.value;
+  const amount   = Number(document.getElementById("expenseAmount")?.value);
+  const date     = document.getElementById("expenseDate")?.value || serverDay;
+  const note     = document.getElementById("expenseNote")?.value || "";
+  const msg      = document.getElementById("expenseMsg");
+  if(!amount || amount <= 0){ if(msg) msg.innerText="Bitte Betrag eingeben."; return; }
+  const res = await fetch("/expenses",{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({category,amount,date,note}) });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || !data.success){ if(msg) msg.innerText = data.message||"Fehler."; return; }
+  if(msg) msg.innerText = "✅ Eingetragen.";
+  document.getElementById("expenseAmount").value = "";
+  document.getElementById("expenseNote").value = "";
+  setTimeout(()=>{ if(msg) msg.innerText=""; }, 3000);
+  loadExpenses();
+}
+
+async function deleteExpense(id){
+  if(!confirm("Ausgabe wirklich löschen?")) return;
+  await fetch(`/expenses/${encodeURIComponent(id)}`,{ method:"DELETE" });
+  loadExpenses();
+}
+
 async function loadDayReport(){
   // Manager: read-only — hide edit controls
   const _dayCloseBtn = document.getElementById("dayCloseBtn");
@@ -2440,6 +2489,8 @@ async function loadDayReport(){
 
   document.getElementById("dayRevenue").innerText=money(data.totals?.revenue||0);
   document.getElementById("dayPurchases").innerText=money(data.totals?.purchases||0);
+  const expEl = document.getElementById("dayExpenses");
+  if(expEl) expEl.innerText = (data.totals?.expenses||0) > 0 ? `-${money(data.totals.expenses)}` : "—";
   document.getElementById("dayProfit").innerText=money(data.totals?.profit||0);
   const cashEl=document.getElementById("dayCash"); if(cashEl) cashEl.innerText=money(data.totals?.cashRevenue||0);
 

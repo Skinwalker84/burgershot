@@ -251,6 +251,7 @@ function makeFreshDB() {
     purchases: [],
 
     salesByDay: { [today]: [] },
+    expenses: [],
     kitchenByDay: { [today]: { pending: [], done: [] } },
     closedDays: {}
   };
@@ -358,6 +359,7 @@ function normalizeDB(db) {
 
   if (!Array.isArray(db.inventory)) db.inventory = [];
   if (!Array.isArray(db.purchases)) db.purchases = [];
+  if (!Array.isArray(db.expenses)) db.expenses = [];
 
   db.products = normalizeProducts(db.products);
   db.inventory = normalizeInventory(db.inventory);
@@ -1389,6 +1391,13 @@ app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
    REPORTS (Day details only; keep existing endpoints if you have more)
    ========================= */
 // Helper: sum purchase costs for a list of day keys
+function getExpensesCosts(dayKeys) {
+  const keySet = new Set(dayKeys);
+  return (db.expenses || [])
+    .filter(e => keySet.has(String(e.date || "").slice(0, 10)))
+    .reduce((s, e) => s + Number(e.amount || 0), 0);
+}
+
 function getPurchaseCosts(dayKeys) {
   const keySet = new Set(dayKeys);
   return (db.purchases || [])
@@ -1412,9 +1421,10 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
   totals.purchases = getPurchaseCosts([dayKey]);
+  totals.expenses = getExpensesCosts([dayKey]);
   totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
   totals.cashRevenue = sales.filter(s => s.isCash && !s.cashTransferred).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
-  totals.profit = totals.revenue - totals.purchases;
+  totals.profit = totals.revenue - totals.purchases - totals.expenses;
 
   const byEmployeeMap = {};
   for (const s of sales) {
@@ -1431,14 +1441,53 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
 
   sales.sort((a, b) => String(a.time).localeCompare(String(b.time)));
 
+  const dayExpenses = (db.expenses || []).filter(e => String(e.date||"").slice(0,10) === dayKey)
+    .sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
   res.json({
     success: true,
     day: dayKey,
     closed: db.closedDays ? (db.closedDays[dayKey] || null) : null,
     totals,
     byEmployee,
-    sales
+    sales,
+    expenses: dayExpenses
   });
+});
+
+// ===== FIRMENAUSGABEN =====
+app.get("/expenses", requireAuth, requireBossOrManager, (req, res) => {
+  const date = String(req.query?.date || "");
+  let list = db.expenses || [];
+  if(date) list = list.filter(e => String(e.date||"").slice(0,10) === date);
+  list = list.slice().sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.json({ success: true, expenses: list });
+});
+
+app.post("/expenses", requireAuth, requireBossOrManager, (req, res) => {
+  const category = String(req.body?.category || "").trim();
+  const note     = String(req.body?.note || "").trim();
+  const amount   = Number(req.body?.amount);
+  const date     = String(req.body?.date || getDayKeyLocal(new Date())).slice(0,10);
+  if(!category || !amount || amount <= 0) return res.status(400).json({ success:false, message:"Kategorie und Betrag erforderlich." });
+  const entry = {
+    id: makeToken().slice(0,12),
+    category, note, amount, date,
+    createdAt: new Date().toISOString(),
+    createdBy: req.user.displayName || req.user.username
+  };
+  if(!Array.isArray(db.expenses)) db.expenses = [];
+  db.expenses.push(entry);
+  saveDB(db);
+  res.json({ success: true, entry });
+});
+
+app.delete("/expenses/:id", requireAuth, requireBossOrManager, (req, res) => {
+  const id = String(req.params.id || "");
+  const before = (db.expenses||[]).length;
+  db.expenses = (db.expenses||[]).filter(e => e.id !== id);
+  if(db.expenses.length === before) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  saveDB(db);
+  res.json({ success: true });
 });
 
 // Week report by employee (Calendar Week)
@@ -1469,7 +1518,8 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
   totals.purchases = getPurchaseCosts(dayKeys);
-  totals.profit = totals.revenue - totals.purchases;
+  totals.expenses = getExpensesCosts(dayKeys);
+  totals.profit = totals.revenue - totals.purchases - totals.expenses;
 
   const byEmployeeMap = {};
   for (const s of salesAll) {
@@ -1540,7 +1590,8 @@ app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
     monthDayKeys.push(getDayKeyLocal(d));
   }
   totals.purchases = getPurchaseCosts(monthDayKeys);
-  totals.profit = totals.revenue - totals.purchases;
+  totals.expenses = getExpensesCosts(monthDayKeys);
+  totals.profit = totals.revenue - totals.purchases - totals.expenses;
 
   const byEmployeeMap = {};
   for(const s of salesAll){
