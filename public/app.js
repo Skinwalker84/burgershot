@@ -2492,6 +2492,8 @@ async function loadDayReport(){
   document.getElementById("dayPurchases").innerText=money(data.totals?.purchases||0);
   const expEl = document.getElementById("dayExpenses");
   if(expEl) expEl.innerText = (data.totals?.expenses||0) > 0 ? `-${money(data.totals.expenses)}` : "—";
+  const expCardEl = document.getElementById("dayExpensesCard");
+  if(expCardEl) expCardEl.innerText = (data.totals?.expenses||0) > 0 ? money(data.totals.expenses) : "—";
   document.getElementById("dayProfit").innerText=money(data.totals?.profit||0);
   const cashEl=document.getElementById("dayCash"); if(cashEl) cashEl.innerText=money(data.totals?.cashRevenue||0);
 
@@ -2590,12 +2592,16 @@ async function loadWeekReport(){
   if(isBoss() || isManager()){
     document.getElementById("weekRevenue").innerText=money(data.totals?.revenue||0);
     document.getElementById("weekPurchases").innerText=money(data.totals?.purchases||0);
+    const weekExpEl = document.getElementById("weekExpenses");
+    if(weekExpEl) weekExpEl.innerText = (data.totals?.expenses||0) > 0 ? money(data.totals.expenses) : "—";
     document.getElementById("weekProfit").innerText=money(data.totals?.profit||0);
     document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
   } else {
     // Staff: mask all totals
     document.getElementById("weekRevenue").innerText="—";
     document.getElementById("weekPurchases").innerText="—";
+    const weekExpElErr = document.getElementById("weekExpenses");
+    if(weekExpElErr) weekExpElErr.innerText="—";
     document.getElementById("weekProfit").innerText="—";
     document.getElementById("weekOrders").innerText="—";
   }
@@ -2772,6 +2778,8 @@ async function loadMonthReport(){
 
   document.getElementById("monthRevenue").innerText=money(data.totals?.revenue||0);
   document.getElementById("monthPurchases").innerText=money(data.totals?.purchases||0);
+  const monthExpEl = document.getElementById("monthExpenses");
+  if(monthExpEl) monthExpEl.innerText = (data.totals?.expenses||0) > 0 ? money(data.totals.expenses) : "—";
   document.getElementById("monthProfit").innerText=money(data.totals?.profit||0);
   document.getElementById("monthOrders").innerText=String(data.totals?.orders||0);
 
