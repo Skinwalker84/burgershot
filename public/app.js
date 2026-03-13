@@ -2664,7 +2664,10 @@ async function loadSchichtplan(){
   // Build rows
   const rows = users.map(u => {
     const firstToday = u.firstLoginToday || null;
-    const lastSeen   = u.lastSeen || null;
+    // Only show lastSeen if it was today
+    const todayStr = document.getElementById("schichtDate")?.value || serverDay || new Date().toISOString().slice(0,10);
+    const lastSeenRaw = u.lastSeen || null;
+    const lastSeen = (lastSeenRaw && lastSeenRaw.slice(0,10) === todayStr) ? lastSeenRaw : null;
     const empData    = byEmp[u.username] || null;
     const orders     = empData?.orders || 0;
     const revenue    = empData?.revenue || 0;
