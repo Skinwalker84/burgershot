@@ -2444,6 +2444,7 @@ async function submitExpense(){
   document.getElementById("expenseNote").value = "";
   setTimeout(()=>{ if(msg) msg.innerText=""; }, 3000);
   loadExpenses();
+  if(isBoss()) loadBankBalance();
 }
 
 async function deleteExpense(id){

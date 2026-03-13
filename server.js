@@ -829,6 +829,10 @@ app.post("/purchases", requireAuth, requireBossOrManager, (req, res) => {
     db.purchases.push(...added);
     if(db.purchases.length > 5000) db.purchases = db.purchases.slice(-5000);
 
+    // Lagereinkauf → vom Kontostand abziehen
+    const batchCost = added.reduce((s,p) => s + (p.price != null ? p.qty * p.price : 0), 0);
+    if(batchCost > 0) adjustBankBalance(-batchCost, `Lagereinkauf (${added.length} Artikel)`);
+
     saveDB(db);
     return res.json({ success:true, added: added.length, items: db.inventory });
   }
@@ -868,6 +872,9 @@ app.post("/purchases", requireAuth, requireBossOrManager, (req, res) => {
   if(!Array.isArray(db.purchases)) db.purchases = [];
   db.purchases.push(p);
   if(db.purchases.length > 5000) db.purchases = db.purchases.slice(-5000);
+
+  // Lagereinkauf → vom Kontostand abziehen
+  if(price != null && price > 0) adjustBankBalance(-(qty * price), `Lagereinkauf: ${it.name}`);
 
   saveDB(db);
   res.json({ success:true, purchase: p, items: db.inventory });
@@ -1477,6 +1484,10 @@ app.post("/expenses", requireAuth, requireBossOrManager, (req, res) => {
   };
   if(!Array.isArray(db.expenses)) db.expenses = [];
   db.expenses.push(entry);
+
+  // Firmenausgabe → vom Kontostand abziehen
+  adjustBankBalance(-amount, `Firmenausgabe: ${category}${note ? ' – ' + note : ''}`);
+
   saveDB(db);
   res.json({ success: true, entry });
 });
