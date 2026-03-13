@@ -696,29 +696,29 @@ function activateRegBtn(btn){
 
 /* Products */
 const PRODUCTS_DEFAULT = [
-  { name: "The Bleeder", price: 14, cat: "Burger" },
-  { name: "The Heartstopper", price: 16, cat: "Burger" },
-  { name: "The Chicken", price: 12, cat: "Burger" },
-  { name: "Vegan Burger", price: 10, cat: "Burger" },
-  { name: "The Chozzo", price: 12, cat: "Burger" },
-  { name: "The German", price: 16, cat: "Burger" },
-  { name: "Coleslaw", price: 10, cat: "Beilagen" },
-  { name: "Fries", price: 6, cat: "Beilagen" },
-  { name: "Cheesy Fries", price: 8, cat: "Beilagen" },
-  { name: "Chicken Nuggets", price: 10, cat: "Beilagen" },
-  { name: "Onion Rings", price: 6, cat: "Beilagen" },
-  { name: "ECola", price: 8, cat: "Getränke" },
-  { name: "ECola Light", price: 8, cat: "Getränke" },
-  { name: "Sprunk", price: 8, cat: "Getränke" },
-  { name: "Sprunk Light", price: 8, cat: "Getränke" },
+  { name: "The Bleeder", price: 19, cat: "Burger" },
+  { name: "The Heartstopper", price: 21, cat: "Burger" },
+  { name: "The Chicken", price: 17, cat: "Burger" },
+  { name: "Vegan Burger", price: 15, cat: "Burger" },
+  { name: "The Chozzo", price: 17, cat: "Burger" },
+  { name: "The German", price: 21, cat: "Burger" },
+  { name: "Coleslaw", price: 15, cat: "Beilagen" },
+  { name: "Fries", price: 11, cat: "Beilagen" },
+  { name: "Cheesy Fries", price: 13, cat: "Beilagen" },
+  { name: "Chicken Nuggets", price: 15, cat: "Beilagen" },
+  { name: "Onion Rings", price: 11, cat: "Beilagen" },
+  { name: "ECola", price: 13, cat: "Getränke" },
+  { name: "ECola Light", price: 13, cat: "Getränke" },
+  { name: "Sprunk", price: 13, cat: "Getränke" },
+  { name: "Sprunk Light", price: 13, cat: "Getränke" },
   // legacy typo kept for compatibility with older saved data
-  { name: "Sprung", price: 8, cat: "Getränke" },
-  { name: "Slush", price: 10, cat: "Getränke" },
-  { name: "Milchshake", price: 10, cat: "Getränke" },
-  { name: "Donut", price: 8, cat: "Süßes" },
-  { name: "Caramel Sundae", price: 8, cat: "Süßes" },
-  { name: "Chocolate Sundae", price: 8, cat: "Süßes" },
-  { name: "Strawberry Sundae", price: 8, cat: "Süßes" },
+  { name: "Sprung", price: 13, cat: "Getränke" },
+  { name: "Slush", price: 15, cat: "Getränke" },
+  { name: "Milchshake", price: 15, cat: "Getränke" },
+  { name: "Donut", price: 13, cat: "Süßes" },
+  { name: "Caramel Sundae", price: 13, cat: "Süßes" },
+  { name: "Chocolate Sundae", price: 13, cat: "Süßes" },
+  { name: "Strawberry Sundae", price: 13, cat: "Süßes" },
 ];
 let PRODUCTS = [];
 
@@ -2000,7 +2000,7 @@ function openGroupMenu(p){
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else {
     const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
-    const fries   = (PRODUCTS||[]).filter(x => x.id === "fries" || x.id === "cheesy_fries" || x.id === "onion_rings");
+    const fries   = (PRODUCTS||[]).filter(x => x.cat === "Beilagen" || (x.cat === "Süßes" && x.name && x.name.toLowerCase().includes("sundae")));
     document.getElementById("groupBurgerSection").style.display = "";
     document.getElementById("groupFriesSection").style.display = "";
     renderGroupSection("groupBurgerList", burgers, "burgers", size);
