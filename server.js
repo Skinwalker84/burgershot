@@ -618,6 +618,10 @@ app.post("/auth/login", (req, res) => {
 
   const token = makeToken();
   db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 };
+  // Track first login of today
+  const todayKey = getDayKeyLocal(new Date());
+  if(!user.firstLoginByDay) user.firstLoginByDay = {};
+  if(!user.firstLoginByDay[todayKey]) user.firstLoginByDay[todayKey] = new Date().toISOString();
   saveDB(db);
 
   setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 14 });
@@ -1179,7 +1183,8 @@ app.put("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
    USERS (Management)
    ========================= */
 app.get("/users", requireAuth, requireBoss, (req, res) => {
-  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, lastSeen: u.lastSeen || null })) });
+  const todayKey = getDayKeyLocal(new Date());
+  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, lastSeen: u.lastSeen || null, firstLoginToday: (u.firstLoginByDay && u.firstLoginByDay[todayKey]) || null })) });
 });
 
 app.post("/users", requireAuth, requireBoss, (req, res) => {
