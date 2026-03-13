@@ -124,6 +124,11 @@
           <span>Monat</span>
         </button>
 
+        <button class="iconBtn" onclick="openTab('tab_schicht', null)" id="iconBtnSchicht" title="Schichtplan">
+          <img src="/icons/managment.png" alt="Schicht" />
+          <span>Schicht</span>
+        </button>
+
         <button class="iconBtn" onclick="openTab('tab_mgmt', null)" id="iconBtnMgmt" title="Management">
           <img src="/icons/managment.png" alt="Management" />
         </button>
@@ -493,6 +498,22 @@
     </div>
 
     <!-- ===== TAB: MANAGEMENT ===== -->
+    <!-- ===== TAB: SCHICHTPLAN ===== -->
+    <div id="tab_schicht" class="tabPage hidden">
+      <div class="panel" style="max-width:900px; margin:0 auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <div style="font-weight:900; font-size:18px;">📋 Schichtplan</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="date" id="schichtDate" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:13px;" onchange="loadSchichtplan()" />
+            <button class="ghost" onclick="setSchichtToday()">Heute</button>
+          </div>
+        </div>
+        <div id="schichtBody">
+          <div class="muted small">Lade…</div>
+        </div>
+      </div>
+    </div>
+
     <div id="tab_mgmt" class="tabPage hidden">
       <div class="panel">
         <div class="row" style="justify-content:space-between; align-items:flex-start;">

@@ -73,7 +73,7 @@ function applyRoleVisibility(){
   const mgr = isBossOrManager();
 
   // Boss-only tabs
-  ["iconBtnMonth"].forEach(id=>{
+  ["iconBtnMonth","iconBtnSchicht"].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display = boss ? "" : "none";
   });
@@ -91,7 +91,7 @@ function applyRoleVisibility(){
 }
 
 function openTab(tabId, btn){
-  const bossOnlyTabs = ["tab_month"];
+  const bossOnlyTabs = ["tab_month","tab_schicht"];
   const managerTabs   = ["tab_shop","tab_day"];
   if(bossOnlyTabs.includes(tabId) && !isBoss()){
     alert("Nur Chef.");
@@ -113,6 +113,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_day") { initDayTab(); loadDayReport(); if(isBoss()) loadBankBalance(); }
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); const p=document.getElementById("weekPdfBtn"); const t=document.getElementById("weekTipBtn"); const show=isBossOrManager(); if(p) p.style.display=show?"":"none"; if(t) t.style.display=show?"":"none"; }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
+  if(tabId==="tab_schicht") { initSchichtTab(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_board") {
     // Mark seen: store current time so all existing posts are considered read
@@ -2564,6 +2565,118 @@ async function loadWeekReport(){
 
 /* Month report (Summe aus Wochen) */
 let monthTabInited=false;
+/* ============================
+   SCHICHTPLAN
+   ============================ */
+function initSchichtTab(){
+  if(!isBoss()) return;
+  const d = document.getElementById("schichtDate");
+  if(d && !d.value) d.value = serverDay || new Date().toISOString().slice(0,10);
+  loadSchichtplan();
+}
+
+function setSchichtToday(){
+  const d = document.getElementById("schichtDate");
+  if(d) d.value = serverDay || new Date().toISOString().slice(0,10);
+  loadSchichtplan();
+}
+
+async function loadSchichtplan(){
+  if(!isBoss()) return;
+  const body = document.getElementById("schichtBody");
+  if(!body) return;
+  const date = document.getElementById("schichtDate")?.value || serverDay;
+  if(!date) return;
+
+  body.innerHTML = `<div class="muted small">Lade…</div>`;
+
+  // Fetch users with firstLoginByDay + lastSeen from /users
+  const res = await fetch("/users").catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success){ body.innerHTML=`<div class="muted small">Fehler beim Laden.</div>`; return; }
+
+  const users = (data.users||[]).filter(u => u.username);
+
+  // Fetch day sales to get order count per employee
+  const rRes = await fetch(`/reports/day-details?date=${encodeURIComponent(date)}`).catch(()=>null);
+  const rData = rRes?.ok ? await rRes.json().catch(()=>({})) : {};
+  const byEmp = {};
+  for(const e of (rData.byEmployee||[])) byEmp[e.employeeUsername||e.employee] = e;
+
+  const pad = n => String(n).padStart(2,'0');
+  const fmtTime = iso => {
+    if(!iso) return '—';
+    const d = new Date(iso);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`;
+  };
+
+  // Build rows
+  const rows = users.map(u => {
+    const firstToday = u.firstLoginToday || null;
+    const lastSeen   = u.lastSeen || null;
+    const empData    = byEmp[u.username] || null;
+    const orders     = empData?.orders || 0;
+    const revenue    = empData?.revenue || 0;
+    const wasActive  = !!firstToday;
+
+    return { u, firstToday, lastSeen, orders, revenue, wasActive };
+  }).sort((a,b) => {
+    // Active employees first, then by first login time
+    if(a.wasActive && !b.wasActive) return -1;
+    if(!a.wasActive && b.wasActive) return 1;
+    if(a.firstToday && b.firstToday) return a.firstToday.localeCompare(b.firstToday);
+    return (a.u.displayName||'').localeCompare(b.u.displayName||'');
+  });
+
+  const roleLabel = { boss:'👑 Chef', manager:'⭐ Manager', staff:'👤 Mitarbeiter' };
+
+  body.innerHTML = `
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border); color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px;">
+          <th style="text-align:left; padding:8px 10px;">Mitarbeiter</th>
+          <th style="text-align:center; padding:8px 10px;">Datum</th>
+          <th style="text-align:center; padding:8px 10px;">Zuerst eingeloggt</th>
+          <th style="text-align:center; padding:8px 10px;">Letztes Mal online</th>
+          <th style="text-align:right; padding:8px 10px;">Orders</th>
+          <th style="text-align:right; padding:8px 10px;">Umsatz</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(({u, firstToday, lastSeen, orders, revenue, wasActive}) => `
+          <tr style="border-bottom:1px solid var(--border); opacity:${wasActive?1:.45};">
+            <td style="padding:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="width:9px;height:9px;border-radius:50%;background:${wasActive?'#22c55e':'#ef4444'};display:inline-block;flex-shrink:0;"></span>
+                <div>
+                  <div style="font-weight:900;">${esc(u.displayName)}</div>
+                  <div class="muted small">${roleLabel[u.role]||u.role}</div>
+                </div>
+              </div>
+            </td>
+            <td style="text-align:center; padding:10px; color:var(--muted); font-size:13px;">${esc(date)}</td>
+            <td style="text-align:center; padding:10px;">
+              ${firstToday
+                ? `<span style="color:#22c55e; font-weight:900;">${fmtTime(firstToday)}</span>`
+                : `<span class="muted small">Nicht eingeloggt</span>`}
+            </td>
+            <td style="text-align:center; padding:10px;">
+              ${lastSeen
+                ? `<span style="color:var(--muted); font-size:13px;">${fmtTime(lastSeen)}</span>`
+                : `<span class="muted small">—</span>`}
+            </td>
+            <td style="text-align:right; padding:10px; font-weight:900;">${orders||'—'}</td>
+            <td style="text-align:right; padding:10px; font-weight:900; color:#22c55e;">${revenue>0?money(revenue):'—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="muted small" style="margin-top:12px; text-align:right;">
+      ${rows.filter(r=>r.wasActive).length} von ${rows.length} Mitarbeitern aktiv
+    </div>
+  `;
+}
+
 function initMonthTab(){
   if(monthTabInited) return;
   monthTabInited=true;
