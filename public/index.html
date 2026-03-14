@@ -227,7 +227,10 @@
             <div style="font-weight:900; font-size:22px;" id="dayRevenue">—</div>
           </div>
           <div class="panel" style="flex:1 1 180px;">
-            <div class="muted small">Einkaufskosten</div>
+            <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <div class="muted small">Einkaufskosten</div>
+              <button class="ghost" style="padding:2px 8px; font-size:11px;" onclick="openEditPurchaseCosts()">✏️</button>
+            </div>
             <div style="font-weight:900; font-size:22px; color:#ef4444;" id="dayPurchases">—</div>
           </div>
           <div class="panel" style="flex:1 1 180px;">
@@ -1063,6 +1066,19 @@
       </label>
 
       <button class="primary" style="margin-top:12px; width:100%;" onclick="submitPay()">OK</button>
+    </div>
+  </div>
+
+  <!-- ===== EDIT PURCHASE COSTS OVERLAY ===== -->
+  <div id="editPurchaseCostsOverlay" class="overlay hidden">
+    <div class="overlayCard" style="max-width:460px; width:95%;">
+      <div style="font-weight:900; font-size:17px; margin-bottom:14px;">✏️ Einkaufskosten bearbeiten</div>
+      <div class="muted small" style="margin-bottom:14px;" id="editPurchaseCostsDate">—</div>
+      <div id="editPurchaseCostsList" style="max-height:340px; overflow-y:auto; margin-bottom:14px;"></div>
+      <div id="editPurchaseCostsMsg" class="muted small" style="margin-bottom:10px;"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="ghost" onclick="document.getElementById('editPurchaseCostsOverlay').classList.add('hidden')">Schließen</button>
+      </div>
     </div>
   </div>
 
