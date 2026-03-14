@@ -192,6 +192,62 @@ function updateShopTotal(){
   if(totalEl) totalEl.innerText = "$" + total.toFixed(2);
 }
 
+async function loadPurchaseHistory(){
+  const tbody = document.getElementById("purchaseHistoryBody");
+  const msg   = document.getElementById("purchaseHistoryMsg");
+  if(!tbody) return;
+
+  // Set date default on first open
+  const dateInput = document.getElementById("purchaseHistoryDate");
+  if(dateInput && !dateInput.value) dateInput.value = serverDay || new Date().toISOString().slice(0,10);
+
+  const date = document.getElementById("purchaseHistoryDate")?.value || "";
+  const url  = date ? `/purchases?limit=200&date=${encodeURIComponent(date)}` : "/purchases?limit=200";
+
+  const res  = await fetch(url).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  const list = (data.items || []).filter(p => !date || String(p.date||"").slice(0,10) === date);
+
+  if(list.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" class="muted small">Keine Einträge${date ? " für dieses Datum" : ""}.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(p => {
+    const summe = (p.price != null && p.qty) ? `$${(p.qty * p.price).toFixed(0)}` : "—";
+    const priceStr = p.price != null ? `$${p.price}` : "—";
+    return `<tr>
+      <td class="muted small">${esc(String(p.date||"").slice(0,10))}</td>
+      <td style="font-weight:900;">${esc(p.name||p.inventoryId||"")}</td>
+      <td style="text-align:right;">${p.qty} ${esc(p.unit||"")}</td>
+      <td style="text-align:right; color:var(--muted);">${priceStr}</td>
+      <td style="text-align:right; font-weight:900; color:#ef4444;">-${summe}</td>
+      <td class="muted small">${esc(p.by||"")}</td>
+      <td>
+        ${isBoss() ? `<button class="ghost" style="font-size:11px; padding:2px 8px; color:#ef4444;"
+          onclick="deletePurchase('${escAttr(p.id||"")}')">Stornieren</button>` : ""}
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function deletePurchase(id){
+  if(!isBoss()) return;
+  if(!confirm("Diesen Einkauf wirklich stornieren?\nBestand und Kontostand werden zurückgesetzt.")) return;
+  const msg = document.getElementById("purchaseHistoryMsg");
+  const res = await fetch(`/purchases/${encodeURIComponent(id)}`, { method:"DELETE" }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!res?.ok || !data.success){
+    if(msg) msg.innerText = data.message || "Fehler beim Stornieren.";
+    return;
+  }
+  inventoryItems = Array.isArray(data.items) ? data.items : inventoryItems;
+  renderInventory();
+  loadPurchaseHistory();
+  loadBankBalance();
+  if(msg){ msg.innerText = "✅ Storniert — Bestand und Kontostand wurden angepasst."; setTimeout(()=>{ msg.innerText=""; }, 4000); }
+}
+
 async function bookShopPurchases(){
   if(!isBoss()) return alert("Nur Chef.");
   const msg = document.getElementById("shopMsg");

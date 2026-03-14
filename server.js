@@ -757,7 +757,10 @@ function makePurchaseId(){
 
 app.get("/purchases", requireAuth, requireBossOrManager, (req, res) => {
   const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
-  const list = (db.purchases || []).slice().reverse().slice(0, limit);
+  const date  = String(req.query.date || "").slice(0,10);
+  let list = (db.purchases || []).slice().reverse();
+  if(date) list = list.filter(p => String(p.date||"").slice(0,10) === date);
+  list = list.slice(0, limit);
   res.json({ success:true, items: list });
 });
 
@@ -878,6 +881,20 @@ app.post("/purchases", requireAuth, requireBossOrManager, (req, res) => {
 
   saveDB(db);
   res.json({ success:true, purchase: p, items: db.inventory });
+});
+
+app.delete("/purchases/:id", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "");
+  const before = (db.purchases||[]).length;
+  const entry = (db.purchases||[]).find(p => p.id === id);
+  if(!entry) return res.status(404).json({ success:false, message:"Eintrag nicht gefunden." });
+  // Reverse stock and bank balance
+  const it = (db.inventory || []).find(x => x.id === entry.inventoryId);
+  if(it) it.stock = Math.round(Math.max(0, (Number(it.stock)||0) - (Number(entry.qty)||0)) * 100) / 100;
+  if(entry.price != null && entry.qty > 0) adjustBankBalance(entry.qty * entry.price, `Einkauf storniert: ${entry.name}`);
+  db.purchases = db.purchases.filter(p => p.id !== id);
+  saveDB(db);
+  res.json({ success: true, items: db.inventory });
 });
 
 /* =========================
@@ -1398,6 +1415,28 @@ app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
    REPORTS (Day details only; keep existing endpoints if you have more)
    ========================= */
 // Helper: sum purchase costs for a list of day keys
+/* =========================
+   BANK BALANCE HELPER
+   ========================= */
+function adjustBankBalance(amount, note) {
+  if (!Number.isFinite(amount) || amount === 0) return;
+  if (!Number.isFinite(db.bankBalance)) db.bankBalance = 0;
+  const prev = db.bankBalance;
+  db.bankBalance = Math.round((db.bankBalance + amount) * 100) / 100;
+  db.bankBalanceUpdatedAt = new Date().toISOString();
+  if (!Array.isArray(db.bankHistory)) db.bankHistory = [];
+  db.bankHistory.push({
+    ts: db.bankBalanceUpdatedAt,
+    balance: db.bankBalance,
+    prev,
+    diff: Math.round(amount * 100) / 100,
+    note: note || null,
+    by: "system",
+    byName: "System"
+  });
+  if (db.bankHistory.length > 500) db.bankHistory = db.bankHistory.slice(-500);
+}
+
 function getExpensesCosts(dayKeys) {
   const keySet = new Set(dayKeys);
   return (db.expenses || [])

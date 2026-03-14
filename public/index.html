@@ -507,6 +507,40 @@
 
         <div class="muted small" style="margin-top:10px;">Tipp: Trage nur Mengen ein, die du wirklich gekauft hast. Leere Felder werden ignoriert.</div>
       </div>
+
+      <!-- Einkaufsverlauf / Korrektur -->
+      <div class="panel" style="margin-top:14px;">
+        <div class="row" style="justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('purchaseHistory'); if(!document.getElementById('purchaseHistory').classList.contains('hidden')) loadPurchaseHistory();">
+          <div>
+            <div style="font-weight:900;">🧾 Einkaufsverlauf &amp; Korrektur</div>
+            <div class="muted small">Letzte Buchungen ansehen und bei Bedarf stornieren</div>
+          </div>
+          <span id="purchaseHistoryArrow" style="font-size:18px; transition:transform .2s;">▼</span>
+        </div>
+        <div id="purchaseHistory" class="hidden">
+          <div style="margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="date" id="purchaseHistoryDate" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:13px;" onchange="loadPurchaseHistory()" />
+            <button class="ghost" onclick="document.getElementById('purchaseHistoryDate').value=''; loadPurchaseHistory();">Alle anzeigen</button>
+          </div>
+          <div style="margin-top:10px; overflow:auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Artikel</th>
+                  <th style="text-align:right;">Menge</th>
+                  <th style="text-align:right;">EK-Preis</th>
+                  <th style="text-align:right;">Summe</th>
+                  <th>Gebucht von</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="purchaseHistoryBody"><tr><td colspan="7" class="muted small">—</td></tr></tbody>
+            </table>
+          </div>
+          <div id="purchaseHistoryMsg" class="muted small" style="margin-top:6px;"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== TAB: MANAGEMENT ===== -->
