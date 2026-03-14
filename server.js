@@ -883,6 +883,29 @@ app.post("/purchases", requireAuth, requireBossOrManager, (req, res) => {
   res.json({ success:true, purchase: p, items: db.inventory });
 });
 
+app.put("/purchases/:id", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "");
+  const entry = (db.purchases||[]).find(p => p.id === id);
+  if(!entry) return res.status(404).json({ success:false, message:"Eintrag nicht gefunden." });
+
+  const newPrice = req.body?.price !== undefined ? Number(req.body.price) : entry.price;
+  const newQty   = req.body?.qty   !== undefined ? Number(req.body.qty)   : entry.qty;
+
+  if(!Number.isFinite(newQty) || newQty < 0) return res.status(400).json({ success:false, message:"Ungültige Menge." });
+
+  // Reverse old cost, apply new cost
+  const oldCost = (entry.price != null && entry.qty > 0) ? entry.qty * entry.price : 0;
+  const newCost = (newPrice != null && !isNaN(newPrice) && newPrice >= 0 && newQty > 0) ? newQty * newPrice : 0;
+  const diff = newCost - oldCost;
+  if(diff !== 0) adjustBankBalance(-diff, `Einkauf korrigiert: ${entry.name}`);
+
+  entry.price = (newPrice != null && !isNaN(newPrice) && newPrice >= 0) ? Math.round(newPrice * 100) / 100 : null;
+  entry.qty   = Math.round(newQty * 100) / 100;
+
+  saveDB(db);
+  res.json({ success: true, entry });
+});
+
 app.delete("/purchases/:id", requireAuth, requireBoss, (req, res) => {
   const id = String(req.params.id || "");
   const before = (db.purchases||[]).length;

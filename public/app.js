@@ -223,12 +223,43 @@ async function loadPurchaseHistory(){
       <td style="text-align:right; color:var(--muted);">${priceStr}</td>
       <td style="text-align:right; font-weight:900; color:#ef4444;">-${summe}</td>
       <td class="muted small">${esc(p.by||"")}</td>
-      <td>
-        ${isBoss() ? `<button class="ghost" style="font-size:11px; padding:2px 8px; color:#ef4444;"
-          onclick="deletePurchase('${escAttr(p.id||"")}')">Stornieren</button>` : ""}
+      <td style="display:flex; gap:4px;">
+        ${isBoss() ? `
+          <button class="ghost" style="font-size:11px; padding:2px 8px;"
+            onclick="editPurchase('${escAttr(p.id||"")}','${escAttr(p.name||"")}',${p.qty||0},${p.price??'null'})">✏️ Bearbeiten</button>
+          <button class="ghost" style="font-size:11px; padding:2px 8px; color:#ef4444;"
+            onclick="deletePurchase('${escAttr(p.id||"")}')">Stornieren</button>
+        ` : ""}
       </td>
     </tr>`;
   }).join("");
+}
+
+function editPurchase(id, name, qty, price){
+  const newPrice = prompt(`Einkauf korrigieren: ${name}
+
+Neuer EK-Preis pro Einheit ($):
+(leer lassen = kein Preis)`, price != null ? price : "");
+  if(newPrice === null) return; // cancelled
+  const newQty = prompt(`Neue Menge (${qty}):`, qty);
+  if(newQty === null) return;
+
+  const payload = {};
+  if(newPrice.trim() !== "") payload.price = parseFloat(newPrice);
+  else payload.price = null;
+  payload.qty = parseFloat(newQty) || qty;
+
+  fetch(`/purchases/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(data => {
+    const msg = document.getElementById("purchaseHistoryMsg");
+    if(!data.success){ if(msg) msg.innerText = data.message || "Fehler."; return; }
+    if(msg){ msg.innerText = "✅ Eintrag aktualisiert."; setTimeout(()=>{ msg.innerText=""; }, 3000); }
+    loadPurchaseHistory();
+    if(isBoss()) loadBankBalance();
+  }).catch(()=>{});
 }
 
 async function deletePurchase(id){
