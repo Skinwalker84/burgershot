@@ -1469,10 +1469,17 @@ function getExpensesCosts(dayKeys) {
 }
 
 function getPurchaseCosts(dayKeys) {
-  const keySet = new Set(dayKeys);
-  return (db.purchases || [])
-    .filter(p => keySet.has(String(p.date || "").slice(0, 10)))
-    .reduce((s, p) => s + (Number(p.price) > 0 ? Number(p.qty || 0) * Number(p.price) : 0), 0);
+  let total = 0;
+  for (const dayKey of dayKeys) {
+    if (db.purchaseOverrides && db.purchaseOverrides[dayKey] != null) {
+      total += Number(db.purchaseOverrides[dayKey]);
+    } else {
+      total += (db.purchases || [])
+        .filter(p => String(p.date || "").slice(0, 10) === dayKey)
+        .reduce((s, p) => s + (Number(p.price) > 0 ? Number(p.qty || 0) * Number(p.price) : 0), 0);
+    }
+  }
+  return total;
 }
 
 app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) => {
@@ -1490,7 +1497,7 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
     orders: sales.length
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
-  totals.purchases = (db.purchaseOverrides && db.purchaseOverrides[dayKey] != null) ? Number(db.purchaseOverrides[dayKey]) : getPurchaseCosts([dayKey]);
+  totals.purchases = getPurchaseCosts([dayKey]);
   totals.expenses = getExpensesCosts([dayKey]);
   totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
   totals.cashRevenue = sales.filter(s => s.isCash && !s.cashTransferred).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
