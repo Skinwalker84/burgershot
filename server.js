@@ -359,6 +359,7 @@ function normalizeDB(db) {
 
   if (!Array.isArray(db.inventory)) db.inventory = [];
   if (!Array.isArray(db.purchases)) db.purchases = [];
+  if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
   if (!Array.isArray(db.expenses)) db.expenses = [];
 
   db.products = normalizeProducts(db.products);
@@ -1489,7 +1490,7 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
     orders: sales.length
   };
   totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
-  totals.purchases = getPurchaseCosts([dayKey]);
+  totals.purchases = (db.purchaseOverrides && db.purchaseOverrides[dayKey] != null) ? Number(db.purchaseOverrides[dayKey]) : getPurchaseCosts([dayKey]);
   totals.expenses = getExpensesCosts([dayKey]);
   totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
   totals.cashRevenue = sales.filter(s => s.isCash && !s.cashTransferred).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
@@ -1561,6 +1562,20 @@ app.delete("/expenses/:id", requireAuth, requireBossOrManager, (req, res) => {
   if(db.expenses.length === before) return res.status(404).json({ success:false, message:"Nicht gefunden." });
   saveDB(db);
   res.json({ success: true });
+});
+
+app.put("/reports/purchases-override", requireAuth, requireBoss, (req, res) => {
+  const date   = String(req.body?.date || "").slice(0,10);
+  const amount = Number(req.body?.amount);
+  if(!date) return res.status(400).json({ success:false, message:"Datum fehlt." });
+  if(!Number.isFinite(amount) || amount < 0) return res.status(400).json({ success:false, message:"Ungültiger Betrag." });
+  if(!db.purchaseOverrides) db.purchaseOverrides = {};
+  const old = db.purchaseOverrides[date] ?? getPurchaseCosts([date]);
+  const diff = amount - old;
+  db.purchaseOverrides[date] = Math.round(amount * 100) / 100;
+  if(diff !== 0) adjustBankBalance(-diff, `Einkaufskosten korrigiert (${date})`);
+  saveDB(db);
+  res.json({ success:true, amount: db.purchaseOverrides[date] });
 });
 
 // Week report by employee (Calendar Week)

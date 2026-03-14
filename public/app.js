@@ -2439,66 +2439,21 @@ async function markCashTransferred(day, employeeUsername, employeeName){
 
 async function openEditPurchaseCosts(){
   if(!isBoss()) return;
-  const date = document.getElementById("dayDate")?.value || serverDay;
-  const ov   = document.getElementById("editPurchaseCostsOverlay");
-  const list = document.getElementById("editPurchaseCostsList");
-  const msg  = document.getElementById("editPurchaseCostsMsg");
-  const dateLabel = document.getElementById("editPurchaseCostsDate");
-  if(!ov || !list) return;
+  const date    = document.getElementById("dayDate")?.value || serverDay;
+  const current = document.getElementById("dayPurchases")?.innerText || "0";
+  const val = prompt(`Einkaufskosten für ${date} korrigieren:
 
-  if(dateLabel) dateLabel.innerText = `Datum: ${date}`;
-  list.innerHTML = `<div class="muted small">Lade…</div>`;
-  ov.classList.remove("hidden");
-
-  const res  = await fetch(`/purchases?limit=200&date=${encodeURIComponent(date)}`).catch(()=>null);
-  const data = res?.ok ? await res.json().catch(()=>({})) : {};
-  const items = (data.items||[]).filter(p => String(p.date||"").slice(0,10) === date);
-
-  if(items.length === 0){
-    list.innerHTML = `<div class="muted small">Keine Einkäufe für diesen Tag.</div>`;
-    return;
-  }
-
-  list.innerHTML = items.map(p => {
-    const summe = (p.price != null && p.qty) ? (p.qty * p.price).toFixed(0) : "—";
-    return `
-      <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border);">
-        <div style="flex:1;">
-          <div style="font-weight:900; font-size:13px;">${esc(p.name||"")}</div>
-          <div class="muted small">${p.qty} ${esc(p.unit||"")} · EK: $${p.price ?? "—"} · Summe: $${summe}</div>
-        </div>
-        <input type="number" min="0" step="0.01" placeholder="EK-Preis"
-          value="${p.price ?? ""}"
-          id="pedit_price_${escAttr(p.id)}"
-          style="width:80px; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:12px;"
-        />
-        <input type="number" min="0" step="0.01" placeholder="Menge"
-          value="${p.qty ?? ""}"
-          id="pedit_qty_${escAttr(p.id)}"
-          style="width:70px; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:12px;"
-        />
-        <button class="ghost" style="font-size:12px; padding:4px 10px; background:#22c55e; color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:900;"
-          onclick="savePurchaseEdit('${escAttr(p.id)}')">✓</button>
-      </div>`;
-  }).join("");
-}
-
-async function savePurchaseEdit(id){
-  const priceEl = document.getElementById(`pedit_price_${id}`);
-  const qtyEl   = document.getElementById(`pedit_qty_${id}`);
-  const msg     = document.getElementById("editPurchaseCostsMsg");
-  const payload = {
-    price: priceEl?.value.trim() !== "" ? parseFloat(priceEl.value) : null,
-    qty:   qtyEl?.value.trim()   !== "" ? parseFloat(qtyEl.value)   : undefined
-  };
-  const res  = await fetch(`/purchases/${encodeURIComponent(id)}`, {
-    method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)
+Aktueller Wert: ${current}`, current.replace(/[^0-9.]/g,""));
+  if(val === null) return;
+  const amount = parseFloat(val);
+  if(!isFinite(amount) || amount < 0) return alert("Ungültiger Betrag.");
+  const res  = await fetch("/reports/purchases-override", {
+    method:"PUT", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ date, amount })
   }).catch(()=>null);
   const data = res?.ok ? await res.json().catch(()=>({})) : {};
-  if(!data.success){ if(msg) msg.innerText = data.message||"Fehler."; return; }
-  if(msg){ msg.innerText="✅ Gespeichert."; setTimeout(()=>{ msg.innerText=""; },2500); }
-  openEditPurchaseCosts(); // reload list
-  loadDayReport();         // refresh totals
+  if(!data.success) return alert(data.message || "Fehler.");
+  loadDayReport();
   loadBankBalance();
 }
 
