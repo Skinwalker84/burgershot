@@ -808,12 +808,13 @@ const PRODUCTS_DEFAULT = [
   { name: "Strawberry Sundae", price: 13, cat: "Süßes" },
 ];
 let PRODUCTS = [];
+let HIDDEN_PRODUCTS = [];
 
 
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v2";
+const PRODUCTS_STORAGE_KEY = "bs_products_v3";
 
 function loadProductsFromStorage(){
   try{
@@ -891,9 +892,58 @@ function renderProductsEditor(){
       <td style="text-align:right;">
         <input class="input" style="width:110px; text-align:right; padding:8px 10px;" data-price-key="${escAttr(slugKey(p))}" value="${escAttr(p.price)}" />
       </td>
+      <td style="text-align:center; padding:4px;">
+        <button class="ghost" title="Aus dem Sortiment entfernen"
+          style="padding:2px 8px; font-size:12px; color:#ef4444;"
+          onclick="hideProduct('${escAttr(p.id)}','${escAttr(p.name)}')">🗑️</button>
+      </td>
     </tr>
-  `).join("") || `<tr><td colspan="3" class="muted small">Keine Produkte.</td></tr>`;
+  `).join("") || `<tr><td colspan="4" class="muted small">Keine Produkte.</td></tr>`;
+  // Show restore section if any hidden
+  renderHiddenProductsList();
   if(msg) msg.innerText = "—";
+}
+
+async function hideProduct(id, name){
+  if(!confirm(`"${name}" aus dem Sortiment entfernen?
+
+Das Produkt erscheint nicht mehr in der Kasse.`)) return;
+  const res  = await fetch(`/products/${encodeURIComponent(id)}`, { method:"DELETE" }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success){ alert(data.message||"Fehler."); return; }
+  PRODUCTS = data.products;
+  HIDDEN_PRODUCTS = data.hiddenProducts || HIDDEN_PRODUCTS;
+  renderProducts();
+  renderProductsEditor();
+}
+
+async function restoreProduct(id){
+  const res  = await fetch(`/products/${encodeURIComponent(id)}/restore`, { method:"POST" }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success){ alert(data.message||"Fehler."); return; }
+  PRODUCTS = data.products;
+  HIDDEN_PRODUCTS = (HIDDEN_PRODUCTS||[]).filter(h => h !== id);
+  renderProducts();
+  renderProductsEditor();
+}
+
+function renderHiddenProductsList(){
+  const body = document.getElementById("mgmtProductsBody");
+  if(!body) return;
+  if(!HIDDEN_PRODUCTS || HIDDEN_PRODUCTS.length === 0) return;
+
+  // Find all DEFAULT product names for hidden ids
+  // We don't have them client-side so just show IDs with restore button
+  const hiddenRows = HIDDEN_PRODUCTS.map(id => `
+    <tr style="opacity:.5;">
+      <td colspan="2"><span class="muted small">🚫 ${esc(id)}</span></td>
+      <td style="text-align:right;"><span class="muted small">versteckt</span></td>
+      <td style="text-align:center;">
+        <button class="ghost" style="padding:2px 8px; font-size:12px; color:#22c55e;"
+          onclick="restoreProduct('${escAttr(id)}')">↩️ Wiederherstellen</button>
+      </td>
+    </tr>`).join("");
+  body.innerHTML += hiddenRows;
 }
 
 async function mgmtReloadProducts(){

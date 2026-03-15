@@ -186,7 +186,6 @@ const DEFAULT_PRODUCTS = [
   { id:"junk_energy",      name:"Junk Energy",        price:15, cat:"Getränke", icon:"junk_energy.png",      ekPrice:5 },
   { id:"juice_apple",      name:"Apfelsaft",          price:8, cat:"Getränke", icon:"Juice_Apple.png",      ekPrice:3 },
   { id:"juice_orange",     name:"Orangensaft",        price:8, cat:"Getränke", icon:"Juice_Orange.png",     ekPrice:3 },
-  { id:"slushy_aqua",      name:"Slush Aqua",         price:18, cat:"Getränke", icon:"slushy_aqua.png",      ekPrice:8 },
   { id:"slushy_atom",      name:"Slush Atom",         price:18, cat:"Getränke", icon:"slushy_atom.png",      ekPrice:8 },
   { id:"electrolyte_drink",name:"Elektrolyte Trink",  price:14, cat:"Getränke", icon:"electrolytet_rink.png",ekPrice:7 },
 
@@ -208,16 +207,8 @@ const DEFAULT_PRODUCTS = [
   { id:"ns_xl",     name:"No Sides X-tra Large", price:285, cat:"Menü", icon:"no_sides_xl.png",     groupSize:10, noSidesBox:true, desc:"10× Burger & 10 Getränke nach Wahl" },
 
   // Chicken Boxes — fixer Chicken Burger + Nuggets, nur Getränk wählbar
-  { id:"cbox_small",  name:"Chicken Box Small",       price:43,  cat:"Menü", icon:"chicken_small.png",  groupSize:1,  chickenBox:true, desc:"1× Chicken Burger, 1× Nuggets Box, 1 Getränk" },
-  { id:"cbox_medium", name:"Chicken Box Medium",      price:86,  cat:"Menü", icon:"chicken_medium.png", groupSize:2,  chickenBox:true, desc:"2× Chicken Burger, 2× Nuggets Box, 2 Getränke" },
-  { id:"cbox_large",  name:"Chicken Box Large",       price:214, cat:"Menü", icon:"chicken_large.png",  groupSize:5,  chickenBox:true, desc:"5× Chicken Burger, 5× Nuggets Box, 5 Getränke" },
-  { id:"cbox_xl",     name:"Chicken Box X-tra Large", price:428, cat:"Menü", icon:"chicken_xl.png",     groupSize:10, chickenBox:true, desc:"10× Chicken Burger, 10× Nuggets Box, 10 Getränke" },
 
   // German Special — fixer German + Coleslaw, nur Getränk wählbar
-  { id:"gbox_small",  name:"German Special Small",       price:47,  cat:"Menü", icon:"german_small.png",  groupSize:1,  germanBox:true, desc:"1× The German, 1× Coleslaw, 1 Getränk" },
-  { id:"gbox_medium", name:"German Special Medium",      price:93,  cat:"Menü", icon:"german_medium.png", groupSize:2,  germanBox:true, desc:"2× The German, 2× Coleslaw, 2 Getränke" },
-  { id:"gbox_large",  name:"German Special Large",       price:233, cat:"Menü", icon:"german_large.png",  groupSize:5,  germanBox:true, desc:"5× The German, 5× Coleslaw, 5 Getränke" },
-  { id:"gbox_xl",     name:"German Special X-tra Large", price:466, cat:"Menü", icon:"german_xl.png",     groupSize:10, germanBox:true, desc:"10× The German, 10× Coleslaw, 10 Getränke" },
 
   // Donut Boxes — nur Anzahl, keine Auswahl
   { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
@@ -342,6 +333,9 @@ function normalizeProducts(list) {
   for (const [id] of map) {
     if (!defaultIds.has(id)) map.delete(id);
   }
+  // Remove hidden products
+  const hidden = new Set(Array.isArray(db.hiddenProducts) ? db.hiddenProducts : []);
+  for (const id of hidden) map.delete(id);
   return Array.from(map.values());
 }
 
@@ -659,6 +653,24 @@ app.post("/auth/change-password", requireAuth, (req, res) => {
 /* =========================
    PRODUCTS (VK Preise)
    ========================= */
+app.delete("/products/:id", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
+  if(!Array.isArray(db.hiddenProducts)) db.hiddenProducts = [];
+  if(!db.hiddenProducts.includes(id)) db.hiddenProducts.push(id);
+  db.products = normalizeProducts(db.products); // rebuild without hidden
+  saveDB(db);
+  res.json({ success:true, products: db.products, hiddenProducts: db.hiddenProducts });
+});
+
+app.post("/products/:id/restore", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "").trim();
+  db.hiddenProducts = (db.hiddenProducts||[]).filter(h => h !== id);
+  db.products = normalizeProducts(db.products);
+  saveDB(db);
+  res.json({ success:true, products: db.products });
+});
+
 app.get("/products", requireAuth, (req, res) => {
   res.json({ success: true, products: db.products });
 });
