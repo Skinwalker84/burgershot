@@ -1866,6 +1866,6 @@ app.post("/presence/leave", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`BurgerShot Server läuft auf http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`BurgerShot Server läuft auf http://0.0.0.0:${PORT}`);
 });
