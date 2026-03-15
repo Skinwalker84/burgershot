@@ -1795,59 +1795,32 @@ function renderProducts(){
   box.innerHTML="";
   let list = PRODUCTS.filter(p=>p.cat===currentCategory);
 
-  // For Menü: regular menus top row, chicken boxes second row
-  if(currentCategory === "Menü" && list.some(p=>p.chickenBox)){
+  // Menü tab: fixed row order — Regular → No Sides → Donut Box
+  if(currentCategory === "Menü"){
     box.style.display = "flex";
     box.style.flexWrap = "wrap";
     box.style.alignContent = "start";
-    const regular = list.filter(p=>!p.chickenBox && !p.donutBox && !p.germanBox && !p.noSidesBox);
-    const chicken = list.filter(p=>p.chickenBox && !p.donutBox && !p.germanBox);
 
-    if(regular.length){
-      const row1 = document.createElement("div");
-      row1.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
-      box.appendChild(row1);
-      renderProductList(regular, row1);
-    }
+    const makeRow = (label) => {
+      if(label){
+        const lbl = document.createElement("div");
+        lbl.style.cssText = "width:100%; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:12px 0 4px; padding-top:10px; border-top:1px solid var(--border);";
+        lbl.innerText = label;
+        box.appendChild(lbl);
+      }
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
+      box.appendChild(row);
+      return row;
+    };
+
+    const regular = list.filter(p=>!p.noSidesBox && !p.donutBox && !p.chickenBox && !p.germanBox);
     const noSides = list.filter(p=>p.noSidesBox);
-    if(noSides.length){
-      const dividerNS = document.createElement("div");
-      dividerNS.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
-      box.appendChild(dividerNS);
-      const rowNS = document.createElement("div");
-      rowNS.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
-      box.appendChild(rowNS);
-      renderProductList(noSides, rowNS);
-    }
-    if(chicken.length){
-      const divider = document.createElement("div");
-      divider.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px; flex-basis:100%;";
-      box.appendChild(divider);
-      const row2 = document.createElement("div");
-      row2.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
-      box.appendChild(row2);
-      renderProductList(chicken, row2);
-    }
-    const german = list.filter(p=>p.germanBox);
-    if(german.length){
-      const divider2 = document.createElement("div");
-      divider2.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
-      box.appendChild(divider2);
-      const row3 = document.createElement("div");
-      row3.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
-      box.appendChild(row3);
-      renderProductList(german, row3);
-    }
-    const donuts = list.filter(p=>p.donutBox);
-    if(donuts.length){
-      const divider3 = document.createElement("div");
-      divider3.style.cssText = "width:100%; border-top:1px solid var(--border); margin:10px 0 10px;";
-      box.appendChild(divider3);
-      const row4 = document.createElement("div");
-      row4.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; width:100%;";
-      box.appendChild(row4);
-      renderProductList(donuts, row4);
-    }
+    const donuts  = list.filter(p=>p.donutBox);
+
+    if(regular.length) renderProductList(regular, makeRow(null));
+    if(noSides.length) renderProductList(noSides, makeRow("No Sides"));
+    if(donuts.length)  renderProductList(donuts,  makeRow("Donut Box"));
     return;
   }
   box.style.display = "";
