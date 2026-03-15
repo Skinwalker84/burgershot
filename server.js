@@ -281,7 +281,7 @@ function normalizeInventory(list){
   return out;
 }
 
-function normalizeProducts(list) {
+function normalizeProducts(list, hiddenProducts) {
   const arr = Array.isArray(list) ? list : [];
   const out = [];
   const seen = new Set();
@@ -333,9 +333,8 @@ function normalizeProducts(list) {
   for (const [id] of map) {
     if (!defaultIds.has(id)) map.delete(id);
   }
-  // Remove hidden products (passed in or read from db if available)
-  const hiddenList = typeof db !== "undefined" && Array.isArray(db.hiddenProducts) ? db.hiddenProducts : [];
-  const hidden = new Set(hiddenList);
+  // Remove hidden products
+  const hidden = new Set(Array.isArray(hiddenProducts) ? hiddenProducts : []);
   for (const id of hidden) map.delete(id);
   return Array.from(map.values());
 }
@@ -357,7 +356,7 @@ function normalizeDB(db) {
   if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
   if (!Array.isArray(db.expenses)) db.expenses = [];
 
-  db.products = normalizeProducts(db.products);
+  db.products = normalizeProducts(db.products, db.hiddenProducts);
   db.inventory = normalizeInventory(db.inventory);
   // saleInventoryLinks: [{id, productId, inventoryId, qty}]
   if(!Array.isArray(db.saleInventoryLinks)) db.saleInventoryLinks = [];
@@ -659,7 +658,7 @@ app.delete("/products/:id", requireAuth, requireBoss, (req, res) => {
   if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
   if(!Array.isArray(db.hiddenProducts)) db.hiddenProducts = [];
   if(!db.hiddenProducts.includes(id)) db.hiddenProducts.push(id);
-  db.products = normalizeProducts(db.products); // rebuild without hidden
+  db.products = normalizeProducts(db.products, db.hiddenProducts); // rebuild without hidden
   saveDB(db);
   res.json({ success:true, products: db.products, hiddenProducts: db.hiddenProducts });
 });
@@ -667,7 +666,7 @@ app.delete("/products/:id", requireAuth, requireBoss, (req, res) => {
 app.post("/products/:id/restore", requireAuth, requireBoss, (req, res) => {
   const id = String(req.params.id || "").trim();
   db.hiddenProducts = (db.hiddenProducts||[]).filter(h => h !== id);
-  db.products = normalizeProducts(db.products);
+  db.products = normalizeProducts(db.products, db.hiddenProducts);
   saveDB(db);
   res.json({ success:true, products: db.products });
 });
@@ -678,7 +677,7 @@ app.get("/products", requireAuth, (req, res) => {
 
 app.put("/products", requireAuth, requireBoss, (req, res) => {
   const incoming = req.body?.products;
-  const normalized = normalizeProducts(incoming);
+  const normalized = normalizeProducts(incoming, db.hiddenProducts);
 
   // guard: prevent accidental wipe by requiring at least 5 products
   if (!Array.isArray(normalized) || normalized.length < 5) {
