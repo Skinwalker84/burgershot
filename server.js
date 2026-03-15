@@ -333,8 +333,9 @@ function normalizeProducts(list) {
   for (const [id] of map) {
     if (!defaultIds.has(id)) map.delete(id);
   }
-  // Remove hidden products
-  const hidden = new Set(Array.isArray(db.hiddenProducts) ? db.hiddenProducts : []);
+  // Remove hidden products (passed in or read from db if available)
+  const hiddenList = typeof db !== "undefined" && Array.isArray(db.hiddenProducts) ? db.hiddenProducts : [];
+  const hidden = new Set(hiddenList);
   for (const id of hidden) map.delete(id);
   return Array.from(map.values());
 }
