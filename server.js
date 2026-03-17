@@ -1265,6 +1265,29 @@ app.post("/users", requireAuth, requireBoss, (req, res) => {
   res.json({ success: true });
 });
 
+app.put("/users/:username", requireAuth, requireBoss, (req, res) => {
+  const username = String(req.params.username || "").toLowerCase();
+  const user = db.users.find(u => u.username === username);
+  if(!user) return res.status(404).json({ success:false, message:"User nicht gefunden." });
+
+  const newRole = String(req.body?.role || "").toLowerCase();
+  const newPassword = String(req.body?.password || "").trim();
+  const newDisplayName = String(req.body?.displayName || "").trim();
+
+  if(newRole && ["boss","manager","staff"].includes(newRole)) user.role = newRole;
+  if(newDisplayName) user.displayName = newDisplayName;
+  if(newPassword){
+    const pw = hashPassword(newPassword);
+    user.pw = pw;
+    // Invalidate all sessions for this user
+    for(const [tok, sess] of Object.entries(db.sessions||{})){
+      if(sess.username === username) delete db.sessions[tok];
+    }
+  }
+  saveDB(db);
+  res.json({ success:true, user: { username: user.username, displayName: user.displayName, role: user.role } });
+});
+
 app.delete("/users/:username", requireAuth, requireBoss, (req, res) => {
   const u = String(req.params.username || "").trim().toLowerCase();
   if (!u) return res.status(400).json({ success: false, message: "Username fehlt." });

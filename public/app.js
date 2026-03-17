@@ -3022,7 +3022,10 @@ async function loadUsers(){
           ">📅 Heute eingeloggt: ${firstLoginStr}</div>
         </div>
       </div>
-      <button class="ghost" style="margin-left:8px;" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
+      <div style="display:flex; gap:6px; margin-left:8px;">
+        <button class="ghost" onclick="openEditUser('${escAttr(u.username)}','${escAttr(u.displayName)}','${escAttr(u.role)}')">✏️ Bearbeiten</button>
+        <button class="ghost" style="color:#ef4444;" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
+      </div>
     </div>
   `}).join("");
 }
@@ -3075,6 +3078,38 @@ async function addUser(username, displayName, role, password){
   if(!res.ok || !data.success) return alert(data.message || "Fehler.");
   loadUsers();
 }
+function openEditUser(username, displayName, role){
+  document.getElementById("editUserLabel").innerText = `${displayName} (${username})`;
+  document.getElementById("editUserDisplayName").value = displayName;
+  document.getElementById("editUserRole").value = role;
+  document.getElementById("editUserPassword").value = "";
+  document.getElementById("editUserMsg").innerText = "";
+  document.getElementById("editUserOverlay")._username = username;
+  document.getElementById("editUserOverlay").classList.remove("hidden");
+}
+
+async function submitEditUser(){
+  const ov       = document.getElementById("editUserOverlay");
+  const username = ov._username;
+  const role     = document.getElementById("editUserRole").value;
+  const displayName = document.getElementById("editUserDisplayName").value.trim();
+  const password = document.getElementById("editUserPassword").value;
+  const msg      = document.getElementById("editUserMsg");
+
+  const payload = { role };
+  if(displayName) payload.displayName = displayName;
+  if(password)    payload.password    = password;
+
+  const res  = await fetch(`/users/${encodeURIComponent(username)}`, {
+    method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)
+  }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success){ if(msg) msg.innerText = data.message||"Fehler."; return; }
+
+  ov.classList.add("hidden");
+  loadUsers();
+}
+
 async function delUser(username){
   if(!confirm(`User ${username} löschen?`)) return;
   const res=await fetch(`/users/${encodeURIComponent(username)}`,{ method:"DELETE" });
