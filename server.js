@@ -211,7 +211,7 @@ const DEFAULT_PRODUCTS = [
   // German Special — fixer German + Coleslaw, nur Getränk wählbar
 
   // Donut Boxes — nur Anzahl, keine Auswahl
-  // Little Soul Carwash
+  // Little Seoul Carwash
   { id:"lsc_xl", name:"Little Seoul Carwash", price:260, cat:"Menü", icon:"xl.png", groupSize:10, soulCarwashBox:true, desc:"10× The Heartstopper & 10× Milchshake" },
 
   { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
@@ -329,8 +329,11 @@ function normalizeProducts(list, hiddenProducts) {
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {
-      // Always sync extra fields from defaults (groupSize, icon, desc)
-      Object.assign(map.get(id), extra);
+      // Always sync name, cat and extra fields from defaults
+      const existing = map.get(id);
+      existing.name = dp.name;
+      existing.cat  = dp.cat;
+      Object.assign(existing, extra);
     }
   }
   // Remove products that no longer exist in DEFAULT_PRODUCTS (e.g. renamed/deleted defaults)
