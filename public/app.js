@@ -1818,9 +1818,11 @@ function renderProducts(){
     const noSides = list.filter(p=>p.noSidesBox);
     const donuts  = list.filter(p=>p.donutBox);
 
-    if(regular.length) renderProductList(regular, makeRow(null));
-    if(noSides.length) renderProductList(noSides, makeRow("No Sides"));
-    if(donuts.length)  renderProductList(donuts,  makeRow("Donut Box"));
+    const soulCarwash = list.filter(p=>p.soulCarwashBox);
+    if(regular.length)     renderProductList(regular,     makeRow(null));
+    if(noSides.length)     renderProductList(noSides,     makeRow("No Sides"));
+    if(soulCarwash.length) renderProductList(soulCarwash, makeRow("Little Soul Carwash"));
+    if(donuts.length)      renderProductList(donuts,      makeRow("Donut Box"));
     return;
   }
   box.style.display = "";
@@ -1965,6 +1967,15 @@ function addToCart(p){
       const displayName = `${p.name} | 🍩 ${size}× Donut`;
       cart.push({ name: displayName, price: p.price, qty:1, productId: p.id,
         components:[{ productId:"donut", qty: size }] });
+      renderCart(); saveCartsDebounced(); sendPresencePing(); renderPresenceWarning();
+      return;
+    }
+    if(p.soulCarwashBox){
+      // Fixed: 10× Heartstopper + 10× Milchshake
+      const size = p.groupSize || 10;
+      const displayName = `${p.name} | 💜 ${size}× Heartstopper & ${size}× Milchshake`;
+      cart.push({ name: displayName, price: p.price, qty:1, productId: p.id,
+        components:[{ productId:"heartstopper", qty: size }, { productId:"milchshake", qty: size }] });
       renderCart(); saveCartsDebounced(); sendPresencePing(); renderPresenceWarning();
       return;
     }

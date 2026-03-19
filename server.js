@@ -211,6 +211,9 @@ const DEFAULT_PRODUCTS = [
   // German Special — fixer German + Coleslaw, nur Getränk wählbar
 
   // Donut Boxes — nur Anzahl, keine Auswahl
+  // Little Soul Carwash
+  { id:"lsc_xl", name:"Little Soul Carwash", price:260, cat:"Menü", icon:"xl.png", groupSize:10, soulCarwashBox:true, desc:"10× The Heartstopper & 10× Milchshake" },
+
   { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
   { id:"dbox_medium", name:"Donut Box Medium",      price:74,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },
   { id:"dbox_large",  name:"Donut Box Large",       price:148,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:12, desc:"12× Donut" },
@@ -304,6 +307,7 @@ function normalizeProducts(list, hiddenProducts) {
     if (p.donutBox) extra.donutBox = true;
     if (p.germanBox) extra.germanBox = true;
     if (p.noSidesBox) extra.noSidesBox = true;
+    if (p.soulCarwashBox) extra.soulCarwashBox = true;
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 
@@ -321,6 +325,7 @@ function normalizeProducts(list, hiddenProducts) {
     if (dp.donutBox) extra.donutBox = true;
     if (dp.germanBox) extra.germanBox = true;
     if (dp.noSidesBox) extra.noSidesBox = true;
+    if (dp.soulCarwashBox) extra.soulCarwashBox = true;
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {
