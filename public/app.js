@@ -814,7 +814,7 @@ let HIDDEN_PRODUCTS = [];
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v3";
+const PRODUCTS_STORAGE_KEY = "bs_products_v4";
 
 function loadProductsFromStorage(){
   try{
@@ -831,7 +831,16 @@ function loadProductsFromStorage(){
       const price = Number(p.price);
       if(!name || !cat || !Number.isFinite(price) || price<0) continue;
       const id = String(p.id||"").trim() || null;
-      out.push({ id, name, cat, price: Math.round(price) });
+      const extra = {};
+      if(p.icon)           extra.icon           = p.icon;
+      if(p.desc)           extra.desc           = p.desc;
+      if(p.groupSize)      extra.groupSize      = Number(p.groupSize);
+      if(p.noSidesBox)     extra.noSidesBox     = true;
+      if(p.donutBox)       extra.donutBox       = true;
+      if(p.chickenBox)     extra.chickenBox     = true;
+      if(p.germanBox)      extra.germanBox      = true;
+      if(p.soulCarwashBox) extra.soulCarwashBox = true;
+      out.push({ id, name, cat, price: Math.round(price), ...extra });
     }
     return out.length ? out : null;
   }catch{ return null; }
