@@ -814,7 +814,7 @@ let HIDDEN_PRODUCTS = [];
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v4";
+const PRODUCTS_STORAGE_KEY = "bs_products_v5";
 
 function loadProductsFromStorage(){
   try{
@@ -1979,10 +1979,10 @@ function addToCart(p){
       renderCart(); saveCartsDebounced(); sendPresencePing(); renderPresenceWarning();
       return;
     }
-    if(p.soulCarwashBox){
+    if(p.id === "lsc_xl" || p.soulCarwashBox){
       // Fixed: 10× Heartstopper + 10× Milchshake
       const size = p.groupSize || 10;
-      const displayName = `${p.name} | 💜 ${size}× Heartstopper & ${size}× Milchshake`;
+      const displayName = `${p.name} | 💜 ${size}× The Heartstopper & ${size}× Milchshake`;
       cart.push({ name: displayName, price: p.price, qty:1, productId: p.id,
         components:[{ productId:"heartstopper", qty: size }, { productId:"milchshake", qty: size }] });
       renderCart(); saveCartsDebounced(); sendPresencePing(); renderPresenceWarning();
