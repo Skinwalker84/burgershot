@@ -212,7 +212,7 @@ const DEFAULT_PRODUCTS = [
 
   // Donut Boxes — nur Anzahl, keine Auswahl
   // Little Soul Carwash
-  { id:"lsc_xl", name:"Little Soul Carwash", price:260, cat:"Menü", icon:"xl.png", groupSize:10, soulCarwashBox:true, desc:"10× The Heartstopper & 10× Milchshake" },
+  { id:"lsc_xl", name:"Little Seoul Carwash", price:260, cat:"Menü", icon:"xl.png", groupSize:10, soulCarwashBox:true, desc:"10× The Heartstopper & 10× Milchshake" },
 
   { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
   { id:"dbox_medium", name:"Donut Box Medium",      price:74,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },

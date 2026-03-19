@@ -1814,14 +1814,14 @@ function renderProducts(){
       return row;
     };
 
-    const regular = list.filter(p=>!p.noSidesBox && !p.donutBox && !p.chickenBox && !p.germanBox);
+    const regular = list.filter(p=>!p.noSidesBox && !p.donutBox && !p.chickenBox && !p.germanBox && !p.soulCarwashBox);
     const noSides = list.filter(p=>p.noSidesBox);
     const donuts  = list.filter(p=>p.donutBox);
 
     const soulCarwash = list.filter(p=>p.soulCarwashBox);
     if(regular.length)     renderProductList(regular,     makeRow(null));
     if(noSides.length)     renderProductList(noSides,     makeRow("No Sides"));
-    if(soulCarwash.length) renderProductList(soulCarwash, makeRow("Little Soul Carwash"));
+    if(soulCarwash.length) renderProductList(soulCarwash, makeRow("Little Seoul Carwash"));
     if(donuts.length)      renderProductList(donuts,      makeRow("Donut Box"));
     return;
   }
