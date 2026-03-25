@@ -789,6 +789,8 @@ const PRODUCTS_DEFAULT = [
   { name: "Vegan Burger", price: 15, cat: "Burger" },
   { name: "The Chozzo", price: 17, cat: "Burger" },
   { name: "The German", price: 21, cat: "Burger" },
+  { name: "Breakfast Deluxe", price: 0, cat: "Burger", icon: "breakfast_deluxe.png" },
+  { name: "Special Burger",   price: 0, cat: "Burger", icon: "special_burger.png" },
   { name: "Coleslaw", price: 15, cat: "Beilagen" },
   { name: "Fries", price: 11, cat: "Beilagen" },
   { name: "Cheesy Fries", price: 13, cat: "Beilagen" },
@@ -814,7 +816,7 @@ let HIDDEN_PRODUCTS = [];
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v5";
+const PRODUCTS_STORAGE_KEY = "bs_products_v6";
 
 function loadProductsFromStorage(){
   try{

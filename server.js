@@ -168,6 +168,8 @@ const DEFAULT_PRODUCTS = [
   { id:"vegan_burger", name:"Vegan Burger", price:15, cat:"Burger" },
   { id:"chozzo", name:"The Chozzo", price:17, cat:"Burger" },
   { id:"german", name:"The German", price:21, cat:"Burger" },
+  { id:"breakfast_deluxe", name:"Breakfast Deluxe", price:0, cat:"Burger", icon:"breakfast_deluxe.png" },
+  { id:"special_burger",   name:"Special Burger",   price:0, cat:"Burger", icon:"special_burger.png" },
 
   { id:"coleslaw", name:"Coleslaw", price:15, cat:"Beilagen" },
   { id:"fries", name:"Fries", price:11, cat:"Beilagen" },
@@ -195,16 +197,16 @@ const DEFAULT_PRODUCTS = [
   { id:"strawberry_sundae", name:"Strawberry Sundae", price:13, cat:"Süßes" },
 
   // Gruppen-Menüs
-  { id:"menu_small",   name:"Small Menü",       price:39,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_medium",  name:"Medium Menü",      price:78,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_large",   name:"Large Menü",       price:195, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_xlarge",  name:"X-tra Large Menü", price:390, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" },
+  { id:"menu_small",   name:"Small Menü",       price:48,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Fries/Cheesy Fries & Getränk" },
+  { id:"menu_medium",  name:"Medium Menü",      price:97,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Fries/Cheesy Fries & Getränk" },
+  { id:"menu_large",   name:"Large Menü",       price:242, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Fries/Cheesy Fries & Getränk" },
+  { id:"menu_xlarge",  name:"X-tra Large Menü", price:484, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" },
 
   // No Sides — Burger + Getränk, keine Beilage
-  { id:"ns_small",  name:"No Sides Small",       price:28,  cat:"Menü", icon:"no_sides_small.png",  groupSize:1,  noSidesBox:true, desc:"1× Burger & 1 Getränk nach Wahl" },
-  { id:"ns_medium", name:"No Sides Medium",      price:57,  cat:"Menü", icon:"no_sides_medium.png", groupSize:2,  noSidesBox:true, desc:"2× Burger & 2 Getränke nach Wahl" },
-  { id:"ns_large",  name:"No Sides Large",       price:142, cat:"Menü", icon:"no_sides_large.png",  groupSize:5,  noSidesBox:true, desc:"5× Burger & 5 Getränke nach Wahl" },
-  { id:"ns_xl",     name:"No Sides X-tra Large", price:285, cat:"Menü", icon:"no_sides_xl.png",     groupSize:10, noSidesBox:true, desc:"10× Burger & 10 Getränke nach Wahl" },
+  { id:"ns_small",  name:"No Sides Small",       price:34,  cat:"Menü", icon:"no_sides_small.png",  groupSize:1,  noSidesBox:true, desc:"1× Burger & 1 Getränk nach Wahl" },
+  { id:"ns_medium", name:"No Sides Medium",      price:68,  cat:"Menü", icon:"no_sides_medium.png", groupSize:2,  noSidesBox:true, desc:"2× Burger & 2 Getränke nach Wahl" },
+  { id:"ns_large",  name:"No Sides Large",       price:171, cat:"Menü", icon:"no_sides_large.png",  groupSize:5,  noSidesBox:true, desc:"5× Burger & 5 Getränke nach Wahl" },
+  { id:"ns_xl",     name:"No Sides X-tra Large", price:342, cat:"Menü", icon:"no_sides_xl.png",     groupSize:10, noSidesBox:true, desc:"10× Burger & 10 Getränke nach Wahl" },
 
   // Chicken Boxes — fixer Chicken Burger + Nuggets, nur Getränk wählbar
 
