@@ -2246,6 +2246,7 @@ function confirmGroupMenu(){
 
 let _currentDiscount = 0;
 let _currentDiscountId = null; // percent
+let _bahamaMamas = false; // flat $10 per burger for Bahama Mama's
 
 const DISCOUNTS = {
   0:  { label: "Kein Rabatt", id: "discBtn0" },
@@ -2260,6 +2261,7 @@ function openPay(){
   if(cart.length===0) return alert("Warenkorb ist leer.");
   _currentDiscount = 0;
   _currentDiscountId = null;
+  _bahamaMamas = false;
   updatePayOverlay();
   document.getElementById("payAmount").value = "";
   const cashCb = document.getElementById("payIsCash"); if(cashCb) cashCb.checked = false;
@@ -2267,7 +2269,19 @@ function openPay(){
   document.getElementById("payOverlay").classList.remove("hidden");
 }
 
+const BAHAMA_BURGER_IDS = ["heartstopper","chicken","vegan_burger"];
+
+function applyBahamaMamas(){
+  _bahamaMamas = !_bahamaMamas;
+  if(_bahamaMamas){
+    _currentDiscount = 0;
+    _currentDiscountId = null;
+  }
+  updatePayOverlay();
+}
+
 function applyDiscount(pct, id){
+  _bahamaMamas = false;
   _currentDiscount = pct;
   _currentDiscountId = id || null;
   updatePayOverlay();
@@ -2277,7 +2291,19 @@ function updatePayOverlay(){
   const original = cartTotal();
   const discAmt = Math.round(original * _currentDiscount / 100);
   const deliveryFee = document.getElementById("payIsDelivery")?.checked ? 50 : 0;
-  const total = original - discAmt + deliveryFee;
+
+  // Bahama Mama's: calculate burger discount
+  let bahamaDisc = 0;
+  if(_bahamaMamas){
+    for(const item of (cart||[])){
+      const pid = item.productId || "";
+      if(BAHAMA_BURGER_IDS.includes(pid)){
+        bahamaDisc += Math.max(0, item.price - 10) * (item.qty || 1);
+      }
+    }
+  }
+
+  const total = original - discAmt - bahamaDisc + deliveryFee;
 
   document.getElementById("payOriginal").innerText = money(original);
   document.getElementById("payTotal").innerText = money(total);
@@ -2290,6 +2316,14 @@ function updatePayOverlay(){
   } else {
     discRow.style.display = "none";
   }
+  const bahamaRow = document.getElementById("payBahamaRow");
+  if(bahamaRow){
+    bahamaRow.style.display = _bahamaMamas && bahamaDisc > 0 ? "flex" : "none";
+    const bahamaAmtEl = document.getElementById("payBahamaAmt");
+    if(bahamaAmtEl) bahamaAmtEl.innerText = `−${money(bahamaDisc)}`;
+  }
+  const bahamaBtn = document.getElementById("discBtnBahama");
+  if(bahamaBtn) bahamaBtn.classList.toggle("discountBtnActive", _bahamaMamas);
   const delivRow = document.getElementById("payDeliveryRow");
   if(delivRow) delivRow.style.display = deliveryFee > 0 ? "flex" : "none";
 
@@ -2319,13 +2353,15 @@ async function submitPay(){
   const isDelivery = document.getElementById("payIsDelivery")?.checked || false;
   const deliveryFee = isDelivery ? 50 : 0;
   const discountFactor = (total - deliveryFee) / (original || 1);
-  const items = cart.map(x => ({
-    name: x.name,
-    price: _currentDiscount > 0 ? Math.round(x.price * discountFactor * 100) / 100 : x.price,
-    qty: x.qty,
-    productId: x.productId || null,
-    components: x.components || null
-  }));
+  const items = cart.map(x => {
+    let itemPrice = x.price;
+    if(_currentDiscount > 0){
+      itemPrice = Math.round(x.price * discountFactor * 100) / 100;
+    } else if(_bahamaMamas && BAHAMA_BURGER_IDS.includes(x.productId||"")){
+      itemPrice = 10;
+    }
+    return { name: x.name, price: itemPrice, qty: x.qty, productId: x.productId||null, components: x.components||null };
+  });
   if(isDelivery) items.push({ name: "🛵 Liefergebühr", price: 50, qty: 1, productId: null, components: null });
 
   const payload = {
@@ -2335,6 +2371,7 @@ async function submitPay(){
     paidAmount: paid,
     time: new Date().toISOString(),
     discount: _currentDiscount > 0 ? _currentDiscount : undefined,
+    bahamaMamas: _bahamaMamas || undefined,
     isCash: document.getElementById("payIsCash")?.checked || false,
     isDelivery
   };
