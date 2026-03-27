@@ -3353,6 +3353,8 @@ function syncActiveRegisterButton(reg){
   }catch(e){}
 }
 
+const REGISTER_NAMES = { 1:"Kasse 1", 2:"Kasse 2", 3:"Kasse 3", 4:"Kasse 4", 5:"Drive-In", 6:"Foodtruck" };
+
 function ensureRegisterBlockOverlay(){
   let ov = document.getElementById('regBlockOverlay');
   if(ov) return ov;
@@ -3362,28 +3364,48 @@ function ensureRegisterBlockOverlay(){
   ov.innerHTML = `
     <div class="overlayCard" style="max-width:420px; text-align:center;">
       <div style="font-size:48px; margin-bottom:8px;">🔒</div>
-      <div style="font-weight:900; font-size:20px; margin-bottom:6px;">Kasse <span id="regBlockNum">—</span> ist belegt</div>
+      <div style="font-weight:900; font-size:20px; margin-bottom:6px;"><span id="regBlockLabel">Kasse</span> ist belegt</div>
       <div style="font-size:15px; margin-bottom:4px;"><b><span id="regBlockName">—</span></b> arbeitet gerade an dieser Kasse.</div>
       <div class="muted" style="font-size:13px; margin-top:6px;">Bitte wähle eine andere Kasse oder warte, bis sie freigegeben wird.</div>
-      <div style="display:flex; justify-content:center; margin-top:20px;">
+      <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:20px;">
         <button class="primary" id="regBlockOkBtn" style="min-width:120px;">OK</button>
+        <button class="ghost" id="regBlockForceBtn" style="min-width:160px; color:#ef4444; display:none;">🔓 Kasse freigeben</button>
       </div>
     </div>
   `;
   document.body.appendChild(ov);
-  ov.querySelector('#regBlockOkBtn')?.addEventListener('click', ()=>{
-    ov.classList.add('hidden');
+  ov.querySelector('#regBlockOkBtn')?.addEventListener('click', ()=>{ ov.classList.add('hidden'); });
+  ov.querySelector('#regBlockForceBtn')?.addEventListener('click', async ()=>{
+    const reg = ov._blockedReg;
+    if(!reg) return;
+    const res = await fetch('/presence/force-clear',{
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ register: String(reg) })
+    }).catch(()=>null);
+    if(res?.ok) ov.classList.add('hidden');
   });
   return ov;
 }
 
 function showRegisterBlocked(reg, names){
   const ov = ensureRegisterBlockOverlay();
-  const nEl = ov.querySelector('#regBlockNum');
-  const nameEl = ov.querySelector('#regBlockName');
-  if(nEl) nEl.textContent = String(reg||"—");
-  if(nameEl) nameEl.textContent = String(names||"—");
+  const labelEl = ov.querySelector('#regBlockLabel');
+  const nameEl  = ov.querySelector('#regBlockName');
+  const forceBtn = ov.querySelector('#regBlockForceBtn');
+  if(labelEl) labelEl.textContent = REGISTER_NAMES[Number(reg)] || `Kasse ${reg}`;
+  if(nameEl)  nameEl.textContent  = String(names||"—");
+  if(forceBtn) forceBtn.style.display = isBoss() ? "" : "none";
+  ov._blockedReg = reg;
   ov.classList.remove('hidden');
+}
+
+async function forceReleaseRegister(){
+  const ov  = document.getElementById('regBlockOverlay');
+  const reg = ov?._blockedReg;
+  if(!reg) return;
+  const res = await fetch('/presence/force-clear',{
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ register: String(reg) })
+  }).catch(()=>null);
+  if(res?.ok) ov.classList.add('hidden');
 }
 
 function renderPresenceWarning(){
