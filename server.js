@@ -457,7 +457,7 @@ app.use(express.json());
 // ===== Soft Lock / Presence (SSE) =====
 const presenceClients = new Set();
 // { "1": { users: { "username": { name, at } } } }
-let presenceState = { "1": {users:{}}, "2": {users:{}}, "3": {users:{}}, "4": {users:{}} };
+let presenceState = { "1": {users:{}}, "2": {users:{}}, "3": {users:{}}, "4": {users:{}}, "5": {users:{}}, "6": {users:{}} };
 // Global online tracking (no register required)
 let onlineUsers = {}; // { username: { name, at } }
 // Debounced lastSeen save — avoid saveDB on every heartbeat (race conditions)
@@ -1836,6 +1836,15 @@ app.get("/events/presence", (req, res) => {
   req.on("close", () => {
     try{ presenceClients.delete(res); }catch(e){}
   });
+});
+
+// Boss force-release a register
+app.post("/presence/force-clear", requireAuth, requireBoss, (req, res) => {
+  const register = String(req.body?.register || "");
+  if(!register || !presenceState[register]) return res.status(400).json({ success:false, message:"Ungültige Kasse." });
+  presenceState[register] = { users:{} };
+  broadcastPresence();
+  res.json({ success:true });
 });
 
 // Presence ping (soft lock helper)

@@ -771,7 +771,7 @@ setInterval(updateDayInfo, 1000);
 
 function updateRegisterDisplay(){
   const d=document.getElementById("registerDisplay");
-  if(d) d.innerText = currentRegister ? ("Kasse " + currentRegister) : "Kasse —";
+  if(d) d.innerText = currentRegister ? (REGISTER_NAMES[Number(currentRegister)] || "Kasse " + currentRegister) : "Kasse —";
   syncActiveRegisterButton(currentRegister);
 }
 
