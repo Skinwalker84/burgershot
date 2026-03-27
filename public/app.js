@@ -2345,13 +2345,23 @@ function parseMoney(val){ const s=String(val||"").replace(/[^\d.-]/g,""); const 
 async function submitPay(){
   const original = cartTotal();
   const discAmt = Math.round(original * _currentDiscount / 100);
-  const total = original - discAmt;
+
+  // Bahama Mama's flat-price discount
+  let bahamaDisc = 0;
+  if(_bahamaMamas){
+    for(const item of (cart||[])){
+      if(BAHAMA_BURGER_IDS.includes(item.productId||"")){
+        bahamaDisc += Math.max(0, item.price - 10) * (item.qty || 1);
+      }
+    }
+  }
+
+  const isDelivery = document.getElementById("payIsDelivery")?.checked || false;
+  const deliveryFee = isDelivery ? 50 : 0;
+  const total = original - discAmt - bahamaDisc + deliveryFee;
   const paid = parseMoney(document.getElementById("payAmount").value);
   if(!Number.isFinite(paid) || paid < total) return alert("Bezahlt muss >= Total sein.");
 
-  // Apply discount to item prices proportionally
-  const isDelivery = document.getElementById("payIsDelivery")?.checked || false;
-  const deliveryFee = isDelivery ? 50 : 0;
   const discountFactor = (total - deliveryFee) / (original || 1);
   const items = cart.map(x => {
     let itemPrice = x.price;
@@ -2367,7 +2377,7 @@ async function submitPay(){
   const payload = {
     register: currentRegister,
     items,
-    total,
+    total: total - deliveryFee,
     paidAmount: paid,
     time: new Date().toISOString(),
     discount: _currentDiscount > 0 ? _currentDiscount : undefined,
