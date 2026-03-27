@@ -3366,7 +3366,7 @@ function ensureRegisterBlockOverlay(){
       <div style="font-size:15px; margin-bottom:4px;"><b><span id="regBlockName">—</span></b> arbeitet gerade an dieser Kasse.</div>
       <div class="muted" style="font-size:13px; margin-top:6px;">Bitte wähle eine andere Kasse oder warte, bis sie freigegeben wird.</div>
       <div style="display:flex; justify-content:center; margin-top:20px;">
-        <button class="primary" id="regBlockOkBtn" style="min-width:120px;">OK</button> ${isBoss() ? `<button class="danger" id="regForceBtn" style="min-width:160px;">Freigeben (Chef)</button>` : ``}
+        <button class="primary" id="regBlockOkBtn" style="min-width:120px;">OK</button>
       </div>
     </div>
   `;
