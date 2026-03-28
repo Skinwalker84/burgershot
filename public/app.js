@@ -635,6 +635,7 @@ async function login(){
   updateRegisterDisplay();
   syncActiveRegisterButton(null);
   await initProducts();
+  getZutatenCache(); // preload so ⓘ buttons render correctly
   renderCart();
   await loadCartsFromServer();
   startCartsSSE();
@@ -1925,6 +1926,12 @@ function renderProductList(list, box){
     infoBtn.addEventListener('mouseleave', ()=>{ infoBtn.style.background='rgba(0,0,0,.55)'; });
     infoBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showZutatenPopup(p.name); });
     imgWrap.style.position = 'relative';
+    // Hide button if no zutaten entry exists (check cache, hide async if not loaded yet)
+    infoBtn.style.display = 'none'; // hidden by default
+    getZutatenCache().then(cache => {
+      const hasEntry = cache.some(z => z.name.toLowerCase() === p.name.toLowerCase());
+      infoBtn.style.display = hasEntry ? 'flex' : 'none';
+    });
     imgWrap.appendChild(infoBtn);
 
     wrap.appendChild(imgWrap);
