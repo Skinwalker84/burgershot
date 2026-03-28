@@ -378,7 +378,7 @@ function normalizeDB(db) {
         else if (sideNames.includes(z.name)) z.category = 'Sides';
         else if (dessertNames.includes(z.name)) z.category = 'Desserts';
         else if (drinkNames.includes(z.name)) z.category = 'Drinks';
-        else z.category = 'Sonstiges';
+        else z.category = 'Special Burger';
       }
     }
   }

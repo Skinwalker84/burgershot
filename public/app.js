@@ -2834,7 +2834,7 @@ const ZUTAT_CATEGORIES = [
   { key:"Sides",     icon:"🍟" },
   { key:"Desserts",  icon:"🍩" },
   { key:"Drinks",    icon:"🥤" },
-  { key:"Sonstiges", icon:"📋" },
+  { key:"Special Burger", icon:"🌟" },
 ];
 
 async function loadZutaten(){
