@@ -1623,6 +1623,17 @@ app.post("/zutaten", requireAuth, requireBoss, (req, res) => {
   res.json({ success:true, zutaten: db.zutaten });
 });
 
+app.put("/zutaten/:id", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "");
+  const entry = (db.zutaten||[]).find(z => z.id === id);
+  if(!entry) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  if(req.body?.name)        entry.name        = String(req.body.name).trim();
+  if(req.body?.category)    entry.category    = String(req.body.category).trim();
+  if(req.body?.ingredients) entry.ingredients = String(req.body.ingredients).trim();
+  saveDB(db);
+  res.json({ success:true, zutaten: db.zutaten });
+});
+
 app.delete("/zutaten/:id", requireAuth, requireBoss, (req, res) => {
   const id = String(req.params.id || "");
   db.zutaten = (db.zutaten||[]).filter(z => z.id !== id);

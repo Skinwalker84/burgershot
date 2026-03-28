@@ -2862,7 +2862,11 @@ async function loadZutaten(){
       return `<div style="padding:12px 0; border-bottom:1px solid rgba(255,255,255,.06);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <div style="font-weight:900; font-size:14px;">${esc(z.name)}</div>
-          ${isBoss() ? `<button class="ghost" style="padding:2px 8px; color:#ef4444; font-size:12px;" onclick="deleteZutat('${escAttr(z.id)}')">🗑️</button>` : ""}
+          ${isBoss() ? `
+          <div style="display:flex; gap:4px;">
+            <button class="ghost" style="padding:2px 8px; font-size:12px;" onclick="editZutat('${escAttr(z.id)}','${escAttr(z.name)}','${escAttr(z.category||'')}','${escAttr(z.ingredients)}')">✏️</button>
+            <button class="ghost" style="padding:2px 8px; color:#ef4444; font-size:12px;" onclick="deleteZutat('${escAttr(z.id)}')">🗑️</button>
+          </div>` : ""}
         </div>
         <div>${tags}</div>
       </div>`;
@@ -2902,6 +2906,29 @@ async function openAddZutat(){
   const res = await fetch("/zutaten",{
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ name:name.trim(), category:cat.key, ingredients:ingredients.trim() })
+  }).catch(()=>null);
+  if(res?.ok) loadZutaten();
+}
+
+async function editZutat(id, currentName, currentCat, currentIngredients){
+  if(!isBoss()) return;
+
+  const catOptions = ZUTAT_CATEGORIES.map((c,i) => `${i+1}. ${c.key}`).join("\n");
+  const currentCatIdx = ZUTAT_CATEGORIES.findIndex(c => c.key === currentCat) + 1;
+  const catIdx = prompt(`Kategorie (aktuell: ${currentCat}):\n${catOptions}\n\nNummer eingeben (Enter = unverändert):`, currentCatIdx);
+  if(catIdx === null) return;
+  const cat = ZUTAT_CATEGORIES[Number(catIdx)-1] || ZUTAT_CATEGORIES.find(c=>c.key===currentCat);
+
+  const name = prompt("Name:", currentName);
+  if(name === null) return;
+
+  const ingredients = prompt("Zutaten (kommagetrennt):", currentIngredients);
+  if(ingredients === null) return;
+
+  const res = await fetch(`/zutaten/${encodeURIComponent(id)}`, {
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ name: name.trim(), category: cat.key, ingredients: ingredients.trim() })
   }).catch(()=>null);
   if(res?.ok) loadZutaten();
 }
