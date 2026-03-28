@@ -2322,6 +2322,7 @@ function confirmGroupMenu(){
 let _currentDiscount = 0;
 let _currentDiscountId = null; // percent
 let _bahamaMamas = false; // flat $10 per burger for Bahama Mama's
+let _littleSeoul = false;  // flat Heartstopper $16, Milchshake $10 for Little Seoul
 
 const DISCOUNTS = {
   0:  { label: "Kein Rabatt", id: "discBtn0" },
@@ -2337,6 +2338,7 @@ function openPay(){
   _currentDiscount = 0;
   _currentDiscountId = null;
   _bahamaMamas = false;
+  _littleSeoul = false;
   updatePayOverlay();
   document.getElementById("payAmount").value = "";
   const cashCb = document.getElementById("payIsCash"); if(cashCb) cashCb.checked = false;
@@ -2345,18 +2347,23 @@ function openPay(){
 }
 
 const BAHAMA_BURGER_IDS = ["heartstopper","chicken","vegan_burger"];
+const SEOUL_PRICES = { "heartstopper": 16, "milchshake": 10 };
 
 function applyBahamaMamas(){
   _bahamaMamas = !_bahamaMamas;
-  if(_bahamaMamas){
-    _currentDiscount = 0;
-    _currentDiscountId = null;
-  }
+  if(_bahamaMamas){ _littleSeoul = false; _currentDiscount = 0; _currentDiscountId = null; }
+  updatePayOverlay();
+}
+
+function applyLittleSeoul(){
+  _littleSeoul = !_littleSeoul;
+  if(_littleSeoul){ _bahamaMamas = false; _currentDiscount = 0; _currentDiscountId = null; }
   updatePayOverlay();
 }
 
 function applyDiscount(pct, id){
   _bahamaMamas = false;
+  _littleSeoul = false;
   _currentDiscount = pct;
   _currentDiscountId = id || null;
   updatePayOverlay();
@@ -2366,6 +2373,17 @@ function updatePayOverlay(){
   const original = cartTotal();
   const discAmt = Math.round(original * _currentDiscount / 100);
   const deliveryFee = document.getElementById("payIsDelivery")?.checked ? 50 : 0;
+
+  // Little Seoul flat prices
+  let seoulDisc = 0;
+  if(_littleSeoul){
+    for(const item of (cart||[])){
+      const pid = item.productId || "";
+      if(SEOUL_PRICES[pid] !== undefined){
+        seoulDisc += Math.max(0, item.price - SEOUL_PRICES[pid]) * (item.qty || 1);
+      }
+    }
+  }
 
   // Bahama Mama's: calculate burger discount
   let bahamaDisc = 0;
@@ -2378,7 +2396,7 @@ function updatePayOverlay(){
     }
   }
 
-  const total = original - discAmt - bahamaDisc + deliveryFee;
+  const total = original - discAmt - bahamaDisc - seoulDisc + deliveryFee;
 
   document.getElementById("payOriginal").innerText = money(original);
   document.getElementById("payTotal").innerText = money(total);
@@ -2399,6 +2417,14 @@ function updatePayOverlay(){
   }
   const bahamaBtn = document.getElementById("discBtnBahama");
   if(bahamaBtn) bahamaBtn.classList.toggle("discountBtnActive", _bahamaMamas);
+  const seoulRow = document.getElementById("paySeoulRow");
+  if(seoulRow){
+    seoulRow.style.display = _littleSeoul && seoulDisc > 0 ? "flex" : "none";
+    const seoulAmtEl = document.getElementById("paySeoulAmt");
+    if(seoulAmtEl) seoulAmtEl.innerText = `−${money(seoulDisc)}`;
+  }
+  const seoulBtn = document.getElementById("discBtnSeoul");
+  if(seoulBtn) seoulBtn.classList.toggle("discountBtnActive", _littleSeoul);
   const delivRow = document.getElementById("payDeliveryRow");
   if(delivRow) delivRow.style.display = deliveryFee > 0 ? "flex" : "none";
 
@@ -2430,10 +2456,19 @@ async function submitPay(){
       }
     }
   }
+  let seoulDisc = 0;
+  if(_littleSeoul){
+    for(const item of (cart||[])){
+      const pid = item.productId||"";
+      if(SEOUL_PRICES[pid] !== undefined){
+        seoulDisc += Math.max(0, item.price - SEOUL_PRICES[pid]) * (item.qty || 1);
+      }
+    }
+  }
 
   const isDelivery = document.getElementById("payIsDelivery")?.checked || false;
   const deliveryFee = isDelivery ? 50 : 0;
-  const total = original - discAmt - bahamaDisc + deliveryFee;
+  const total = original - discAmt - bahamaDisc - seoulDisc + deliveryFee;
   const paid = parseMoney(document.getElementById("payAmount").value);
   if(!Number.isFinite(paid) || paid < total) return alert("Bezahlt muss >= Total sein.");
 
@@ -2444,6 +2479,8 @@ async function submitPay(){
       itemPrice = Math.round(x.price * discountFactor * 100) / 100;
     } else if(_bahamaMamas && BAHAMA_BURGER_IDS.includes(x.productId||"")){
       itemPrice = 10;
+    } else if(_littleSeoul && SEOUL_PRICES[x.productId||""] !== undefined){
+      itemPrice = SEOUL_PRICES[x.productId||""];
     }
     return { name: x.name, price: itemPrice, qty: x.qty, productId: x.productId||null, components: x.components||null };
   });

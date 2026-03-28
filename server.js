@@ -213,9 +213,6 @@ const DEFAULT_PRODUCTS = [
   // German Special — fixer German + Coleslaw, nur Getränk wählbar
 
   // Donut Boxes — nur Anzahl, keine Auswahl
-  // Little Seoul Carwash
-  { id:"lsc_xl", name:"Little Seoul Carwash", price:260, cat:"Menü", icon:"xl.png", groupSize:10, soulCarwashBox:true, desc:"10× The Heartstopper & 10× Milchshake" },
-
   { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
   { id:"dbox_medium", name:"Donut Box Medium",      price:74,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },
   { id:"dbox_large",  name:"Donut Box Large",       price:148,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:12, desc:"12× Donut" },
