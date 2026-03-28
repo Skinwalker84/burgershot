@@ -1907,10 +1907,77 @@ function renderProductList(list, box){
     }
     meta.appendChild(pr);
 
+    // ⓘ info button — only show if zutaten exist for this product
+    const infoBtn = document.createElement('button');
+    infoBtn.innerHTML = 'ⓘ';
+    infoBtn.title = 'Zutaten anzeigen';
+    infoBtn.style.cssText = [
+      'position:absolute','top:4px','right:4px',
+      'width:20px','height:20px','border-radius:50%',
+      'border:1px solid rgba(255,255,255,.3)',
+      'background:rgba(0,0,0,.55)','color:#fff',
+      'font-size:11px','font-weight:900','line-height:1',
+      'cursor:pointer','display:flex','align-items:center',
+      'justify-content:center','z-index:2','padding:0',
+      'transition:background .15s'
+    ].join(';');
+    infoBtn.addEventListener('mouseenter', ()=>{ infoBtn.style.background='rgba(96,165,250,.8)'; });
+    infoBtn.addEventListener('mouseleave', ()=>{ infoBtn.style.background='rgba(0,0,0,.55)'; });
+    infoBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showZutatenPopup(p.name); });
+    imgWrap.style.position = 'relative';
+    imgWrap.appendChild(infoBtn);
+
     wrap.appendChild(imgWrap);
     wrap.appendChild(meta);
     box.appendChild(wrap);
   });
+}
+
+/* ============================
+   ZUTATEN POPUP (POS)
+   ============================ */
+let _zutatenCache = null;
+
+async function getZutatenCache(){
+  if(_zutatenCache) return _zutatenCache;
+  const res  = await fetch("/zutaten").catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  _zutatenCache = data.zutaten || [];
+  return _zutatenCache;
+}
+
+async function showZutatenPopup(productName){
+  const zutaten = await getZutatenCache();
+  const entry = zutaten.find(z => z.name.toLowerCase() === productName.toLowerCase());
+
+  let ov = document.getElementById('zutatenPopupOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'zutatenPopupOv';
+    ov.className = 'overlay hidden';
+    ov.innerHTML = `
+      <div class="overlayCard" style="max-width:480px; width:95%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="font-weight:900; font-size:17px;" id="zutPopupTitle">Zutaten</div>
+          <button class="ghost" style="padding:4px 10px;" onclick="document.getElementById('zutatenPopupOv').classList.add('hidden')">✕</button>
+        </div>
+        <div id="zutPopupBody"></div>
+      </div>`;
+    document.body.appendChild(ov);
+  }
+
+  document.getElementById('zutPopupTitle').innerText = '🍔 ' + productName;
+  const body = document.getElementById('zutPopupBody');
+
+  if(!entry){
+    body.innerHTML = '<div class="muted small" style="padding:8px 0;">Keine Zutatenliste hinterlegt.</div>';
+  } else {
+    const tags = entry.ingredients.split(',').map(i =>
+      `<span style="display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 10px;font-size:13px;margin:4px 4px 0 0;">${i.trim()}</span>`
+    ).join('');
+    body.innerHTML = `<div style="line-height:2;">${tags}</div>`;
+  }
+  ov.classList.remove('hidden');
 }
 
 // +1 popup near click position
