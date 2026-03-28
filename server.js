@@ -366,6 +366,22 @@ function normalizeDB(db) {
   if (!Array.isArray(db.purchases)) db.purchases = [];
   if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
   if (!Array.isArray(db.expenses)) db.expenses = [];
+  // Migrate existing zutaten: assign default categories if missing
+  if (Array.isArray(db.zutaten)) {
+    const burgerNames = ['The Bleeder','The Heartstopper','The Chicken','Vegan Burger','The Chozzo','The German','Breakfast Deluxe','Special Burger'];
+    const sideNames   = ['Coleslaw','Fries','Cheesy Fries','Onion Rings','Chicken Nuggets'];
+    const dessertNames= ['Donut','Caramel Sundae','Chocolate Sundae','Strawberry Sundae'];
+    const drinkNames  = ['ECola','ECola Light','Sprunk','Sprunk Light','Slush','Milchshake','Orange O Tang','Mexi-Coke Spicy','Junk Energy','Apfelsaft','Orangensaft','Slush Atom','Elektrolyte Trink'];
+    for (const z of db.zutaten) {
+      if (!z.category) {
+        if (burgerNames.includes(z.name)) z.category = 'Burger';
+        else if (sideNames.includes(z.name)) z.category = 'Sides';
+        else if (dessertNames.includes(z.name)) z.category = 'Desserts';
+        else if (drinkNames.includes(z.name)) z.category = 'Drinks';
+        else z.category = 'Sonstiges';
+      }
+    }
+  }
   if (!Array.isArray(db.zutaten) || db.zutaten.length === 0) {
     db.zutaten = [
     { id:"001zut", name:'The Bleeder',      category:'Burger', ingredients:'Brioche-Burgerbrötchen, Rinder-Patty, Cheddar, Rote Zwiebelringe, Rucola, karamellisierte Paprika, Ketchup, BBQ-Sauce, Sriracha' },
