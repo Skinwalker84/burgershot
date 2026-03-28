@@ -114,7 +114,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); const p=document.getElementById("weekPdfBtn"); const t=document.getElementById("weekTipBtn"); const show=isBossOrManager(); if(p) p.style.display=show?"":"none"; if(t) t.style.display=show?"":"none"; }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_schicht") { initSchichtTab(); }
-  if(tabId==="tab_zutaten") { renderZutatenList(); }
+  if(tabId==="tab_zutaten") { loadZutaten(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_board") {
     // Mark seen: store current time so all existing posts are considered read
