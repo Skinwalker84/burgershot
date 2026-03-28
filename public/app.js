@@ -114,6 +114,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); const p=document.getElementById("weekPdfBtn"); const t=document.getElementById("weekTipBtn"); const show=isBossOrManager(); if(p) p.style.display=show?"":"none"; if(t) t.style.display=show?"":"none"; }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_schicht") { initSchichtTab(); }
+  if(tabId==="tab_zutaten") { /* static content */ }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_board") {
     // Mark seen: store current time so all existing posts are considered read
@@ -2825,6 +2826,38 @@ let monthTabInited=false;
 /* ============================
    SCHICHTPLAN
    ============================ */
+/* ============================
+   ZUTATEN TAB
+   ============================ */
+function openAddZutat(){
+  const name = prompt("Name des Burgers / Beilage:");
+  if(!name) return;
+  const ingredients = prompt(`Zutaten für "${name}" (kommagetrennt):`);
+  if(!ingredients) return;
+
+  const list = document.getElementById("zutatenList");
+  if(!list) return;
+
+  const tags = ingredients.split(",").map(i =>
+    `<span style="display:inline-block; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:6px; padding:3px 9px; font-size:12px; margin:3px 3px 0 0;">${i.trim()}</span>`
+  ).join("");
+
+  const div = document.createElement("div");
+  div.style.cssText = "padding:14px 0; border-bottom:1px solid var(--border);";
+  div.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div style="font-weight:900; font-size:15px;">🍔 ${esc(name)}</div>
+      <button class="ghost" title="Löschen" style="padding:2px 8px; color:#ef4444; font-size:13px;" onclick="deleteZutat(this)">🗑️</button>
+    </div>
+    <div class="zutatTags">${tags}</div>`;
+  list.appendChild(div);
+}
+
+function deleteZutat(btn){
+  if(!confirm("Eintrag löschen?")) return;
+  btn.closest("div[style]")?.remove();
+}
+
 function initSchichtTab(){
   if(!isBoss()) return;
   const d = document.getElementById("schichtDate");
