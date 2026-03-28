@@ -114,7 +114,7 @@ function openTab(tabId, btn){
   if(tabId==="tab_week") { initWeekTab(); loadWeekReport(); const p=document.getElementById("weekPdfBtn"); const t=document.getElementById("weekTipBtn"); const show=isBossOrManager(); if(p) p.style.display=show?"":"none"; if(t) t.style.display=show?"":"none"; }
   if(tabId==="tab_month") { initMonthTab(); loadMonthReport(); }
   if(tabId==="tab_schicht") { initSchichtTab(); }
-  if(tabId==="tab_zutaten") { /* static content */ }
+  if(tabId==="tab_zutaten") { renderZutatenList(); }
   if(tabId==="tab_stock") { loadInventory(); }
   if(tabId==="tab_board") {
     // Mark seen: store current time so all existing posts are considered read
@@ -2829,33 +2829,68 @@ let monthTabInited=false;
 /* ============================
    ZUTATEN TAB
    ============================ */
-function openAddZutat(){
-  const name = prompt("Name des Burgers / Beilage:");
-  if(!name) return;
-  const ingredients = prompt(`Zutaten für "${name}" (kommagetrennt):`);
-  if(!ingredients) return;
+const ZUTATEN_KEY = "bs_zutaten_v1";
+const ZUTATEN_DEFAULTS = [
+  { name: "The Bleeder", ingredients: "Brioche-Burgerbrötchen, Rinder-Patty, Cheddar, Rote Zwiebelringe, Rucola, karamellisierte Paprika, Ketchup, BBQ-Sauce, Sriracha" },
+  { name: "The Heartstopper", ingredients: "1 großes Brioche Burger Bun, 3 Rindfleisch-Patties, 2 Scheiben Bacon, 3 Scheiben Cheddar, 1 Spiegelei, Röstzwiebeln, 3 Scheiben Gewürzgurken, 2 Scheiben Tomate, Eisbergsalat, Burger-Sauce, BBQ-Sauce, Cheese-Sauce" },
+  { name: "The Chicken", ingredients: "Brioche-Burgerbrötchen, panierte Hähnchenbrust, 1 Scheibe Gouda, Eisbergsalat, Gurkenscheiben, Karottenstreifen, Rote Zwiebelringe, Honig-Senf-Soße, Paprika-Würfel" },
+  { name: "Vegan Burger", ingredients: "Sesam-Burgerbrötchen, Schwarze-Bohnen-Patty, veganer Käse, Spinat, Avocado-Scheiben, Rote Paprika, Rote Zwiebelringe, Gurkenscheiben, Karottenstreifen, Cashew-Aioli Creme, gegrillte Auberginenscheiben" },
+  { name: "The Chozzo", ingredients: "Brioche-Bun, Rinder-Patty, Cheddar, Bacon, karamellisierten Zwiebeln, Gewürzgurken, Röstzwiebeln, Salat, rauchige Chozzo-Sauce, Jalapeño, Chillie Cheese Sauce" },
+  { name: "The German", ingredients: "Längliches Sesam-Burgerbrötchen, Schweinefleisch-Patty, rauchig-süße BBQ-Sauce, frische Zwiebelstückchen und Gewürzgurken" },
+  { name: "Coleslaw", ingredients: "Weißkohl, Karotten, Rote Zwiebeln, Mayonnaise, Joghurt, Zitronensaft" }
+];
 
-  const list = document.getElementById("zutatenList");
-  if(!list) return;
-
-  const tags = ingredients.split(",").map(i =>
-    `<span style="display:inline-block; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:6px; padding:3px 9px; font-size:12px; margin:3px 3px 0 0;">${i.trim()}</span>`
-  ).join("");
-
-  const div = document.createElement("div");
-  div.style.cssText = "padding:14px 0; border-bottom:1px solid var(--border);";
-  div.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div style="font-weight:900; font-size:15px;">🍔 ${esc(name)}</div>
-      <button class="ghost" title="Löschen" style="padding:2px 8px; color:#ef4444; font-size:13px;" onclick="deleteZutat(this)">🗑️</button>
-    </div>
-    <div class="zutatTags">${tags}</div>`;
-  list.appendChild(div);
+function loadZutatenFromStorage(){
+  try{
+    const raw = localStorage.getItem(ZUTATEN_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch{}
+  return null;
 }
 
-function deleteZutat(btn){
+function saveZutatenToStorage(list){
+  try{ localStorage.setItem(ZUTATEN_KEY, JSON.stringify(list)); }catch{}
+}
+
+function getZutaten(){
+  return loadZutatenFromStorage() || ZUTATEN_DEFAULTS.map(z => ({...z}));
+}
+
+function renderZutatenList(){
+  const list = document.getElementById("zutatenList");
+  if(!list) return;
+  const zutaten = getZutaten();
+  list.innerHTML = zutaten.map((z, idx) => {
+    const tags = z.ingredients.split(",").map(i =>
+      `<span style="display:inline-block; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:6px; padding:3px 9px; font-size:12px; margin:3px 3px 0 0;">${i.trim()}</span>`
+    ).join("");
+    return `<div style="padding:14px 0; border-bottom:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-weight:900; font-size:15px;">🍔 ${esc(z.name)}</div>
+        <button class="ghost" title="Löschen" style="padding:2px 8px; color:#ef4444; font-size:13px;" onclick="deleteZutat(${idx})">🗑️</button>
+      </div>
+      <div class="zutatTags">${tags}</div>
+    </div>`;
+  }).join("");
+}
+
+function openAddZutat(){
+  const name = prompt("Name des Burgers / Beilage:");
+  if(!name || !name.trim()) return;
+  const ingredients = prompt(`Zutaten für "${name}" (kommagetrennt):`);
+  if(!ingredients || !ingredients.trim()) return;
+  const zutaten = getZutaten();
+  zutaten.push({ name: name.trim(), ingredients: ingredients.trim() });
+  saveZutatenToStorage(zutaten);
+  renderZutatenList();
+}
+
+function deleteZutat(idx){
   if(!confirm("Eintrag löschen?")) return;
-  btn.closest("div[style]")?.remove();
+  const zutaten = getZutaten();
+  zutaten.splice(idx, 1);
+  saveZutatenToStorage(zutaten);
+  renderZutatenList();
 }
 
 function initSchichtTab(){

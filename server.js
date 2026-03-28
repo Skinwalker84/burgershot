@@ -248,6 +248,7 @@ function makeFreshDB() {
 
     salesByDay: { [today]: [] },
     expenses: [],
+    zutaten: [],
     kitchenByDay: { [today]: { pending: [], done: [] } },
     closedDays: {}
   };
@@ -365,6 +366,17 @@ function normalizeDB(db) {
   if (!Array.isArray(db.purchases)) db.purchases = [];
   if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
   if (!Array.isArray(db.expenses)) db.expenses = [];
+  if (!Array.isArray(db.zutaten) || db.zutaten.length === 0) {
+    db.zutaten = [
+    { id:"001zut", name:'The Bleeder', ingredients:'Brioche-Burgerbrötchen, Rinder-Patty, Cheddar, Rote Zwiebelringe, Rucola, karamellisierte Paprika, Ketchup, BBQ-Sauce, Sriracha' },
+    { id:"002zut", name:'The Heartstopper', ingredients:'1 großes Brioche Burger Bun, 3 Rindfleisch-Patties, 2 Scheiben Bacon, 3 Scheiben Cheddar, 1 Spiegelei, Röstzwiebeln, 3 Scheiben Gewürzgurken, 2 Scheiben Tomate, Eisbergsalat, Burger-Sauce, BBQ-Sauce, Cheese-Sauce' },
+    { id:"003zut", name:'The Chicken', ingredients:'Brioche-Burgerbrötchen, panierte Hähnchenbrust, 1 Scheibe Gouda, Eisbergsalat, Gurkenscheiben, Karottenstreifen, Rote Zwiebelringe, Honig-Senf-Soße, Paprika-Würfel' },
+    { id:"004zut", name:'Vegan Burger', ingredients:'Sesam-Burgerbrötchen, Schwarze-Bohnen-Patty, veganer Käse, Spinat, Avocado-Scheiben, Rote Paprika, Rote Zwiebelringe, Gurkenscheiben, Karottenstreifen, Cashew-Aioli Creme, gegrillte Auberginenscheiben' },
+    { id:"005zut", name:'The Chozzo', ingredients:'Brioche-Bun, Rinder-Patty, Cheddar, Bacon, karamellisierten Zwiebeln, Gewürzgurken, Röstzwiebeln, Salat, rauchige Chozzo-Sauce, Jalapeño, Chillie Cheese Sauce' },
+    { id:"006zut", name:'The German', ingredients:'Längliches Sesam-Burgerbrötchen, Schweinefleisch-Patty, rauchig-süße BBQ-Sauce, frische Zwiebelstückchen und Gewürzgurken' },
+    { id:"007zut", name:'Coleslaw', ingredients:'Weißkohl, Karotten, Rote Zwiebeln, Mayonnaise, Joghurt, Zitronensaft' },
+    ];
+  }
 
   db.products = normalizeProducts(db.products, db.hiddenProducts);
   db.inventory = normalizeInventory(db.inventory);
@@ -1574,6 +1586,31 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
     sales,
     expenses: dayExpenses
   });
+});
+
+// ===== ZUTATEN =====
+app.get("/zutaten", requireAuth, (req, res) => {
+  res.json({ success:true, zutaten: db.zutaten || [] });
+});
+
+app.post("/zutaten", requireAuth, requireBoss, (req, res) => {
+  const name        = String(req.body?.name || "").trim();
+  const ingredients = String(req.body?.ingredients || "").trim();
+  if(!name) return res.status(400).json({ success:false, message:"Name fehlt." });
+  if(!Array.isArray(db.zutaten)) db.zutaten = [];
+  // Update existing or add new
+  const existing = db.zutaten.find(z => z.name === name);
+  if(existing){ existing.ingredients = ingredients; }
+  else { db.zutaten.push({ id: makeToken().slice(0,10), name, ingredients }); }
+  saveDB(db);
+  res.json({ success:true, zutaten: db.zutaten });
+});
+
+app.delete("/zutaten/:id", requireAuth, requireBoss, (req, res) => {
+  const id = String(req.params.id || "");
+  db.zutaten = (db.zutaten||[]).filter(z => z.id !== id);
+  saveDB(db);
+  res.json({ success:true });
 });
 
 // ===== FIRMENAUSGABEN =====
