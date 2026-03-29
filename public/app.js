@@ -2200,7 +2200,8 @@ function openGroupMenu(p){
     // Sides: all Beilagen + Desserts
     const sidesAndDesserts = (PRODUCTS||[]).filter(x => x.cat === "Beilagen" || (x.cat === "Süßes" && x.name && x.name.toLowerCase().includes("sundae")) || x.cat === "Süßes");
     document.getElementById("groupFriesSection").style.display = "";
-    document.getElementById("groupFriesSection").querySelector("div:first-child").innerText = "🍟 Side & Dessert nach Wahl";
+    const friesLabel = document.getElementById("groupFriesSection").querySelector("div");
+    if(friesLabel) friesLabel.innerHTML = "🍟 Side & Dessert nach Wahl <span class=\"muted small\" id=\"groupFriesCounter\">0 / 0</span>";
     renderGroupSection("groupFriesList", sidesAndDesserts, "fries", size);
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else if(p.chickenBox){
