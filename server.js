@@ -716,7 +716,11 @@ app.post("/products/:id/restore", requireAuth, requireBoss, (req, res) => {
 });
 
 app.get("/products", requireAuth, (req, res) => {
-  res.json({ success: true, products: db.products });
+  const weeklyName = getCurrentSpecialBurgerName();
+  const products = (db.products || []).map(p =>
+    p.id === "special_burger" ? { ...p, name: weeklyName, weeklyName } : p
+  );
+  res.json({ success: true, products, hiddenProducts: db.hiddenProducts || [] });
 });
 
 app.put("/products", requireAuth, requireBoss, (req, res) => {
