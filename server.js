@@ -334,6 +334,7 @@ function normalizeProducts(list, hiddenProducts) {
     if (dp.germanBox) extra.germanBox = true;
     if (dp.noSidesBox) extra.noSidesBox = true;
     if (dp.soulCarwashBox) extra.soulCarwashBox = true;
+    if (dp.specialBurgerBox) extra.specialBurgerBox = true;
     if (!map.has(id)) {
       map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
     } else {
