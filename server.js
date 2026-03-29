@@ -1528,7 +1528,7 @@ const SPECIAL_BURGER_CYCLE = [
   "Spicy Inferno",
   "Veggie Volcano"
 ];
-const SPECIAL_BURGER_START_WEEK = 14; // ISO week 14 (March 30, 2026) = index 0
+const SPECIAL_BURGER_START_WEEK = 9; // KW13=Veggie Volcano, KW14=Crispy Tropical Fish
 
 function getISOWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
