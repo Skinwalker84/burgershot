@@ -214,6 +214,12 @@ const DEFAULT_PRODUCTS = [
   // German Special — fixer German + Coleslaw, nur Getränk wählbar
 
   // Donut Boxes — nur Anzahl, keine Auswahl
+  // Special Burger Menü
+  { id:"sbmenu_small",  name:"Special Burger Small",       price:0, cat:"Menü", icon:"special_burger.png", groupSize:1,  specialBurgerBox:true, desc:"1× Special Burger, 1 Side, 1 Dessert & 1 Getränk" },
+  { id:"sbmenu_medium", name:"Special Burger Medium",      price:0, cat:"Menü", icon:"special_burger.png", groupSize:2,  specialBurgerBox:true, desc:"2× Special Burger, 2 Sides, 2 Desserts & 2 Getränke" },
+  { id:"sbmenu_large",  name:"Special Burger Large",       price:0, cat:"Menü", icon:"special_burger.png", groupSize:5,  specialBurgerBox:true, desc:"5× Special Burger, 5 Sides, 5 Desserts & 5 Getränke" },
+  { id:"sbmenu_xl",     name:"Special Burger X-tra Large", price:0, cat:"Menü", icon:"special_burger.png", groupSize:10, specialBurgerBox:true, desc:"10× Special Burger, 10 Sides, 10 Desserts & 10 Getränke" },
+
   { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
   { id:"dbox_medium", name:"Donut Box Medium",      price:74,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },
   { id:"dbox_large",  name:"Donut Box Large",       price:148,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:12, desc:"12× Donut" },
@@ -309,6 +315,7 @@ function normalizeProducts(list, hiddenProducts) {
     if (p.germanBox) extra.germanBox = true;
     if (p.noSidesBox) extra.noSidesBox = true;
     if (p.soulCarwashBox) extra.soulCarwashBox = true;
+    if (p.specialBurgerBox) extra.specialBurgerBox = true;
     out.push({ id, name, cat, price: Math.round(price), ...extra });
   }
 

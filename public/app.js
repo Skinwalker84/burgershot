@@ -819,7 +819,7 @@ let HIDDEN_PRODUCTS = [];
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v7";
+const PRODUCTS_STORAGE_KEY = "bs_products_v8";
 
 function loadProductsFromStorage(){
   try{
@@ -845,6 +845,7 @@ function loadProductsFromStorage(){
       if(p.chickenBox)     extra.chickenBox     = true;
       if(p.germanBox)      extra.germanBox      = true;
       if(p.soulCarwashBox) extra.soulCarwashBox = true;
+      if(p.specialBurgerBox) extra.specialBurgerBox = true;
       out.push({ id, name, cat, price: Math.round(price), ...extra });
     }
     return out.length ? out : null;
@@ -1833,11 +1834,13 @@ function renderProducts(){
     const noSides = list.filter(p=>p.noSidesBox);
     const donuts  = list.filter(p=>p.donutBox);
 
-    const soulCarwash = list.filter(p=>p.soulCarwashBox);
-    if(regular.length)     renderProductList(regular,     makeRow(null));
-    if(noSides.length)     renderProductList(noSides,     makeRow("No Sides"));
-    if(soulCarwash.length) renderProductList(soulCarwash, makeRow("Little Seoul Carwash"));
-    if(donuts.length)      renderProductList(donuts,      makeRow("Donut Box"));
+    const soulCarwash   = list.filter(p=>p.soulCarwashBox);
+    const specialBurger = list.filter(p=>p.specialBurgerBox);
+    if(regular.length)       renderProductList(regular,       makeRow(null));
+    if(noSides.length)       renderProductList(noSides,       makeRow("No Sides"));
+    if(soulCarwash.length)   renderProductList(soulCarwash,   makeRow("Little Seoul Carwash"));
+    if(specialBurger.length) renderProductList(specialBurger, makeRow("Special Burger Menü"));
+    if(donuts.length)        renderProductList(donuts,        makeRow("Donut Box"));
     return;
   }
   box.style.display = "";
@@ -2058,6 +2061,11 @@ function addToCart(p){
       renderCart(); saveCartsDebounced(); sendPresencePing(); renderPresenceWarning();
       return;
     }
+    if(p.specialBurgerBox){
+      // Special Burger fixed + side + dessert + drink selection
+      openGroupMenu(p);
+      return;
+    }
     if(p.id === "lsc_xl" || p.soulCarwashBox){
       // Fixed: 10× Heartstopper + 10× Milchshake
       const size = p.groupSize || 10;
@@ -2185,7 +2193,17 @@ function openGroupMenu(p){
 
   const drinks = (PRODUCTS||[]).filter(x => x.cat === "Getränke");
 
-  if(p.chickenBox){
+  if(p.specialBurgerBox){
+    // Pre-fill Special Burger, show side + dessert + drink
+    _groupSelections.burgers["special_burger"] = size;
+    document.getElementById("groupBurgerSection").style.display = "none";
+    // Sides: all Beilagen + Desserts
+    const sidesAndDesserts = (PRODUCTS||[]).filter(x => x.cat === "Beilagen" || (x.cat === "Süßes" && x.name && x.name.toLowerCase().includes("sundae")) || x.cat === "Süßes");
+    document.getElementById("groupFriesSection").style.display = "";
+    document.getElementById("groupFriesSection").querySelector("div:first-child").innerText = "🍟 Side & Dessert nach Wahl";
+    renderGroupSection("groupFriesList", sidesAndDesserts, "fries", size);
+    renderGroupSection("groupDrinkList", drinks, "drinks", size);
+  } else if(p.chickenBox){
     // Pre-fill burger + nuggets, only show drinks
     _groupSelections.burgers["chicken"] = size;
     _groupSelections.fries["chicken_nuggets"] = size;
@@ -2261,7 +2279,8 @@ function updateGroupCounters(size){
     document.getElementById("groupFriesCounter").innerText  = `${f} / ${size}`;
   }
   document.getElementById("groupDrinkCounter").innerText = `${d} / ${size}`;
-  const ok = isChicken ? d===size : isNoSides ? (b===size && d===size) : (b===size && f===size && d===size);
+  const isSpecialBurger = !!_groupMenuProduct?.specialBurgerBox;
+  const ok = isSpecialBurger ? (f===size && d===size) : isChicken ? d===size : isNoSides ? (b===size && d===size) : (b===size && f===size && d===size);
   document.getElementById("groupMenuConfirmBtn").disabled = !ok;
   const msg = document.getElementById("groupMenuMsg");
   if(msg){
@@ -2296,7 +2315,10 @@ function confirmGroupMenu(){
   }).join(", ");
 
   let displayName;
-  if(p.chickenBox){
+  if(p.specialBurgerBox){
+    const sideNames2 = Object.entries(_groupSelections.fries).filter(([,q])=>q>0).map(([id,q])=>{ const pr=(PRODUCTS||[]).find(x=>x.id===id); return (q>1?q+'× ':'')+( pr?.name||id); }).join(', ');
+    displayName = `${p.name} | 🍔 ${size}× Special Burger | 🍟 ${sideNames2} | 🥤 ${drinkNames}`;
+  } else if(p.chickenBox){
     displayName = `${p.name} | 🍗 ${size}× The Chicken | 🍗 ${size}× Chicken Nuggets | 🥤 ${drinkNames}`;
   } else if(p.germanBox){
     displayName = `${p.name} | 🇩🇪 ${size}× The German | 🥗 ${size}× Coleslaw | 🥤 ${drinkNames}`;
