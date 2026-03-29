@@ -806,6 +806,7 @@ const PRODUCTS_DEFAULT = [
   { name: "Sprung", price: 13, cat: "Getränke" },
   { name: "Slush", price: 15, cat: "Getränke" },
   { name: "Milchshake", price: 15, cat: "Getränke" },
+  { name: "Splashy Drink", price: 0, cat: "Getränke", icon: "splashy.png" },
   { name: "Donut", price: 13, cat: "Süßes" },
   { name: "Caramel Sundae", price: 13, cat: "Süßes" },
   { name: "Chocolate Sundae", price: 13, cat: "Süßes" },
@@ -818,7 +819,7 @@ let HIDDEN_PRODUCTS = [];
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v6";
+const PRODUCTS_STORAGE_KEY = "bs_products_v7";
 
 function loadProductsFromStorage(){
   try{
@@ -1773,6 +1774,7 @@ const PRODUCT_ICON = {
   "Sprung": "sprunk.jpeg",
   "Slush": "slush.png",
   "Milchshake": "milchshake.png",
+  "Splashy Drink": "splashy.png",
   "Donut": "burgershot_donut.png",
   "Caramel Sundae": "burgershot_sunday_caramel.png",
   "Chocolate Sundae": "burgershot_sunday_chocolate.png",

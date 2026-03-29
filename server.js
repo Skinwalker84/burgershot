@@ -190,6 +190,7 @@ const DEFAULT_PRODUCTS = [
   { id:"juice_orange",     name:"Orangensaft",        price:8, cat:"Getränke", icon:"Juice_Orange.png",     ekPrice:3 },
   { id:"slushy_atom",      name:"Slush Atom",         price:18, cat:"Getränke", icon:"slushy_atom.png",      ekPrice:8 },
   { id:"electrolyte_drink",name:"Elektrolyte Trink",  price:14, cat:"Getränke", icon:"electrolytet_rink.png",ekPrice:7 },
+  { id:"splashy_drink",     name:"Splashy Drink",        price:0,  cat:"Getränke", icon:"splashy.png" },
 
   { id:"donut", name:"Donut", price:13, cat:"Süßes" },
   { id:"caramel_sundae", name:"Caramel Sundae", price:13, cat:"Süßes" },
