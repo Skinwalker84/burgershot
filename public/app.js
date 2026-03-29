@@ -1830,7 +1830,7 @@ function renderProducts(){
       return row;
     };
 
-    const regular = list.filter(p=>!p.noSidesBox && !p.donutBox && !p.chickenBox && !p.germanBox && !p.soulCarwashBox);
+    const regular = list.filter(p=>!p.noSidesBox && !p.donutBox && !p.chickenBox && !p.germanBox && !p.soulCarwashBox && !p.specialBurgerBox);
     const noSides = list.filter(p=>p.noSidesBox);
     const donuts  = list.filter(p=>p.donutBox);
 
