@@ -2238,10 +2238,11 @@ function openGroupMenu(p){
     document.getElementById("groupDessertSection").style.display = "none";
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else {
-    const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
+    const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger" && x.id !== "special_burger");
     const fries   = (PRODUCTS||[]).filter(x => x.cat === "Beilagen" || (x.cat === "Süßes" && x.name && x.name.toLowerCase().includes("sundae")));
     document.getElementById("groupBurgerSection").style.display = "";
     document.getElementById("groupFriesSection").style.display = "";
+    document.getElementById("groupDessertSection").style.display = "none";
     renderGroupSection("groupBurgerList", burgers, "burgers", size);
     renderGroupSection("groupFriesList",  fries,   "fries",   size);
     renderGroupSection("groupDrinkList",  drinks,  "drinks",  size);
