@@ -819,7 +819,7 @@ let HIDDEN_PRODUCTS = [];
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v8";
+const PRODUCTS_STORAGE_KEY = "bs_products_v9";
 
 function loadProductsFromStorage(){
   try{
@@ -876,7 +876,7 @@ async function hydrateProducts(){
     if(res.ok){
       const data = await res.json().catch(()=>({}));
       if(data.success && Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false, noSidesBox:p.noSidesBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:!!p.chickenBox, donutBox:!!p.donutBox, germanBox:!!p.germanBox, noSidesBox:!!p.noSidesBox, soulCarwashBox:!!p.soulCarwashBox, specialBurgerBox:!!p.specialBurgerBox }));
         saveProductsToStorage(PRODUCTS); // keep fallback in sync
         return;
       }
@@ -1008,7 +1008,7 @@ async function mgmtSaveProducts(){
     const data = await res.json().catch(()=>({}));
     if(res.ok && data.success){
       if(Array.isArray(data.products) && data.products.length){
-        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:p.chickenBox||false, donutBox:p.donutBox||false, germanBox:p.germanBox||false, noSidesBox:p.noSidesBox||false }));
+        PRODUCTS = data.products.map(p=>({ id:p.id, name:p.name, cat:p.cat, price:Number(p.price)||0, icon:p.icon||null, desc:p.desc||null, groupSize:p.groupSize||null, chickenBox:!!p.chickenBox, donutBox:!!p.donutBox, germanBox:!!p.germanBox, noSidesBox:!!p.noSidesBox, soulCarwashBox:!!p.soulCarwashBox, specialBurgerBox:!!p.specialBurgerBox }));
       }else{
         PRODUCTS = list;
       }
