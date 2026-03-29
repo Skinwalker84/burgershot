@@ -636,6 +636,7 @@ async function login(){
   syncActiveRegisterButton(null);
   await initProducts();
   getZutatenCache(); // preload so ⓘ buttons render correctly
+  fetch("/special-burger-name").then(r=>r.json()).then(d=>{ if(d.name) _specialBurgerWeeklyName = d.name; }).catch(()=>{});
   renderCart();
   await loadCartsFromServer();
   startCartsSSE();
@@ -814,12 +815,13 @@ const PRODUCTS_DEFAULT = [
 ];
 let PRODUCTS = [];
 let HIDDEN_PRODUCTS = [];
+let _specialBurgerWeeklyName = "Special Burger"; // updated on load
 
 
 function initProducts(){ hydrateProducts(); renderProducts(); }
 
 // bump version so newly added default items (e.g. Light drinks) appear even if older data was cached
-const PRODUCTS_STORAGE_KEY = "bs_products_v9";
+const PRODUCTS_STORAGE_KEY = "bs_products_v10";
 
 function loadProductsFromStorage(){
   try{
@@ -1929,12 +1931,13 @@ function renderProductList(list, box){
     ].join(';');
     infoBtn.addEventListener('mouseenter', ()=>{ infoBtn.style.background='rgba(96,165,250,.8)'; });
     infoBtn.addEventListener('mouseleave', ()=>{ infoBtn.style.background='rgba(0,0,0,.55)'; });
-    infoBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showZutatenPopup(p.name); });
+    const lookupName = p.weeklyName || p.name;
+    infoBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showZutatenPopup(lookupName); });
     imgWrap.style.position = 'relative';
     // Hide button if no zutaten entry exists (check cache, hide async if not loaded yet)
     infoBtn.style.display = 'none'; // hidden by default
     getZutatenCache().then(cache => {
-      const hasEntry = cache.some(z => z.name.toLowerCase() === p.name.toLowerCase());
+      const hasEntry = cache.some(z => z.name.toLowerCase() === lookupName.toLowerCase());
       infoBtn.style.display = hasEntry ? 'flex' : 'none';
     });
     imgWrap.appendChild(infoBtn);

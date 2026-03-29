@@ -1519,6 +1519,31 @@ app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
    ========================= */
 // Helper: sum purchase costs for a list of day keys
 /* =========================
+   SPECIAL BURGER WEEKLY CYCLE
+   ========================= */
+const SPECIAL_BURGER_CYCLE = [
+  "Crispy Tropical Fish Burger",
+  "Smokey Mountain",
+  "Sweet & Salty Crunch",
+  "Spicy Inferno",
+  "Veggie Volcano"
+];
+const SPECIAL_BURGER_START_WEEK = 14; // ISO week 14 (March 30, 2026) = index 0
+
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function getCurrentSpecialBurgerName() {
+  const week = getISOWeek(new Date());
+  const idx = ((week - SPECIAL_BURGER_START_WEEK) % SPECIAL_BURGER_CYCLE.length + SPECIAL_BURGER_CYCLE.length) % SPECIAL_BURGER_CYCLE.length;
+  return SPECIAL_BURGER_CYCLE[idx];
+}
+
+/* =========================
    BANK BALANCE HELPER
    ========================= */
 function adjustBankBalance(amount, note) {
@@ -1608,6 +1633,11 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
     sales,
     expenses: dayExpenses
   });
+});
+
+// Current special burger name
+app.get("/special-burger-name", requireAuth, (req, res) => {
+  res.json({ success: true, name: getCurrentSpecialBurgerName() });
 });
 
 // ===== ZUTATEN =====
