@@ -2181,12 +2181,12 @@ function setRegister(n){
 /* Pay overlay */
 
 let _groupMenuProduct = null;
-let _groupSelections = { burgers:{}, fries:{}, drinks:{} };
+let _groupSelections = { burgers:{}, fries:{}, desserts:{}, drinks:{} };
 
 function openGroupMenu(p){
   _groupMenuProduct = p;
   const size = p.groupSize || 1;
-  _groupSelections = { burgers:{}, fries:{}, drinks:{} };
+  _groupSelections = { burgers:{}, fries:{}, desserts:{}, drinks:{} };
 
   document.getElementById("groupMenuTitle").innerText = p.name + " — " + money(p.price);
   document.getElementById("groupMenuDesc").innerText = p.desc || "";
@@ -2194,15 +2194,19 @@ function openGroupMenu(p){
   const drinks = (PRODUCTS||[]).filter(x => x.cat === "Getränke");
 
   if(p.specialBurgerBox){
-    // Pre-fill Special Burger, show side + dessert + drink
+    // Pre-fill Special Burger, show side + dessert + drink separately
     _groupSelections.burgers["special_burger"] = size;
     document.getElementById("groupBurgerSection").style.display = "none";
-    // Sides: all Beilagen + Desserts
-    const sidesAndDesserts = (PRODUCTS||[]).filter(x => x.cat === "Beilagen" || (x.cat === "Süßes" && x.name && x.name.toLowerCase().includes("sundae")) || x.cat === "Süßes");
+    // Sides only (Beilagen)
+    const sides = (PRODUCTS||[]).filter(x => x.cat === "Beilagen");
     document.getElementById("groupFriesSection").style.display = "";
     const friesLabel = document.getElementById("groupFriesSection").querySelector("div");
-    if(friesLabel) friesLabel.innerHTML = "🍟 Side & Dessert nach Wahl <span class=\"muted small\" id=\"groupFriesCounter\">0 / 0</span>";
-    renderGroupSection("groupFriesList", sidesAndDesserts, "fries", size);
+    if(friesLabel) friesLabel.innerHTML = "🍟 Beilage nach Wahl <span class=\"muted small\" id=\"groupFriesCounter\">0 / 0</span>";
+    renderGroupSection("groupFriesList", sides, "fries", size);
+    // Desserts only (Süßes)
+    const desserts = (PRODUCTS||[]).filter(x => x.cat === "Süßes");
+    document.getElementById("groupDessertSection").style.display = "";
+    renderGroupSection("groupDessertList", desserts, "desserts", size);
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else if(p.chickenBox){
     // Pre-fill burger + nuggets, only show drinks
@@ -2210,11 +2214,13 @@ function openGroupMenu(p){
     _groupSelections.fries["chicken_nuggets"] = size;
     document.getElementById("groupBurgerSection").style.display = "none";
     document.getElementById("groupFriesSection").style.display = "none";
+    document.getElementById("groupDessertSection").style.display = "none";
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else if(p.noSidesBox){
     // Only burger and drink selection
     document.getElementById("groupBurgerSection").style.display = "";
     document.getElementById("groupFriesSection").style.display = "none";
+    document.getElementById("groupDessertSection").style.display = "none";
     _groupSelections.fries = { "__none": 0 }; // skip fries requirement
     const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger" && x.id !== "special_burger");
     renderGroupSection("groupBurgerList", burgers, "burgers", size);
@@ -2225,6 +2231,7 @@ function openGroupMenu(p){
     _groupSelections.fries["coleslaw"] = size;
     document.getElementById("groupBurgerSection").style.display = "none";
     document.getElementById("groupFriesSection").style.display = "none";
+    document.getElementById("groupDessertSection").style.display = "none";
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else {
     const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
@@ -2274,6 +2281,7 @@ function updateGroupCounters(size){
   const isChicken = isFixedMenu;
   const b = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
   const f = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
+  const des = Object.values(_groupSelections.desserts||{}).reduce((s,v)=>s+v,0);
   const d = Object.values(_groupSelections.drinks).reduce((s,v)=>s+v,0);
   if(!isChicken){
     document.getElementById("groupBurgerCounter").innerText = `${b} / ${size}`;
@@ -2281,7 +2289,9 @@ function updateGroupCounters(size){
   }
   document.getElementById("groupDrinkCounter").innerText = `${d} / ${size}`;
   const isSpecialBurger = !!_groupMenuProduct?.specialBurgerBox;
-  const ok = isSpecialBurger ? (f===size && d===size) : isChicken ? d===size : isNoSides ? (b===size && d===size) : (b===size && f===size && d===size);
+  const dessertsEl = document.getElementById("groupDessertCounter");
+  if(dessertsEl) dessertsEl.innerText = `${des} / ${size}`;
+  const ok = isSpecialBurger ? (f===size && des===size && d===size) : isChicken ? d===size : isNoSides ? (b===size && d===size) : (b===size && f===size && d===size);
   document.getElementById("groupMenuConfirmBtn").disabled = !ok;
   const msg = document.getElementById("groupMenuMsg");
   if(msg){
@@ -2306,9 +2316,10 @@ function confirmGroupMenu(){
   const _isNoSides = p.noSidesBox;
   // Build components for inventory deduction
   const components = [];
-  for(const [id, qty] of Object.entries(_groupSelections.burgers)) if(qty>0) components.push({productId:id, qty});
-  for(const [id, qty] of Object.entries(_groupSelections.fries))   if(qty>0) components.push({productId:id, qty});
-  for(const [id, qty] of Object.entries(_groupSelections.drinks))  if(qty>0) components.push({productId:id, qty});
+  for(const [id, qty] of Object.entries(_groupSelections.burgers))  if(qty>0) components.push({productId:id, qty});
+  for(const [id, qty] of Object.entries(_groupSelections.fries))    if(qty>0) components.push({productId:id, qty});
+  for(const [id, qty] of Object.entries(_groupSelections.desserts||{})) if(qty>0) components.push({productId:id, qty});
+  for(const [id, qty] of Object.entries(_groupSelections.drinks))   if(qty>0) components.push({productId:id, qty});
 
   const drinkNames = Object.entries(_groupSelections.drinks).filter(([,q])=>q>0).map(([id,q])=>{
     const prod = (PRODUCTS||[]).find(x=>x.id===id);
@@ -2318,7 +2329,8 @@ function confirmGroupMenu(){
   let displayName;
   if(p.specialBurgerBox){
     const sideNames2 = Object.entries(_groupSelections.fries).filter(([,q])=>q>0).map(([id,q])=>{ const pr=(PRODUCTS||[]).find(x=>x.id===id); return (q>1?q+'× ':'')+( pr?.name||id); }).join(', ');
-    displayName = `${p.name} | 🍔 ${size}× Special Burger | 🍟 ${sideNames2} | 🥤 ${drinkNames}`;
+    const dessertNames2 = Object.entries(_groupSelections.desserts||{}).filter(([,q])=>q>0).map(([id,q])=>{ const pr=(PRODUCTS||[]).find(x=>x.id===id); return (q>1?q+'× ':'')+( pr?.name||id); }).join(', ');
+    displayName = `${p.name} | 🍔 ${size}× Special Burger | 🍟 ${sideNames2} | 🍩 ${dessertNames2} | 🥤 ${drinkNames}`;
   } else if(p.chickenBox){
     displayName = `${p.name} | 🍗 ${size}× The Chicken | 🍗 ${size}× Chicken Nuggets | 🥤 ${drinkNames}`;
   } else if(p.germanBox){
