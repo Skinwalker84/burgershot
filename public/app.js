@@ -2215,7 +2215,7 @@ function openGroupMenu(p){
     document.getElementById("groupBurgerSection").style.display = "";
     document.getElementById("groupFriesSection").style.display = "none";
     _groupSelections.fries = { "__none": 0 }; // skip fries requirement
-    const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger");
+    const burgers = (PRODUCTS||[]).filter(x => x.cat === "Burger" && x.id !== "special_burger");
     renderGroupSection("groupBurgerList", burgers, "burgers", size);
     renderGroupSection("groupDrinkList", drinks, "drinks", size);
   } else if(p.germanBox){

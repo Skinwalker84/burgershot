@@ -198,10 +198,10 @@ const DEFAULT_PRODUCTS = [
   { id:"strawberry_sundae", name:"Strawberry Sundae", price:13, cat:"Süßes" },
 
   // Gruppen-Menüs
-  { id:"menu_small",   name:"Small Menü",       price:48,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_medium",  name:"Medium Menü",      price:97,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_large",   name:"Large Menü",       price:242, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Fries/Cheesy Fries & Getränk" },
-  { id:"menu_xlarge",  name:"X-tra Large Menü", price:484, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Fries/Cheesy Fries & Getränk" },
+  { id:"menu_small",   name:"Small Menü",       price:48,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Beilage & Getränk" },
+  { id:"menu_medium",  name:"Medium Menü",      price:97,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Beilage & Getränk" },
+  { id:"menu_large",   name:"Large Menü",       price:242, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Beilage & Getränk" },
+  { id:"menu_xlarge",  name:"X-tra Large Menü", price:484, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Beilage & Getränk" },
 
   // No Sides — Burger + Getränk, keine Beilage
   { id:"ns_small",  name:"No Sides Small",       price:34,  cat:"Menü", icon:"no_sides_small.png",  groupSize:1,  noSidesBox:true, desc:"1× Burger & 1 Getränk nach Wahl" },
