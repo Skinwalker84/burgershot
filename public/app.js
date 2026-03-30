@@ -2531,7 +2531,7 @@ async function submitPay(){
   const payload = {
     register: currentRegister,
     items,
-    total: total - deliveryFee,
+    total: total,
     paidAmount: paid,
     time: new Date().toISOString(),
     discount: _currentDiscount > 0 ? _currentDiscount : undefined,
@@ -2737,19 +2737,68 @@ function openOrdersDetail(empUsername, empName){
       return `
         <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px; background:rgba(255,255,255,.03);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-weight:900; font-size:15px;">🕐 ${timeStr}</div>
-            ${typeBadge}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="font-weight:900; font-size:15px;">🕐 ${timeStr}</div>
+              ${typeBadge}
+            </div>
+            <button class="ghost" style="padding:2px 8px; font-size:11px; color:#ef4444;"
+              onclick="deleteSale(${s.id})">🗑️ Löschen</button>
           </div>
           <div style="margin-bottom:8px;">${items}</div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.1);">
             <span style="font-weight:900;">Total</span>
             <span style="font-weight:900; color:#22c55e;">${money(s.total)}</span>
           </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+            <span class="muted small">Trinkgeld</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="color:#60a5fa;">${money(s.tip||0)}</span>
+              <button class="ghost" style="padding:2px 7px; font-size:11px;"
+                onclick="editTip(${s.id}, ${s.tip||0})">✏️</button>
+            </div>
+          </div>
           ${discount}
         </div>`;
     }).join('');
   }
   ov.classList.remove('hidden');
+}
+
+async function editTip(saleId, currentTip){
+  if(!isBoss()) return;
+  const val = prompt(`Trinkgeld für Bestellung #${saleId} korrigieren:`, currentTip);
+  if(val === null) return;
+  const tip = parseFloat(val);
+  if(!isFinite(tip) || tip < 0) return alert("Ungültiger Betrag.");
+  const res = await fetch(`/sale/${saleId}`, {
+    method:"PUT", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ tip })
+  }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success) return alert(data.message||"Fehler.");
+  // Update local report data
+  const sale = (currentDayReport?.sales||[]).find(s=>Number(s.id)===saleId);
+  if(sale) sale.tip = tip;
+  loadDayReport();
+  // Reopen detail for same employee
+  const empEl = document.getElementById("ordersDetailTitle");
+  if(empEl && currentDayReport) loadDayReport();
+}
+
+async function deleteSale(saleId){
+  if(!isBoss()) return;
+  if(!confirm(`Bestellung #${saleId} wirklich löschen?
+Lagerbestand wird wiederhergestellt.`)) return;
+  const res = await fetch(`/sale/${saleId}`, { method:"DELETE" }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success) return alert(data.message||"Fehler.");
+  // Remove from local cache
+  if(currentDayReport?.sales) {
+    currentDayReport.sales = currentDayReport.sales.filter(s=>Number(s.id)!==saleId);
+  }
+  closeOrdersDetail();
+  loadDayReport();
+  loadBankBalance();
 }
 
 function closeOrdersDetail(){

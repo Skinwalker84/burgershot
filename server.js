@@ -1438,6 +1438,69 @@ app.post("/sale", requireAuth, (req, res) => {
 });
 
 /* =========================
+   SALE EDIT / DELETE
+   ========================= */
+app.put("/sale/:id", requireAuth, requireBoss, (req, res) => {
+  const id = Number(req.params.id);
+  let found = null;
+  for (const [day, sales] of Object.entries(db.salesByDay || {})) {
+    const s = sales.find(x => Number(x.id) === id);
+    if (s) { found = s; break; }
+  }
+  if (!found) return res.status(404).json({ success:false, message:"Bestellung nicht gefunden." });
+
+  // Only allow editing tip
+  if (req.body?.tip !== undefined) {
+    found.tip = Math.max(0, Number(req.body.tip) || 0);
+    // Adjust bank balance for tip difference
+    const diff = found.tip - (found._prevTip || 0);
+    found._prevTip = found.tip;
+    if (diff !== 0) adjustBankBalance(diff, `Trinkgeld korrigiert #${id}`);
+  }
+  saveDB(db);
+  res.json({ success:true, sale: found });
+});
+
+app.delete("/sale/:id", requireAuth, requireBoss, (req, res) => {
+  const id = Number(req.params.id);
+  let removed = null;
+  for (const [day, sales] of Object.entries(db.salesByDay || {})) {
+    const idx = sales.findIndex(x => Number(x.id) === id);
+    if (idx !== -1) {
+      [removed] = sales.splice(idx, 1);
+      break;
+    }
+  }
+  if (!removed) return res.status(404).json({ success:false, message:"Bestellung nicht gefunden." });
+
+  // Reverse bank balance (non-cash card payments only)
+  if (!removed.isCash && removed.paymentMethod !== "guthaben") {
+    adjustBankBalance(-(Number(removed.total||0) + Number(removed.tip||0)), `Bestellung storniert #${id}`);
+  }
+  // Restore inventory
+  try {
+    const links = db.saleInventoryLinks || [];
+    for (const item of (removed.items || [])) {
+      const pids = [];
+      if (Array.isArray(item.components)) {
+        for (const c of item.components) if (c.productId) pids.push({ productId: c.productId, qty: (c.qty||1)*(item.qty||1) });
+      } else if (item.productId) {
+        pids.push({ productId: item.productId, qty: item.qty||1 });
+      }
+      for (const { productId, qty } of pids) {
+        for (const link of links.filter(l => l.productId === productId)) {
+          const inv = (db.inventory||[]).find(x => x.id === link.inventoryId);
+          if (inv) inv.stock = Math.round((Number(inv.stock)||0)*100 + link.qty*qty*100) / 100;
+        }
+      }
+    }
+  } catch(e) {}
+
+  saveDB(db);
+  res.json({ success:true });
+});
+
+/* =========================
    KITCHEN
    ========================= */
 app.get("/kitchen/orders", requireAuth, (req, res) => {
