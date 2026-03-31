@@ -6,7 +6,7 @@ let me = null;
 let serverDay = null;
 
 // Warenkorb pro Kasse (lokal)
-let cartsByRegister = { 1: [], 2: [], 3: [], 4: [] };
+let cartsByRegister = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 let cart = cartsByRegister[currentRegister];
 
 function switchCartToRegister(n){
@@ -3567,7 +3567,7 @@ async function loadCartsFromServer(){
 function saveCartsDebounced(){
   cartsDirtyByMe = true;
   if(cartsSaveTimer) clearTimeout(cartsSaveTimer);
-  cartsSaveTimer = setTimeout(saveCartsToServer, 200);
+  cartsSaveTimer = setTimeout(saveCartsToServer, 400);
 }
 
 async function saveCartsToServer(){
@@ -3591,6 +3591,8 @@ function startCartsSSE(){
         const rev = Number(data.rev)||0;
         if(rev && rev <= cartsRev) return; // ignore old
         cartsRev = rev;
+        // Don't overwrite our own pending changes
+        if(cartsDirtyByMe) return;
         cartsByRegister = normalizeCarts(data.carts);
         switchCartToRegister(currentRegister);
         renderCart();

@@ -533,12 +533,12 @@ setInterval(prunePresence, 5000);
 
 // ===== Live Carts (SSE) =====
 let cartsRev = 0;
-let cartsState = { 1: [], 2: [], 3: [], 4: [] };
+let cartsState = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 const cartsClients = new Set();
 
 function normalizeCarts(obj){
-  const out = { 1:[], 2:[], 3:[], 4:[] };
-  [1,2,3,4].forEach(k=>{
+  const out = { 1:[], 2:[], 3:[], 4:[], 5:[], 6:[] };
+  [1,2,3,4,5,6].forEach(k=>{
     const arr = obj && (obj[k] || obj[String(k)]);
     if(Array.isArray(arr)){
       out[k] = arr.filter(x=>x && typeof x==="object").map(x=>({
