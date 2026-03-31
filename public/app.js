@@ -3534,9 +3534,9 @@ let cartsSaveTimer = null;
 let cartsDirtyByMe = false;
 
 function normalizeCarts(obj){
-  const out = { 1:[],2:[],3:[],4:[] };
+  const out = { 1:[],2:[],3:[],4:[],5:[],6:[] };
   try{
-    for(const k of [1,2,3,4]){
+    for(const k of [1,2,3,4,5,6]){
       const arr = obj && obj[k] || obj && obj[String(k)];
       if(Array.isArray(arr)){
         out[k] = arr.filter(x=>x && typeof x==='object').map(x=>({
