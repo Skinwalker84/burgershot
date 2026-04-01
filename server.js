@@ -1853,7 +1853,7 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
   });
 });
 
-// Month report by summing whole ISO weeks that intersect the month
+// Month report: exact calendar days from 1st to last day of month
 // GET /reports/month-employee?month=YYYY-MM
 app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
   rotateDayIfNeeded();
@@ -1867,24 +1867,12 @@ app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
   const end = new Date(parsed.year, parsed.month, 0); // last day of month
   end.setHours(0,0,0,0);
 
-  // collect unique ISO weeks that intersect this month (based on days in month)
-  const weekSet = new Set();
-  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
-    const w = isoWeekYearWeek(d);
-    weekSet.add(`${w.year}-W${String(w.week).padStart(2,"0")}`);
-  }
-  const weeks = Array.from(weekSet.values()).sort();
-
+  // Collect only days within the exact calendar month
   const salesAll = [];
-  for(const wStr of weeks){
-    const wParsed = parseWeekYYYY_Www(wStr);
-    if(!wParsed) continue;
-    const wStart = isoWeekStartDate(wParsed.year, wParsed.week);
-    for(let i=0;i<7;i++){
-      const key = getDayKeyLocal(addDays(wStart, i));
-      const sales = Array.isArray(db.salesByDay[key]) ? db.salesByDay[key] : [];
-      salesAll.push(...sales);
-    }
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+    const key = getDayKeyLocal(d);
+    const sales = Array.isArray(db.salesByDay[key]) ? db.salesByDay[key] : [];
+    salesAll.push(...sales);
   }
 
   const totals = {
@@ -1915,11 +1903,18 @@ app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
     .map(x => ({ ...x, avg: x.orders>0 ? x.revenue/x.orders : 0 }))
     .sort((a,b)=> b.revenue - a.revenue);
 
+  // Build list of ISO weeks that appear in this month
+  const weeksSet = new Set();
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+    const {year, week} = isoWeekYearWeek(d);
+    weeksSet.add(`${year}-W${String(week).padStart(2,'0')}`);
+  }
+  const weeks = Array.from(weeksSet);
+
   return res.json({
     success:true,
     month: monthStr,
     weeks,
-    note: "Monatsabrechnung = Summe ganzer KW (inkl. Tage außerhalb des Monats, wenn KW überlappt).",
     totals,
     byEmployee
   });

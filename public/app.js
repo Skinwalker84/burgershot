@@ -3294,7 +3294,7 @@ async function loadMonthReport(){
   document.getElementById("monthPrintYM").innerText=ym;
   document.getElementById("monthPrintWeeks").innerText=weeksText;
   const hint=document.getElementById("monthWeeksHint");
-  if(hint) hint.innerText = `Enthaltene KW: ${weeksText}` + (data.note ? ` — ${data.note}` : "");
+  if(hint) hint.innerText = weeksText ? `Enthaltene KW: ${weeksText}` : "";
 
   document.getElementById("monthRevenue").innerText=money(data.totals?.revenue||0);
   document.getElementById("monthPurchases").innerText=money(data.totals?.purchases||0);
