@@ -508,7 +508,7 @@ function prunePresence(){
   for(const u of Object.keys(onlineUsers)){
     if(now - (onlineUsers[u].at||0) > 30000){ delete onlineUsers[u]; changed = true; }
   }
-  for(const k of ["1","2","3","4"]){
+  for(const k of ["1","2","3","4","5","6"]){
     const users = presenceState[k]?.users || {};
     for(const u of Object.keys(users)){
       if(now - (users[u].at||0) > 20000){ // 20s stale
@@ -2022,7 +2022,7 @@ app.post("/presence", (req, res) => {
     const username = String((req.body && req.body.username) || "").trim();
     const name = String((req.body && req.body.name) || username).trim() || username;
         // Move user: remove from any other register first
-    for(const k of ["1","2","3","4"]){
+    for(const k of ["1","2","3","4","5","6"]){
       try{ if(presenceState[k]?.users && presenceState[k].users[username]) delete presenceState[k].users[username]; }catch(e){}
     }
 if(!["1","2","3","4"].includes(register) || !username){
@@ -2061,7 +2061,7 @@ app.post("/presence/leave", (req, res) => {
     const username = String(((req.query && (req.query.u || req.query.username)) || (req.body && req.body.username) || "")).trim();
     if(!username) return res.status(400).json({ success:false, message:"Bad payload" });
     let changed = false;
-    for(const k of ["1","2","3","4"]){
+    for(const k of ["1","2","3","4","5","6"]){
       try{
         if(presenceState[k] && presenceState[k].users && presenceState[k].users[username]){
           delete presenceState[k].users[username];

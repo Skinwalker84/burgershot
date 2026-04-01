@@ -2051,6 +2051,10 @@ function pulseCart(){
 
 /* Cart */
 function addToCart(p){
+  if(!currentRegister){
+    alert("Bitte zuerst eine Kasse auswählen.");
+    return;
+  }
   if(String(p?.cat||p?.category||"")==="Menü"){
     if(p.germanBox || p.noSidesBox){
       openGroupMenu(p);
@@ -3558,9 +3562,11 @@ async function loadCartsFromServer(){
     const data = await res.json().catch(()=>({}));
     if(!res.ok || !data.success) return;
     cartsRev = Number(data.rev)||0;
-    cartsByRegister = normalizeCarts(data.carts);
-    switchCartToRegister(currentRegister);
-    renderCart();
+    if(!cartsDirtyByMe){
+      cartsByRegister = normalizeCarts(data.carts);
+      switchCartToRegister(currentRegister);
+      renderCart();
+    }
   }catch(e){}
 }
 
