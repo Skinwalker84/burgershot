@@ -2025,7 +2025,7 @@ app.post("/presence", (req, res) => {
     for(const k of ["1","2","3","4","5","6"]){
       try{ if(presenceState[k]?.users && presenceState[k].users[username]) delete presenceState[k].users[username]; }catch(e){}
     }
-if(!["1","2","3","4"].includes(register) || !username){
+if(!["1","2","3","4","5","6"].includes(register) || !username){
       return res.status(400).json({ success:false, message:"Bad payload" });
     }
     if(!presenceState[register]) presenceState[register] = { users:{} };
