@@ -1777,9 +1777,11 @@ app.post("/expenses", requireAuth, requireBossOrManager, (req, res) => {
 
 app.delete("/expenses/:id", requireAuth, requireBossOrManager, (req, res) => {
   const id = String(req.params.id || "");
-  const before = (db.expenses||[]).length;
-  db.expenses = (db.expenses||[]).filter(e => e.id !== id);
-  if(db.expenses.length === before) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  const entry = (db.expenses||[]).find(e => e.id === id);
+  if(!entry) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  // Restore bank balance
+  adjustBankBalance(Number(entry.amount||0), `Firmenausgabe storniert: ${entry.category}`);
+  db.expenses = db.expenses.filter(e => e.id !== id);
   saveDB(db);
   res.json({ success: true });
 });
