@@ -35,7 +35,11 @@ function showLoginPage(msg="Bitte einloggen."){
   document.getElementById("loginPage")?.classList.remove("hidden");
   document.getElementById("appRoot")?.classList.add("hidden");
   const m = document.getElementById("loginMsg");
-  if(m) m.innerText = msg;
+  if(m){
+    if(msg.includes("Inaktivität")) msg = "⏱️ Du wurdest wegen Inaktivität automatisch ausgeloggt.";
+    if(msg.includes("Tagesabschluss") || (msg.includes("Nicht eingeloggt") && window._dayClosedOut)) msg = "🔒 Tagesabschluss — bitte neu einloggen.";
+    m.innerText = msg;
+  }
 }
 
 function showApp(){
@@ -2956,6 +2960,7 @@ async function submitDayClose(){
   if(!res.ok || !data.success){ if(msg) msg.innerText=data.message||"Fehler."; return; }
   closeDayClose();
   loadDayReport();
+  window._dayClosedOut = false;
 }
 
 /* Week report (KW, employees only) */

@@ -605,6 +605,17 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, message: "User nicht gefunden." });
   }
 
+  // Auto-logout after 1 hour of inactivity (based on lastSeen from heartbeat)
+  const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
+  if (user.lastSeen && user.role !== "boss") {
+    const lastActive = new Date(user.lastSeen).getTime();
+    if (Date.now() - lastActive > INACTIVITY_MS) {
+      delete db.sessions[token];
+      saveDB(db);
+      return res.status(401).json({ success: false, message: "Automatisch ausgeloggt (Inaktivität)." });
+    }
+  }
+
   req.user = { username: user.username, displayName: user.displayName, role: user.role };
   req.token = token;
   next();
@@ -1930,6 +1941,13 @@ app.post("/reports/close-day", requireAuth, requireBoss, (req, res) => {
   const date = parseDateYYYYMMDD(dateStr);
   if (!date) return res.status(400).json({ success: false, message: "Ungültiges Datum. Format: YYYY-MM-DD" });
   const dayKey = getDayKeyLocal(date);
+
+  // Invalidate all non-boss sessions on day close
+  for (const [tok, sess] of Object.entries(db.sessions || {})) {
+    if (tok === req.token) continue; // keep own session
+    const u = db.users.find(x => x.username === sess.username);
+    if (!u || u.role !== "boss") delete db.sessions[tok];
+  }
 
   if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
   if (db.closedDays[dayKey]) return res.status(409).json({ success: false, message: "Tag ist bereits abgeschlossen." });
