@@ -729,6 +729,7 @@ async function loadMe(){
   serverDay = data.currentDay;
   if(!data.loggedIn) return showLoginPage("Bitte einloggen.");
   me = data.user;
+  if(data.appVersion) window._appVersion = data.appVersion;
   showApp();
   applyRoleVisibility();
   updateRegisterDisplay();
@@ -3757,6 +3758,60 @@ async function sendPresenceLeave(){
     // keepalive works on unload in modern browsers
     await fetch("/presence/leave?u=" + u, { method:"POST", keepalive:true }).catch(()=>{});
   }catch(e){}
+}
+
+/* ============================
+   UPDATE DETECTION
+   ============================ */
+async function checkForUpdate(){
+  if(!me) return;
+  try{
+    const res = await fetch("/version").catch(()=>null);
+    if(!res?.ok) return;
+    const data = await res.json().catch(()=>({}));
+    if(!data.version) return;
+    if(window._appVersion && data.version !== window._appVersion){
+      showUpdatePopup();
+    }
+  }catch(e){}
+}
+
+function showUpdatePopup(){
+  // Don't show twice
+  if(document.getElementById("updatePopupOv")) return;
+
+  const ov = document.createElement("div");
+  ov.id = "updatePopupOv";
+  ov.className = "overlay";
+  ov.style.zIndex = "9999";
+  ov.innerHTML = `
+    <div class="overlayCard" style="max-width:480px; text-align:center;">
+      <div style="font-size:48px; margin-bottom:12px;">🔄</div>
+      <div style="font-weight:900; font-size:20px; margin-bottom:10px;">System Update</div>
+      <div style="font-size:15px; color:var(--muted); margin-bottom:20px; line-height:1.6;">
+        Es wurde ein Update eingespielt.<br>
+        Bitte logge dich aus und lade die Seite<br>
+        einmal komplett neu.
+      </div>
+      <div style="display:flex; justify-content:center; gap:10px;">
+        <button class="primary" style="min-width:160px;" onclick="doUpdateReload()">
+          🔄 Jetzt neu laden
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
+function doUpdateReload(){
+  // Logout and hard reload
+  fetch("/auth/logout", { method:"POST" }).catch(()=>{}).finally(()=>{
+    window.location.reload(true);
+  });
+}
+
+// Check every 60 seconds
+if(!window._updateCheckInterval){
+  window._updateCheckInterval = setInterval(checkForUpdate, 60000);
 }
 
 async function sendHeartbeat(){

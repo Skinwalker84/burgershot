@@ -10,6 +10,7 @@ const crypto = require("crypto");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const APP_VERSION = Date.now(); // bumps automatically on every server restart/deploy
 
 app.set("trust proxy", 1);
 
@@ -622,6 +623,7 @@ function requireBossOrManager(req, res, next) {
    ROUTES
    ========================= */
 app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/version", (req, res) => res.json({ version: APP_VERSION }));
 
 app.get("/auth/me", (req, res) => {
   rotateDayIfNeeded();
@@ -645,7 +647,7 @@ app.get("/auth/me", (req, res) => {
     return res.json({ success: true, loggedIn: false, currentDay: db.meta.currentDay });
   }
 
-  res.json({ success: true, loggedIn: true, currentDay: db.meta.currentDay, user: { username: user.username, displayName: user.displayName, role: user.role } });
+  res.json({ success: true, loggedIn: true, currentDay: db.meta.currentDay, user: { username: user.username, displayName: user.displayName, role: user.role }, appVersion: APP_VERSION });
 });
 
 app.post("/auth/login", (req, res) => {
@@ -666,7 +668,7 @@ app.post("/auth/login", (req, res) => {
   saveDB(db);
 
   setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 14 });
-  res.json({ success: true, user: { username: user.username, displayName: user.displayName, role: user.role }, currentDay: db.meta.currentDay });
+  res.json({ success: true, user: { username: user.username, displayName: user.displayName, role: user.role }, currentDay: db.meta.currentDay, appVersion: APP_VERSION });
 });
 
 app.post("/auth/logout", requireAuth, (req, res) => {
