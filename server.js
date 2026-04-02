@@ -472,7 +472,7 @@ function todaysKitchen() {
    COOKIES
    ========================= */
 function setCookie(res, name, value, opts = {}) {
-  const parts = [`${name}=${value}`, "Path=/", "HttpOnly"];
+  const parts = [`${name}=${value}`, "Path=/", "HttpOnly", "SameSite=Lax"];
   if (opts.maxAge) parts.push(`Max-Age=${opts.maxAge}`);
   if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
   if (opts.secure) parts.push("Secure");
@@ -606,20 +606,18 @@ function requireAuth(req, res, next) {
   }
 
   // Auto-logout after 1 hour of inactivity
-  // Update lastSeen on every request so active users never get logged out
   const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
   const now = Date.now();
   if (user.role !== "boss") {
     const lastActive = user.lastSeen ? new Date(user.lastSeen).getTime() : now;
     if (now - lastActive > INACTIVITY_MS) {
       delete db.sessions[token];
-      scheduleLastSeenSave();
+      saveDB(db);
       return res.status(401).json({ success: false, message: "Automatisch ausgeloggt (Inaktivität)." });
     }
   }
-  // Refresh lastSeen on every request (debounced save)
+  // Update lastSeen in memory only — heartbeat handles persistence
   user.lastSeen = new Date(now).toISOString();
-  scheduleLastSeenSave();
 
   req.user = { username: user.username, displayName: user.displayName, role: user.role };
   req.token = token;
@@ -676,14 +674,14 @@ app.post("/auth/login", (req, res) => {
   if (!verifyPassword(password, user.pw)) return res.status(401).json({ success: false, message: "Falscher Login." });
 
   const token = makeToken();
-  db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 14 };
+  db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 };
   // Track first login of today
   const todayKey = getDayKeyLocal(new Date());
   if(!user.firstLoginByDay) user.firstLoginByDay = {};
   if(!user.firstLoginByDay[todayKey]) user.firstLoginByDay[todayKey] = new Date().toISOString();
   saveDB(db);
 
-  setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 14 });
+  setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 30 });
   res.json({ success: true, user: { username: user.username, displayName: user.displayName, role: user.role }, currentDay: db.meta.currentDay, appVersion: APP_VERSION });
 });
 
