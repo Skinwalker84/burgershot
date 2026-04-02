@@ -605,18 +605,20 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, message: "User nicht gefunden." });
   }
 
-  // Auto-logout after 1 hour of inactivity
+  // Auto-logout after 1 hour of inactivity (tracked per session, not lastSeen)
   const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
   const now = Date.now();
   if (user.role !== "boss") {
-    const lastActive = user.lastSeen ? new Date(user.lastSeen).getTime() : now;
+    const lastActive = sess.lastActivity || now;
     if (now - lastActive > INACTIVITY_MS) {
       delete db.sessions[token];
       saveDB(db);
       return res.status(401).json({ success: false, message: "Automatisch ausgeloggt (Inaktivität)." });
     }
   }
-  // Update lastSeen in memory only — heartbeat handles persistence
+  // Update activity timestamp on session
+  sess.lastActivity = now;
+  // Update lastSeen in memory — heartbeat handles DB persistence
   user.lastSeen = new Date(now).toISOString();
 
   req.user = { username: user.username, displayName: user.displayName, role: user.role };
@@ -674,7 +676,7 @@ app.post("/auth/login", (req, res) => {
   if (!verifyPassword(password, user.pw)) return res.status(401).json({ success: false, message: "Falscher Login." });
 
   const token = makeToken();
-  db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 };
+  db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30, lastActivity: Date.now() };
   // Track first login of today
   const todayKey = getDayKeyLocal(new Date());
   if(!user.firstLoginByDay) user.firstLoginByDay = {};
