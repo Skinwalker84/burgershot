@@ -605,16 +605,21 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, message: "User nicht gefunden." });
   }
 
-  // Auto-logout after 1 hour of inactivity (based on lastSeen from heartbeat)
+  // Auto-logout after 1 hour of inactivity
+  // Update lastSeen on every request so active users never get logged out
   const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
-  if (user.lastSeen && user.role !== "boss") {
-    const lastActive = new Date(user.lastSeen).getTime();
-    if (Date.now() - lastActive > INACTIVITY_MS) {
+  const now = Date.now();
+  if (user.role !== "boss") {
+    const lastActive = user.lastSeen ? new Date(user.lastSeen).getTime() : now;
+    if (now - lastActive > INACTIVITY_MS) {
       delete db.sessions[token];
-      saveDB(db);
+      scheduleLastSeenSave();
       return res.status(401).json({ success: false, message: "Automatisch ausgeloggt (Inaktivität)." });
     }
   }
+  // Refresh lastSeen on every request (debounced save)
+  user.lastSeen = new Date(now).toISOString();
+  scheduleLastSeenSave();
 
   req.user = { username: user.username, displayName: user.displayName, role: user.role };
   req.token = token;
