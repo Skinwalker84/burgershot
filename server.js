@@ -499,7 +499,7 @@ let onlineUsers = {}; // { username: { name, at } }
 let _lastSeenSaveTimer = null;
 function scheduleLastSeenSave(){
   if(_lastSeenSaveTimer) clearTimeout(_lastSeenSaveTimer);
-  _lastSeenSaveTimer = setTimeout(()=>{ _lastSeenSaveTimer = null; saveDB(db); }, 10000); // save after 10s quiet
+  _lastSeenSaveTimer = setTimeout(()=>{ _lastSeenSaveTimer = null; saveDB(db); }, 2000); // save 2s after last heartbeat
 }
 
 function prunePresence(){

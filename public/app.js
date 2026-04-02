@@ -3197,10 +3197,11 @@ async function loadSchichtplan(){
   // Build rows
   const rows = users.map(u => {
     const firstToday = u.firstLoginToday || null;
-    // Only show lastSeen if it was today
+    // Only show lastSeen if it was today, or if user is currently online
     const todayStr = document.getElementById("schichtDate")?.value || serverDay || new Date().toISOString().slice(0,10);
     const lastSeenRaw = u.lastSeen || null;
-    const lastSeen = (lastSeenRaw && lastSeenRaw.slice(0,10) === todayStr) ? lastSeenRaw : null;
+    const isCurrentlyOnline = onlineData && onlineData[u.username];
+    const lastSeen = isCurrentlyOnline ? "ONLINE" : ((lastSeenRaw && lastSeenRaw.slice(0,10) === todayStr) ? lastSeenRaw : null);
     const empData    = byEmp[u.username] || null;
     const orders     = empData?.orders || 0;
     const revenue    = empData?.revenue || 0;
@@ -3248,9 +3249,11 @@ async function loadSchichtplan(){
                 : `<span class="muted small">Nicht eingeloggt</span>`}
             </td>
             <td style="text-align:center; padding:10px;">
-              ${lastSeen
-                ? `<span style="color:var(--muted); font-size:13px;">${fmtTime(lastSeen)}</span>`
-                : `<span class="muted small">—</span>`}
+              ${lastSeen === "ONLINE"
+                ? `<span style="color:#22c55e; font-weight:900; font-size:13px;">🟢 Gerade online</span>`
+                : lastSeen
+                  ? `<span style="color:var(--muted); font-size:13px;">${fmtTime(lastSeen)}</span>`
+                  : `<span class="muted small">—</span>`}
             </td>
             <td style="text-align:right; padding:10px; font-weight:900;">${orders||'—'}</td>
             <td style="text-align:right; padding:10px; font-weight:900; color:#22c55e;">${revenue>0?money(revenue):'—'}</td>
