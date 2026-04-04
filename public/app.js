@@ -2331,12 +2331,15 @@ function renderGroupSection(containerId, items, key, size){
 
 function groupAdjust(key, id, name, delta){
   const size = _groupMenuProduct?.groupSize || 1;
+  // If swap checkbox is checked, drinks cap doubles
+  const isSwapped = document.getElementById("groupSwapSideForDrink")?.checked || false;
+  const cap = (key === "drinks" && isSwapped) ? size * 2 : size;
   if(!_groupSelections[key]) _groupSelections[key] = {};
   const current = _groupSelections[key][id] || 0;
   const total = Object.values(_groupSelections[key]).reduce((s,v)=>s+v,0);
   const newVal = current + delta;
   if(newVal < 0) return;
-  if(delta > 0 && total >= size) return; // cap at groupSize
+  if(delta > 0 && total >= cap) return; // cap at groupSize (or 2x if swapped)
   _groupSelections[key][id] = newVal;
   if(_groupSelections[key][id] === 0) delete _groupSelections[key][id];
   const el = document.getElementById(`gqty_${key}_${id}`);
