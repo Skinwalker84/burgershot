@@ -767,13 +767,15 @@ app.post("/inventory", requireAuth, requireBoss, (req, res) => {
   const id = String(body.id || "").trim();
   const name = String(body.name || "").trim();
   const unit = String(body.unit || "Stk").trim() || "Stk";
-  let stock = Number(body.stock);
   let minStock = Number(body.minStock);
   if(!name) return res.status(400).json({ success:false, message:"Name fehlt." });
-  if(!Number.isFinite(stock)) stock = 0;
   if(!Number.isFinite(minStock)) minStock = 0;
-  stock = Math.max(0, Math.round(stock * 100) / 100);
   minStock = Math.max(0, Math.round(minStock * 100) / 100);
+
+  // For existing items: NEVER overwrite stock with absolute value (race condition prevention)
+  // Stock changes must use /inventory/adjust (delta-based)
+  // For new items: use provided stock value
+  let stock = null; // only used for new items
 
   if(!Array.isArray(db.inventory)) db.inventory = [];
 

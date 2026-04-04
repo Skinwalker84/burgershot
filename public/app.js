@@ -538,14 +538,36 @@ async function openInventoryEditor(id){
   if(name===null) return;
   const unit = prompt("Einheit (z.B. Stk, l, kg):", existing?.unit || "Stk");
   if(unit===null) return;
-  const stockStr = prompt("Aktueller Bestand:", String(existing?.stock ?? 0));
-  if(stockStr===null) return;
+
+  let stock = existing?.stock ?? 0;
+  if(!existing){
+    // New item: ask for initial stock
+    const stockStr = prompt("Anfangsbestand:", "0");
+    if(stockStr===null) return;
+    stock = Number(String(stockStr).replace(",","."));
+  } else {
+    // Existing item: offer delta adjustment instead of absolute
+    const deltaStr = prompt(
+      `Bestand anpassen für "${existing.name}"\nAktuell: ${existing.stock} ${existing.unit}\n\nDelta eingeben (z.B. +10 oder -5, 0 = keine Änderung):`,
+      "0"
+    );
+    if(deltaStr===null) return;
+    const delta = Number(String(deltaStr).replace(",","."));
+    if(delta !== 0 && Number.isFinite(delta)){
+      // Use adjust endpoint for stock changes
+      await adjustInventory(existing.id, delta);
+      // Refresh after adjust
+      const freshRes2 = await fetch("/inventory");
+      const freshData2 = freshRes2.ok ? await freshRes2.json().catch(()=>({})) : {};
+      if(freshData2.success) inventoryItems = freshData2.items;
+    }
+  }
+
   const minStr = prompt("Mindestbestand (Warnung ab diesem Wert):", String(existing?.minStock ?? 0));
   if(minStr===null) return;
   const ekStr = prompt("EK-Preis pro Einheit ($):", String(existing?.ekPrice ?? 0));
   if(ekStr===null) return;
 
-  const stock = Number(String(stockStr).replace(",","."));
   const minStock = Number(String(minStr).replace(",","."));
   const ekPrice = Number(String(ekStr).replace(",","."));
 
