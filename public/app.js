@@ -2348,29 +2348,33 @@ function groupAdjust(key, id, name, delta){
 }
 
 function updateGroupCounters(size){
-  const isFixedMenu = _groupMenuProduct?.chickenBox || _groupMenuProduct?.germanBox;
-  const isNoSides = _groupMenuProduct?.noSidesBox;
-  const isChicken = isFixedMenu;
-  const b = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
-  const f = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
+  // Declare all flags first
+  const isFixedMenu    = _groupMenuProduct?.chickenBox || _groupMenuProduct?.germanBox;
+  const isChicken      = isFixedMenu;
+  const isNoSides      = !!_groupMenuProduct?.noSidesBox;
+  const isSpecialBurger = !!_groupMenuProduct?.specialBurgerBox;
+  const isSwapped      = !isChicken && !isNoSides && !isSpecialBurger &&
+                         (document.getElementById("groupSwapSideForDrink")?.checked || false);
+  const swapSize   = isSwapped ? size * 2 : size;
+  const drinkLimit = swapSize;
+
+  const b   = Object.values(_groupSelections.burgers).reduce((s,v)=>s+v,0);
+  const f   = Object.values(_groupSelections.fries).reduce((s,v)=>s+v,0);
   const des = Object.values(_groupSelections.desserts||{}).reduce((s,v)=>s+v,0);
-  const d = Object.values(_groupSelections.drinks).reduce((s,v)=>s+v,0);
+  const d   = Object.values(_groupSelections.drinks).reduce((s,v)=>s+v,0);
+
   if(!isChicken){
     document.getElementById("groupBurgerCounter").innerText = `${b} / ${size}`;
-    document.getElementById("groupFriesCounter").innerText  = `${f} / ${size}`;
+    if(!isSwapped) document.getElementById("groupFriesCounter").innerText = `${f} / ${size}`;
   }
-  const swapCb = document.getElementById("groupSwapSideForDrink");
-  const drinkLimit = (swapCb?.checked && !isChicken && !isNoSides && !isSpecialBurger) ? size*2 : size;
   document.getElementById("groupDrinkCounter").innerText = `${d} / ${drinkLimit}`;
-  const isSpecialBurger = !!_groupMenuProduct?.specialBurgerBox;
-  const isSwapped = document.getElementById("groupSwapSideForDrink")?.checked || false;
-  const swapSize = isSwapped ? size * 2 : size;
   const dessertsEl = document.getElementById("groupDessertCounter");
   if(dessertsEl) dessertsEl.innerText = `${des} / ${size}`;
+
   const ok = isSpecialBurger ? (f===size && des===size && d===size)
-    : isChicken ? d===size
-    : isNoSides ? (b===size && d===size)
-    : isSwapped ? (b===size && d===swapSize)
+    : isChicken   ? d===size
+    : isNoSides   ? (b===size && d===size)
+    : isSwapped   ? (b===size && d===swapSize)
     : (b===size && f===size && d===size);
   document.getElementById("groupMenuConfirmBtn").disabled = !ok;
   const msg = document.getElementById("groupMenuMsg");
