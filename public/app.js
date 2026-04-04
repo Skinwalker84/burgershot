@@ -2225,6 +2225,11 @@ function openGroupMenu(p){
 
   document.getElementById("groupMenuTitle").innerText = p.name + " — " + money(p.price);
   document.getElementById("groupMenuDesc").innerText = p.desc || "";
+  // Reset swap checkbox (only shown for regular menus)
+  const _swapRow = document.getElementById("groupSwapRow");
+  const _swapCb  = document.getElementById("groupSwapSideForDrink");
+  if(_swapRow) _swapRow.style.display = "none";
+  if(_swapCb)  _swapCb.checked = false;
 
   const drinks = (PRODUCTS||[]).filter(x => x.cat === "Getränke");
 
@@ -2274,6 +2279,11 @@ function openGroupMenu(p){
     document.getElementById("groupBurgerSection").style.display = "";
     document.getElementById("groupFriesSection").style.display = "";
     document.getElementById("groupDessertSection").style.display = "none";
+    // Show swap checkbox for regular menus only
+    const swapRow = document.getElementById("groupSwapRow");
+    if(swapRow) swapRow.style.display = "";
+    const swapCb = document.getElementById("groupSwapSideForDrink");
+    if(swapCb) swapCb.checked = false;
     renderGroupSection("groupBurgerList", burgers, "burgers", size);
     renderGroupSection("groupFriesList",  fries,   "fries",   size);
     renderGroupSection("groupDrinkList",  drinks,  "drinks",  size);
@@ -2281,6 +2291,29 @@ function openGroupMenu(p){
 
   updateGroupCounters(size);
   document.getElementById("groupMenuOverlay").classList.remove("hidden");
+}
+
+function toggleSideSwap(){
+  const swapped = document.getElementById("groupSwapSideForDrink")?.checked || false;
+  const size = _groupMenuProduct?.groupSize || 1;
+  const friesSection = document.getElementById("groupFriesSection");
+  const drinks = (PRODUCTS||[]).filter(x => x.cat === "Getränke");
+
+  if(swapped){
+    // Hide sides, allow 2 drinks per person
+    if(friesSection) friesSection.style.display = "none";
+    _groupSelections.fries = { "__swapped": 0 }; // mark as skipped
+    renderGroupSection("groupDrinkList", drinks, "drinks", size * 2);
+  } else {
+    // Restore sides, back to 1 drink per person
+    const fries = (PRODUCTS||[]).filter(x => x.cat === "Beilagen" || (x.cat === "Süßes" && x.name && x.name.toLowerCase().includes("sundae")));
+    if(friesSection) friesSection.style.display = "";
+    _groupSelections.fries = {};
+    _groupSelections.drinks = {};
+    renderGroupSection("groupFriesList", fries, "fries", size);
+    renderGroupSection("groupDrinkList", drinks, "drinks", size);
+  }
+  updateGroupCounters(size);
 }
 
 function renderGroupSection(containerId, items, key, size){
@@ -2323,11 +2356,19 @@ function updateGroupCounters(size){
     document.getElementById("groupBurgerCounter").innerText = `${b} / ${size}`;
     document.getElementById("groupFriesCounter").innerText  = `${f} / ${size}`;
   }
-  document.getElementById("groupDrinkCounter").innerText = `${d} / ${size}`;
+  const swapCb = document.getElementById("groupSwapSideForDrink");
+  const drinkLimit = (swapCb?.checked && !isChicken && !isNoSides && !isSpecialBurger) ? size*2 : size;
+  document.getElementById("groupDrinkCounter").innerText = `${d} / ${drinkLimit}`;
   const isSpecialBurger = !!_groupMenuProduct?.specialBurgerBox;
+  const isSwapped = document.getElementById("groupSwapSideForDrink")?.checked || false;
+  const swapSize = isSwapped ? size * 2 : size;
   const dessertsEl = document.getElementById("groupDessertCounter");
   if(dessertsEl) dessertsEl.innerText = `${des} / ${size}`;
-  const ok = isSpecialBurger ? (f===size && des===size && d===size) : isChicken ? d===size : isNoSides ? (b===size && d===size) : (b===size && f===size && d===size);
+  const ok = isSpecialBurger ? (f===size && des===size && d===size)
+    : isChicken ? d===size
+    : isNoSides ? (b===size && d===size)
+    : isSwapped ? (b===size && d===swapSize)
+    : (b===size && f===size && d===size);
   document.getElementById("groupMenuConfirmBtn").disabled = !ok;
   const msg = document.getElementById("groupMenuMsg");
   if(msg){
@@ -2362,6 +2403,7 @@ function confirmGroupMenu(){
     return (q>1?q+"× ":"")+(prod?.name||id);
   }).join(", ");
 
+  const isSwapped = document.getElementById("groupSwapSideForDrink")?.checked || false;
   let displayName;
   if(p.specialBurgerBox){
     const sideNames2 = Object.entries(_groupSelections.fries).filter(([,q])=>q>0).map(([id,q])=>{ const pr=(PRODUCTS||[]).find(x=>x.id===id); return (q>1?q+'× ':'')+( pr?.name||id); }).join(', ');
