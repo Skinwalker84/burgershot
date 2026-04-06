@@ -31,6 +31,26 @@ function localDateStr(){
 function isManager(){ return me?.role === "manager"; }
 function isBossOrManager(){ return me?.role === "boss" || me?.role === "manager"; }
 
+function showLockedPopup(msg){
+  let ov = document.getElementById("lockedPopupOv");
+  if(!ov){
+    ov = document.createElement("div");
+    ov.id = "lockedPopupOv";
+    ov.className = "overlay";
+    ov.style.zIndex = "9999";
+    ov.innerHTML = `
+      <div class="overlayCard" style="max-width:420px; text-align:center;">
+        <div style="font-size:52px; margin-bottom:12px;">🔒</div>
+        <div style="font-weight:900; font-size:20px; margin-bottom:12px; color:#ef4444;">Zugang gesperrt</div>
+        <div id="lockedPopupMsg" style="font-size:15px; color:var(--muted); line-height:1.6; margin-bottom:20px;"></div>
+        <button class="primary" style="min-width:140px;" onclick="document.getElementById('lockedPopupOv').classList.add('hidden')">OK</button>
+      </div>`;
+    document.body.appendChild(ov);
+  }
+  document.getElementById("lockedPopupMsg").innerText = msg;
+  ov.classList.remove("hidden");
+}
+
 function showLoginPage(msg="Bitte einloggen."){
   document.getElementById("loginPage")?.classList.remove("hidden");
   document.getElementById("appRoot")?.classList.add("hidden");
@@ -644,7 +664,14 @@ async function login(){
     body: JSON.stringify({ username, password })
   });
   const data = await res.json().catch(()=>({}));
-  if(!res.ok || !data.success) return showLoginPage(data.message || "Login fehlgeschlagen.");
+  if(!res.ok || !data.success){
+    if(data.locked){
+      showLockedPopup(data.message || "Zugang gesperrt, bitte bei der Geschäftsleitung melden.");
+    } else {
+      showLoginPage(data.message || "Login fehlgeschlagen.");
+    }
+    return;
+  }
   me = data.user;
   serverDay = data.currentDay;
   weekTabInited = false;
@@ -3308,7 +3335,10 @@ async function loadSchichtplan(){
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="width:9px;height:9px;border-radius:50%;background:${wasActive?'#22c55e':'#ef4444'};display:inline-block;flex-shrink:0;"></span>
                 <div>
-                  <div style="font-weight:900;">${esc(u.displayName)}</div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+              <div style="font-weight:900;">${esc(u.displayName)}</div>
+              ${u.locked ? '<span style="font-size:10px; background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); border-radius:4px; padding:1px 6px;">🔒 Gesperrt</span>' : ''}
+            </div>
                   <div class="muted small">${roleLabel[u.role]||u.role}</div>
                 </div>
               </div>
@@ -3494,6 +3524,11 @@ async function loadUsers(){
       </div>
       <div style="display:flex; gap:6px; margin-left:8px;">
         <button class="ghost" onclick="openEditUser('${escAttr(u.username)}','${escAttr(u.displayName)}','${escAttr(u.role)}')">✏️ Bearbeiten</button>
+        ${u.role !== 'boss' ? `
+          <button class="ghost" style="color:${u.locked ? '#22c55e' : '#f97316'}; border-color:${u.locked ? '#22c55e' : '#f97316'};"
+            onclick="toggleUserLock('${escAttr(u.username)}','${escAttr(u.displayName)}',${u.locked})">
+            ${u.locked ? '🔓 Entsperren' : '🔒 Sperren'}
+          </button>` : ''}
         <button class="ghost" style="color:#ef4444;" onclick="delUser('${escAttr(u.username)}')">Löschen</button>
       </div>
     </div>
@@ -3548,6 +3583,15 @@ async function addUser(username, displayName, role, password){
   if(!res.ok || !data.success) return alert(data.message || "Fehler.");
   loadUsers();
 }
+async function toggleUserLock(username, displayName, isLocked){
+  const action = isLocked ? "entsperren" : "sperren";
+  if(!confirm(`Zugang von "${displayName}" ${action}?`)) return;
+  const res = await fetch(`/users/${encodeURIComponent(username)}/lock`, { method:"POST" }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!data.success){ alert(data.message||"Fehler."); return; }
+  loadUsers();
+}
+
 function openEditUser(username, displayName, role){
   document.getElementById("editUserLabel").innerText = `${displayName} (${username})`;
   document.getElementById("editUserDisplayName").value = displayName;

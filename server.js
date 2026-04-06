@@ -674,6 +674,7 @@ app.post("/auth/login", (req, res) => {
   const user = db.users.find(u => String(u.username || "").toLowerCase() === username);
   if (!user) return res.status(401).json({ success: false, message: "Falscher Login." });
   if (!verifyPassword(password, user.pw)) return res.status(401).json({ success: false, message: "Falscher Login." });
+  if (user.locked) return res.status(403).json({ success: false, message: "Zugang gesperrt, bitte bei der Geschäftsleitung melden.", locked: true });
 
   const token = makeToken();
   db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30, lastActivity: Date.now() };
@@ -1314,7 +1315,7 @@ app.put("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
    ========================= */
 app.get("/users", requireAuth, requireBoss, (req, res) => {
   const todayKey = getDayKeyLocal(new Date());
-  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, lastSeen: u.lastSeen || null, firstLoginToday: (u.firstLoginByDay && u.firstLoginByDay[todayKey]) || null })) });
+  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, lastSeen: u.lastSeen || null, firstLoginToday: (u.firstLoginByDay && u.firstLoginByDay[todayKey]) || null, locked: u.locked || false })) });
 });
 
 app.post("/users", requireAuth, requireBoss, (req, res) => {
@@ -1331,6 +1332,22 @@ app.post("/users", requireAuth, requireBoss, (req, res) => {
   db.users.push({ username, displayName, role, pw });
   saveDB(db);
   res.json({ success: true });
+});
+
+app.post("/users/:username/lock", requireAuth, requireBoss, (req, res) => {
+  const username = String(req.params.username || "").toLowerCase();
+  const user = db.users.find(u => u.username === username);
+  if(!user) return res.status(404).json({ success:false, message:"User nicht gefunden." });
+  if(user.role === "boss") return res.status(400).json({ success:false, message:"Chef kann nicht gesperrt werden." });
+  user.locked = !user.locked;
+  // Invalidate sessions if locking
+  if(user.locked){
+    for(const [tok, sess] of Object.entries(db.sessions||{})){
+      if(sess.username === username) delete db.sessions[tok];
+    }
+  }
+  saveDB(db);
+  res.json({ success:true, locked: user.locked });
 });
 
 app.put("/users/:username", requireAuth, requireBoss, (req, res) => {
