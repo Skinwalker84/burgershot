@@ -1881,12 +1881,26 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
     .map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
     .sort((a, b) => b.revenue - a.revenue);
 
+  // Count products sold this week
+  const byProductMap = {};
+  for (const s of salesAll) {
+    for (const item of (s.items || [])) {
+      const name = String(item.name || "").trim();
+      if (!name) continue;
+      if (!byProductMap[name]) byProductMap[name] = { name, qty: 0, revenue: 0 };
+      byProductMap[name].qty += Number(item.qty || 1);
+      byProductMap[name].revenue += Number(item.price || 0) * Number(item.qty || 1);
+    }
+  }
+  const byProduct = Object.values(byProductMap).sort((a, b) => b.qty - a.qty);
+
   res.json({
     success: true,
     week: `${parsed.year}-W${String(parsed.week).padStart(2, "0")}`,
     range: { start: dayKeys[0], end: dayKeys[6] },
     totals,
-    byEmployee
+    byEmployee,
+    byProduct
   });
 });
 

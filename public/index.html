@@ -351,6 +351,27 @@
           </div>
         </div>
 
+        <!-- Verkaufte Produkte -->
+        <div style="margin-top:14px; border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; background:rgba(255,255,255,.04);"
+            onclick="toggleSection('weekProducts')">
+            <div style="font-weight:900;">📦 Verkaufte Produkte</div>
+            <span id="weekProductsArrow" style="font-size:16px; transition:transform .2s;">▼</span>
+          </div>
+          <div id="weekProducts" class="hidden" style="padding:0 16px 12px;">
+            <table class="table" style="margin-top:10px;">
+              <thead>
+                <tr>
+                  <th>Produkt</th>
+                  <th style="text-align:right;">Menge</th>
+                  <th style="text-align:right;">Umsatz</th>
+                </tr>
+              </thead>
+              <tbody id="weekByProduct"></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
 

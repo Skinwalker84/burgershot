@@ -3105,6 +3105,20 @@ async function loadWeekReport(){
     const weekExpEl = document.getElementById("weekExpenses");
     if(weekExpEl) weekExpEl.innerText = (data.totals?.expenses||0) > 0 ? money(data.totals.expenses) : "—";
     document.getElementById("weekProfit").innerText=money(data.totals?.profit||0);
+
+    // Render product stats
+    const prodTbody = document.getElementById("weekByProduct");
+    if(prodTbody){
+      const products = data.byProduct || [];
+      prodTbody.innerHTML = products.length
+        ? products.map(p => `
+            <tr>
+              <td>${esc(p.name)}</td>
+              <td style="text-align:right; font-weight:900;">${p.qty}×</td>
+              <td style="text-align:right; color:#22c55e;">${money(p.revenue)}</td>
+            </tr>`).join("")
+        : `<tr><td colspan="3" class="muted small">Keine Daten.</td></tr>`;
+    }
     document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
   } else {
     // Staff: mask all totals
