@@ -3113,15 +3113,18 @@ async function loadWeekReport(){
       if(products.length){
         const totalQty = products.reduce((s,p)=>s+p.qty,0);
         const totalRev = products.reduce((s,p)=>s+p.revenue,0);
+        const totalCrates = products.reduce((s,p)=>s+(p.crates||0),0);
         prodTbody.innerHTML = products.map(p => `
             <tr>
               <td>${esc(p.name)}</td>
               <td style="text-align:right; font-weight:900;">${p.qty}×</td>
+              <td style="text-align:right; color:#60a5fa;">${p.crates != null ? p.crates + ' 📦' : '<span class="muted small">—</span>'}</td>
               <td style="text-align:right; color:#22c55e;">${money(p.revenue)}</td>
             </tr>`).join("") +
           `<tr style="border-top:2px solid var(--border); font-weight:900;">
               <td>Gesamt</td>
               <td style="text-align:right;">${totalQty}×</td>
+              <td style="text-align:right; color:#60a5fa;">${totalCrates} 📦</td>
               <td style="text-align:right; color:#22c55e;">${money(totalRev)}</td>
             </tr>`;
       } else {
