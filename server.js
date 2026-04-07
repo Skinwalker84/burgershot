@@ -1881,15 +1881,42 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
     .map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
     .sort((a, b) => b.revenue - a.revenue);
 
-  // Count products sold this week
+  // Count individual products sold this week — expand menu components
   const byProductMap = {};
+  const addProduct = (name, qty, revenue) => {
+    const key = String(name || "").trim();
+    if (!key) return;
+    if (!byProductMap[key]) byProductMap[key] = { name: key, qty: 0, revenue: 0 };
+    byProductMap[key].qty     += qty;
+    byProductMap[key].revenue += revenue;
+  };
+
   for (const s of salesAll) {
     for (const item of (s.items || [])) {
-      const name = String(item.name || "").trim();
-      if (!name) continue;
-      if (!byProductMap[name]) byProductMap[name] = { name, qty: 0, revenue: 0 };
-      byProductMap[name].qty += Number(item.qty || 1);
-      byProductMap[name].revenue += Number(item.price || 0) * Number(item.qty || 1);
+      const itemQty = Number(item.qty || 1);
+
+      if (Array.isArray(item.components) && item.components.length > 0) {
+        // Menu item: use components (individual products) and split price proportionally
+        // Don't count the menu name itself — count the components
+        const totalCompPrice = item.components.reduce((sum, c) => {
+          const prod = (db.products||[]).find(p => p.id === c.productId);
+          return sum + ((prod?.price || 0) * (c.qty || 1));
+        }, 0);
+        for (const comp of item.components) {
+          const prod = (db.products||[]).find(p => p.id === comp.productId);
+          const compName = prod?.name || comp.productId;
+          const compQty = (comp.qty || 1) * itemQty;
+          const compRevenue = totalCompPrice > 0
+            ? (item.price || 0) * itemQty * ((prod?.price||0) * (comp.qty||1)) / totalCompPrice
+            : 0;
+          addProduct(compName, compQty, compRevenue);
+        }
+      } else {
+        // Regular item — skip delivery fee and meta items
+        const name = String(item.name || "").trim();
+        if (name.includes("Liefergebühr") || name.includes("🛵")) continue;
+        addProduct(name, itemQty, (item.price || 0) * itemQty);
+      }
     }
   }
   const byProduct = Object.values(byProductMap).sort((a, b) => b.qty - a.qty);

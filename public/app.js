@@ -3110,14 +3110,23 @@ async function loadWeekReport(){
     const prodTbody = document.getElementById("weekByProduct");
     if(prodTbody){
       const products = data.byProduct || [];
-      prodTbody.innerHTML = products.length
-        ? products.map(p => `
+      if(products.length){
+        const totalQty = products.reduce((s,p)=>s+p.qty,0);
+        const totalRev = products.reduce((s,p)=>s+p.revenue,0);
+        prodTbody.innerHTML = products.map(p => `
             <tr>
               <td>${esc(p.name)}</td>
               <td style="text-align:right; font-weight:900;">${p.qty}×</td>
               <td style="text-align:right; color:#22c55e;">${money(p.revenue)}</td>
-            </tr>`).join("")
-        : `<tr><td colspan="3" class="muted small">Keine Daten.</td></tr>`;
+            </tr>`).join("") +
+          `<tr style="border-top:2px solid var(--border); font-weight:900;">
+              <td>Gesamt</td>
+              <td style="text-align:right;">${totalQty}×</td>
+              <td style="text-align:right; color:#22c55e;">${money(totalRev)}</td>
+            </tr>`;
+      } else {
+        prodTbody.innerHTML = `<tr><td colspan="3" class="muted small">Keine Daten.</td></tr>`;
+      }
     }
     document.getElementById("weekOrders").innerText=String(data.totals?.orders||0);
   } else {
