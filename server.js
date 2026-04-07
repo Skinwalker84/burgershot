@@ -1881,6 +1881,35 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
     .map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
     .sort((a, b) => b.revenue - a.revenue);
 
+  // Kisten-Konfiguration: Artikel pro Kiste
+  const CRATE_CONFIG = {
+    "The Heartstopper":    5,
+    "Vegan Burger":        8,
+    "The Bleeder":         6,
+    "The Chicken":         7,
+    "The Chozzo":          7,
+    "The German":          5,
+    "Special Burger":      3,
+    "Breakfast Deluxe":    5,
+    "Fries":              13,
+    "Cheesy Fries":       10,
+    "Onion Rings":        13,
+    "Chicken Nuggets":     8,
+    "Coleslaw":            8,
+    "Donut":              10,
+    "Caramel Sundae":     10,
+    "Chocolate Sundae":   10,
+    "Strawberry Sundae":  10,
+    "Milchshake":          8,
+    "ECola":              10,
+    "ECola Light":        10,
+    "Sprunk":             10,
+    "Sprunk Light":       10,
+    "Slush":               8,
+    "Slush Atom":          8,
+    "Splashy Drink":      10,
+  };
+
   // Count individual products sold this week — expand menu components
   const byProductMap = {};
   const addProduct = (name, qty, revenue) => {
@@ -1898,12 +1927,15 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
       if (Array.isArray(item.components) && item.components.length > 0) {
         // Menu item: use components (individual products) and split price proportionally
         // Don't count the menu name itself — count the components
+        // Use DEFAULT_PRODUCTS as lookup source (db.products may be empty)
+        const allProds = [...DEFAULT_PRODUCTS, ...(db.products||[])];
+        const findProd = (id) => allProds.find(p => p.id === id);
         const totalCompPrice = item.components.reduce((sum, c) => {
-          const prod = (db.products||[]).find(p => p.id === c.productId);
+          const prod = findProd(c.productId);
           return sum + ((prod?.price || 0) * (c.qty || 1));
         }, 0);
         for (const comp of item.components) {
-          const prod = (db.products||[]).find(p => p.id === comp.productId);
+          const prod = findProd(comp.productId);
           const compName = prod?.name || comp.productId;
           const compQty = (comp.qty || 1) * itemQty;
           const compRevenue = totalCompPrice > 0
@@ -1919,7 +1951,13 @@ app.get("/reports/week-employee", requireAuth, (req, res) => {
       }
     }
   }
-  const byProduct = Object.values(byProductMap).sort((a, b) => b.qty - a.qty);
+  const byProduct = Object.values(byProductMap)
+    .map(p => ({
+      ...p,
+      perCrate: CRATE_CONFIG[p.name] || null,
+      crates: CRATE_CONFIG[p.name] ? Math.ceil(p.qty / CRATE_CONFIG[p.name]) : null
+    }))
+    .sort((a, b) => b.qty - a.qty);
 
   res.json({
     success: true,
