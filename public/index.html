@@ -208,6 +208,254 @@
 
         <div id="kitchenOrders" class="kitchenGrid" style="margin-top:14px;"></div>
       </div>
+
+      <!-- Kochen Panel -->
+      <div class="panel" style="margin-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <div style="font-weight:900; font-size:17px;">🍳 Kochen</div>
+            <div class="muted small">Gekochte Mengen eintragen → Kartons werden automatisch abgezogen</div>
+          </div>
+          <button class="primary" onclick="submitCooking()">Kartons abziehen</button>
+        </div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+          <div style="font-size:13px; color:var(--muted);">Vorschau: <span id="cookKartonPreview" style="font-weight:900; color:#60a5fa;">0 Kartons</span></div>
+        </div>
+        <div style="overflow:auto; max-height:400px;">
+          <table class="table">
+            <thead>
+              <tr><th>Produkt</th><th style="text-align:right;">Gekochte Menge</th></tr>
+            </thead>
+            <tbody>              <tr>
+                <td>The Heartstopper <span class="muted small">(1 Karton = 5×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="The Heartstopper" data-per-karton="5"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>The Bleeder <span class="muted small">(1 Karton = 6×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="The Bleeder" data-per-karton="6"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>The Chicken <span class="muted small">(1 Karton = 7×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="The Chicken" data-per-karton="7"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Vegan Burger <span class="muted small">(1 Karton = 8×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Vegan Burger" data-per-karton="8"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>The Chozzo <span class="muted small">(1 Karton = 7×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="The Chozzo" data-per-karton="7"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>The German <span class="muted small">(1 Karton = 5×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="The German" data-per-karton="5"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Special Burger <span class="muted small">(1 Karton = 3×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Special Burger" data-per-karton="3"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Breakfast Deluxe <span class="muted small">(1 Karton = 5×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Breakfast Deluxe" data-per-karton="5"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Fries <span class="muted small">(1 Karton = 13×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Fries" data-per-karton="13"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Cheesy Fries <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Cheesy Fries" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Onion Rings <span class="muted small">(1 Karton = 13×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Onion Rings" data-per-karton="13"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Chicken Nuggets <span class="muted small">(1 Karton = 8×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Chicken Nuggets" data-per-karton="8"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Coleslaw <span class="muted small">(1 Karton = 8×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Coleslaw" data-per-karton="8"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Donut <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Donut" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Caramel Sundae <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Caramel Sundae" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Chocolate Sundae <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Chocolate Sundae" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Strawberry Sundae <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Strawberry Sundae" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Milchshake <span class="muted small">(1 Karton = 8×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Milchshake" data-per-karton="8"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>ECola <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="ECola" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>ECola Light <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="ECola Light" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Sprunk <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Sprunk" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Sprunk Light <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Sprunk Light" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Slush <span class="muted small">(1 Karton = 8×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Slush" data-per-karton="8"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Slush Atom <span class="muted small">(1 Karton = 8×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Slush Atom" data-per-karton="8"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+              <tr>
+                <td>Splashy Drink <span class="muted small">(1 Karton = 10×)</span></td>
+                <td style="text-align:right; width:130px;">
+                  <input type="number" min="0" step="1" placeholder="0"
+                    data-cook-name="Splashy Drink" data-per-karton="10"
+                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
+                    oninput="updateCookPreview()" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="cookMsg" class="muted small" style="margin-top:10px;"></div>
+      </div>
     </div>
 
     <!-- ===== TAB: DAY REPORT ===== -->
@@ -495,253 +743,6 @@
         </div>
 
         <div class="muted small" style="margin-top:10px;">Tipp: Klick auf „Bearbeiten“ um Namen/Einheit/Mindestbestand zu ändern.</div>
-      </div>
-      <!-- Kochen Panel -->
-      <div class="panel" style="margin-top:14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <div>
-            <div style="font-weight:900; font-size:17px;">🍳 Kochen</div>
-            <div class="muted small">Gekochte Mengen eintragen → Kartons werden automatisch abgezogen</div>
-          </div>
-          <button class="primary" onclick="submitCooking()">Kartons abziehen</button>
-        </div>
-        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
-          <div style="font-size:13px; color:var(--muted);">Vorschau: <span id="cookKartonPreview" style="font-weight:900; color:#60a5fa;">0 Kartons</span></div>
-        </div>
-        <div style="overflow:auto; max-height:400px;">
-          <table class="table">
-            <thead>
-              <tr><th>Produkt</th><th style="text-align:right;">Gekochte Menge</th></tr>
-            </thead>
-            <tbody>              <tr>
-                <td>The Heartstopper <span class="muted small">(1 Karton = 5×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="The Heartstopper" data-per-karton="5"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>The Bleeder <span class="muted small">(1 Karton = 6×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="The Bleeder" data-per-karton="6"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>The Chicken <span class="muted small">(1 Karton = 7×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="The Chicken" data-per-karton="7"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Vegan Burger <span class="muted small">(1 Karton = 8×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Vegan Burger" data-per-karton="8"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>The Chozzo <span class="muted small">(1 Karton = 7×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="The Chozzo" data-per-karton="7"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>The German <span class="muted small">(1 Karton = 5×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="The German" data-per-karton="5"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Special Burger <span class="muted small">(1 Karton = 3×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Special Burger" data-per-karton="3"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Breakfast Deluxe <span class="muted small">(1 Karton = 5×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Breakfast Deluxe" data-per-karton="5"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Fries <span class="muted small">(1 Karton = 13×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Fries" data-per-karton="13"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Cheesy Fries <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Cheesy Fries" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Onion Rings <span class="muted small">(1 Karton = 13×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Onion Rings" data-per-karton="13"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Chicken Nuggets <span class="muted small">(1 Karton = 8×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Chicken Nuggets" data-per-karton="8"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Coleslaw <span class="muted small">(1 Karton = 8×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Coleslaw" data-per-karton="8"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Donut <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Donut" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Caramel Sundae <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Caramel Sundae" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Chocolate Sundae <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Chocolate Sundae" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Strawberry Sundae <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Strawberry Sundae" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Milchshake <span class="muted small">(1 Karton = 8×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Milchshake" data-per-karton="8"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>ECola <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="ECola" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>ECola Light <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="ECola Light" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Sprunk <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Sprunk" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Sprunk Light <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Sprunk Light" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Slush <span class="muted small">(1 Karton = 8×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Slush" data-per-karton="8"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Slush Atom <span class="muted small">(1 Karton = 8×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Slush Atom" data-per-karton="8"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-              <tr>
-                <td>Splashy Drink <span class="muted small">(1 Karton = 10×)</span></td>
-                <td style="text-align:right; width:130px;">
-                  <input type="number" min="0" step="1" placeholder="0"
-                    data-cook-name="Splashy Drink" data-per-karton="10"
-                    style="width:110px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:right;"
-                    oninput="updateCookPreview()" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="cookMsg" class="muted small" style="margin-top:10px;"></div>
       </div>
     </div>
 
