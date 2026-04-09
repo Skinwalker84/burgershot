@@ -304,53 +304,73 @@ async function deletePurchase(id){
   if(msg){ msg.innerText = "✅ Storniert — Bestand und Kontostand wurden angepasst."; setTimeout(()=>{ msg.innerText=""; }, 4000); }
 }
 
-async function bookShopPurchases(){
-  if(!isBoss()) return alert("Nur Chef.");
+async function bookKartonPurchase(){
+  if(!isBoss()) return;
   const msg = document.getElementById("shopMsg");
-  const date = document.getElementById("shopDate")?.value || "";
+  const qty = Number(document.getElementById("shopKartonQty")?.value);
+  const price = Number(document.getElementById("shopKartonPrice")?.value) || 0;
+  const date = document.getElementById("shopDate")?.value || serverDay;
+  if(!qty || qty <= 0){ if(msg) msg.innerText = "Bitte Anzahl eintragen."; return; }
 
-  const inputs = Array.from(document.querySelectorAll(".shopQty"));
-  const items = inputs.map(inp=>{
-    const id = inp.getAttribute("data-id") || "";
-    const qty = Number(inp.value);
-    if(!id) return null;
-    if(!Number.isFinite(qty) || qty<=0) return null;
-    const priceEl = document.querySelector(`.shopPrice[data-id="${id}"]`);
-    const price = Number(priceEl?.value) || null;
-    return { inventoryId: id, qty, price: price > 0 ? price : null };
-  }).filter(Boolean);
-
-  if(items.length===0){
-    if(msg) msg.innerText = "Bitte mindestens eine Menge eintragen.";
-    return;
-  }
-
-  if(msg) msg.innerText = "Buche Einkauf…";
-  const payload = { date: date || undefined, items };
-  const res = await fetch("/purchases", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
+  const res = await fetch("/purchases",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ items:[{ inventoryId:"lmk", qty, price: price > 0 ? price : null }], date })
   }).catch(()=>null);
-  const data = res ? await res.json().catch(()=>({})) : {};
-  if(!res || !res.ok || !data.success){
-    if(msg) msg.innerText = data.message || "Fehler beim Buchen.";
-    return;
-  }
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+  if(!res?.ok || !data.success){ if(msg) msg.innerText = data.message||"Fehler."; return; }
 
   inventoryItems = Array.isArray(data.items) ? data.items : inventoryItems;
-  // Clear inputs
-  inputs.forEach(i=>{ i.value = ""; });
-  renderShopTable();
+  document.getElementById("shopKartonQty").value = "";
+  document.getElementById("shopKartonPrice").value = "";
+  if(msg) msg.innerText = `✅ ${qty} Karton${qty===1?'':'s'} eingebucht.`;
+  if(!document.getElementById("tab_stock")?.classList.contains("hidden")) renderInventory();
+  loadBankBalance();
+  setTimeout(()=>{ if(msg) msg.innerText="—"; }, 4000);
+}
 
-  // Keep Lager tab in sync if open
-  if(!document.getElementById("tab_stock")?.classList.contains("hidden")){
-    renderInventory();
+function updateCookPreview(){
+  const inputs = Array.from(document.querySelectorAll("[data-cook-name]"));
+  let total = 0;
+  for(const inp of inputs){
+    const qty = Number(inp.value) || 0;
+    const per = Number(inp.getAttribute("data-per-karton")) || 1;
+    if(qty > 0) total += qty / per;
+  }
+  const el = document.getElementById("cookKartonPreview");
+  if(el) el.innerText = `${Math.ceil(total * 100)/100} Kartons`;
+}
+
+async function submitCooking(){
+  const inputs = Array.from(document.querySelectorAll("[data-cook-name]"));
+  const items = inputs.map(inp => ({
+    name: inp.getAttribute("data-cook-name"),
+    qty: Number(inp.value) || 0
+  })).filter(x => x.qty > 0);
+
+  const msg = document.getElementById("cookMsg");
+  if(items.length === 0){ if(msg) msg.innerText="Bitte mindestens ein Produkt eintragen."; return; }
+  if(msg) msg.innerText = "Buche Kochen…";
+
+  const res = await fetch("/cook",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ items })
+  }).catch(()=>null);
+  const data = res?.ok ? await res.json().catch(()=>({})) : {};
+
+  if(!res?.ok || !data.success){
+    if(msg) msg.innerText = data.message || "Fehler.";
+    return;
   }
 
-  const added = Number(data.added) || items.length;
-  if(msg) msg.innerText = "Gebucht ✅ " + added + " Position" + (added===1?"":"en") + " ins Lager übernommen.";
+  // Clear inputs
+  inputs.forEach(inp => inp.value = "");
+  updateCookPreview();
+  loadInventory();
+  if(msg) msg.innerText = `✅ ${data.kartonsUsed} Karton${data.kartonsUsed===1?'':'s'} abgezogen. Verbleibend: ${data.remaining}`;
+  setTimeout(()=>{ if(msg) msg.innerText=""; }, 5000);
 }
+
+
 
 /* =========================
    INVENTORY / LAGER
