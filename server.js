@@ -370,6 +370,10 @@ function normalizeDB(db) {
   if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
 
   if (!Array.isArray(db.inventory)) db.inventory = [];
+  // Ensure Lebensmittelkarton exists
+  if (!db.inventory.find(x => x.id === "lmk")) {
+    db.inventory.push({ id:"lmk", name:"Lebensmittelkarton", unit:"Karton", stock:0, minStock:5, ekPrice:0, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() });
+  }
   if (!Array.isArray(db.purchases)) db.purchases = [];
   if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
   if (!Array.isArray(db.expenses)) db.expenses = [];
@@ -1742,6 +1746,69 @@ app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) =>
 // Current special burger name
 app.get("/special-burger-name", requireAuth, (req, res) => {
   res.json({ success: true, name: getCurrentSpecialBurgerName() });
+});
+
+// ===== KOCHEN =====
+// CRATE_CONFIG: wie viele Einheiten liefert 1 Lebensmittelkarton pro Produkt
+const CRATE_CONFIG_COOK = {
+  "The Heartstopper":  5,
+  "Vegan Burger":      8,
+  "The Bleeder":       6,
+  "The Chicken":       7,
+  "The Chozzo":        7,
+  "The German":        5,
+  "Special Burger":    3,
+  "Breakfast Deluxe":  5,
+  "Fries":            13,
+  "Cheesy Fries":     10,
+  "Onion Rings":      13,
+  "Chicken Nuggets":   8,
+  "Coleslaw":          8,
+  "Donut":            10,
+  "Caramel Sundae":   10,
+  "Chocolate Sundae": 10,
+  "Strawberry Sundae":10,
+  "Milchshake":        8,
+  "ECola":            10,
+  "ECola Light":      10,
+  "Sprunk":           10,
+  "Sprunk Light":     10,
+  "Slush":             8,
+  "Slush Atom":        8,
+  "Splashy Drink":    10,
+};
+
+app.post("/cook", requireAuth, requireBossOrManager, (req, res) => {
+  const items = req.body?.items; // [{name, qty}]
+  if(!Array.isArray(items) || items.length === 0)
+    return res.status(400).json({ success:false, message:"Keine Items." });
+
+  // Calculate total Kartons needed
+  let totalKartons = 0;
+  const breakdown = [];
+  for(const item of items){
+    const qty = Number(item.qty) || 0;
+    if(qty <= 0) continue;
+    const perKarton = CRATE_CONFIG_COOK[item.name];
+    if(!perKarton) continue;
+    const kartons = qty / perKarton;
+    totalKartons += kartons;
+    breakdown.push({ name: item.name, qty, kartons: Math.round(kartons * 100)/100 });
+  }
+  totalKartons = Math.ceil(totalKartons * 100) / 100;
+
+  // Deduct from Lebensmittelkarton stock
+  const lmk = (db.inventory||[]).find(x => x.id === "lmk");
+  if(!lmk) return res.status(404).json({ success:false, message:"Lebensmittelkarton nicht im Lager." });
+  if(lmk.stock < totalKartons)
+    return res.status(400).json({ success:false, message:`Nicht genug Kartons. Benötigt: ${totalKartons.toFixed(2)}, Vorhanden: ${lmk.stock}` });
+
+  lmk.stock = Math.round((lmk.stock - totalKartons) * 100) / 100;
+  lmk.updatedAt = new Date().toISOString();
+  adjustBankBalance(0); // no bank effect for cooking
+
+  saveDB(db);
+  res.json({ success:true, kartonsUsed: totalKartons, remaining: lmk.stock, breakdown });
 });
 
 // ===== ZUTATEN =====

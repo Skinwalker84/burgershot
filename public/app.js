@@ -163,9 +163,7 @@ async function loadShopTab(){
   if(!isBossOrManager()) return;
   const d = document.getElementById("shopDate");
   if(d && !d.value) d.value = localDateStr();
-
-  await ensureInventoryLoadedForPurchase();
-  renderShopTable();
+  // New: Karton-based system, no renderShopTable needed
 }
 
 function renderShopTable(){
