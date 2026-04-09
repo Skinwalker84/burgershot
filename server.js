@@ -1806,8 +1806,6 @@ app.post("/cook", requireAuth, requireBossOrManager, (req, res) => {
   lmk.stock = Math.round((lmk.stock - totalKartons) * 100) / 100;
   lmk.updatedAt = new Date().toISOString();
 
-  console.log("[COOK] breakdown:", JSON.stringify(breakdown));
-  console.log("[COOK] inventory before:", db.inventory.map(x=>x.id+":"+x.stock));
   // Add cooked items to inventory
   const now = new Date().toISOString();
   for(const item of breakdown){
@@ -1822,7 +1820,6 @@ app.post("/cook", requireAuth, requireBossOrManager, (req, res) => {
     invItem.updatedAt = now;
   }
 
-  console.log("[COOK] inventory after:", db.inventory.map(x=>x.id+":"+x.stock));
   saveDB(db);
   res.json({ success:true, kartonsUsed: totalKartons, remaining: lmk.stock, breakdown });
 });

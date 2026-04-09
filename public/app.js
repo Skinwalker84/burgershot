@@ -177,11 +177,18 @@ function renderShopTable(){
     return;
   }
 
-  body.innerHTML = inventoryItems.map(it=>{
+  const sortedItems = [...inventoryItems].sort((a,b) => {
+    const aCooked = a.id?.startsWith("cooked_") ? 0 : (a.id === "lmk" ? 1 : 2);
+    const bCooked = b.id?.startsWith("cooked_") ? 0 : (b.id === "lmk" ? 1 : 2);
+    return aCooked - bCooked || (a.name||"").localeCompare(b.name||"");
+  });
+  body.innerHTML = sortedItems.map(it=>{
     const isLow = Number(it.stock) <= Number(it.minStock);
+    const isCooked = it.id?.startsWith("cooked_");
+    const isKarton = it.id === "lmk";
     return `
       <tr class="${isLow ? "lowRow" : ""}">
-        <td><b>${esc(it.name)}</b></td>
+        <td><b>${esc(it.name)}</b>${isCooked ? ' <span style="font-size:11px; background:rgba(34,197,94,.15); color:#22c55e; border-radius:4px; padding:1px 6px;">🍳 gekocht</span>' : ''}${isKarton ? ' <span style="font-size:11px; background:rgba(96,165,250,.15); color:#60a5fa; border-radius:4px; padding:1px 6px;">📦 Karton</span>' : ''}</td>
         <td>${esc(it.unit||"Stk")}</td>
         <td style="text-align:right; font-weight:900;">${num(it.stock)}</td>
         <td style="text-align:right;">${num(it.minStock)}</td>
