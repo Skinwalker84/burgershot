@@ -1778,7 +1778,7 @@ const CRATE_CONFIG_COOK = {
   "Splashy Drink":    10,
 };
 
-app.post("/cook", requireAuth, requireBossOrManager, (req, res) => {
+app.post("/cook", requireAuth, (req, res) => {
   const items = req.body?.items; // [{name, qty}]
   if(!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ success:false, message:"Keine Items." });
