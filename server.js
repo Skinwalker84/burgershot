@@ -1805,7 +1805,20 @@ app.post("/cook", requireAuth, requireBossOrManager, (req, res) => {
 
   lmk.stock = Math.round((lmk.stock - totalKartons) * 100) / 100;
   lmk.updatedAt = new Date().toISOString();
-  adjustBankBalance(0); // no bank effect for cooking
+
+  // Add cooked items to inventory
+  const now = new Date().toISOString();
+  for(const item of breakdown){
+    // Find or create inventory entry for this product
+    const invId = "cooked_" + item.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    let invItem = (db.inventory||[]).find(x => x.id === invId);
+    if(!invItem){
+      invItem = { id: invId, name: item.name, unit:"Stk", stock:0, minStock:0, ekPrice:0, createdAt:now, updatedAt:now };
+      db.inventory.push(invItem);
+    }
+    invItem.stock = Math.round((Number(invItem.stock)||0)*100 + item.qty*100) / 100;
+    invItem.updatedAt = now;
+  }
 
   saveDB(db);
   res.json({ success:true, kartonsUsed: totalKartons, remaining: lmk.stock, breakdown });
