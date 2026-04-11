@@ -1,2280 +1,1301 @@
-// server.js
-// Burger Shot – Firmensoftware (GTA RP)
-// Auth, POS Sales, Küche, Management, Reports (Tag/Woche), Tagesabschluss
-// Persistenz via JSON + editierbare Produktpreise (VK)
+// server.js — BurgerShot POS · Kompletter Neubau
+"use strict";
+const express  = require("express");
+const path     = require("path");
+const fs       = require("fs");
+const crypto   = require("crypto");
 
-const express = require("express");
-const path = require("path");
-const fs = require("fs");
-const crypto = require("crypto");
-
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
-const APP_VERSION = Date.now(); // bumps automatically on every server restart/deploy
+const APP_VERSION = Date.now();
 
 app.set("trust proxy", 1);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
-// DB_PATH: Wenn RAILWAY_VOLUME_MOUNT_PATH gesetzt ist, wird das persistente Volume genutzt.
-// Sonst fallback auf lokales data/db.json (Entwicklung).
+// ── DB Path ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DATA_FILE || process.env.DB_PATH
   ? path.resolve(process.env.DATA_FILE || process.env.DB_PATH)
   : path.join(__dirname, "data", "db.json");
-
 console.log("[DB] Pfad:", DB_PATH);
 
-/* =========================
-   HELPERS
-   ========================= */
-function safeReadJSON(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    const raw = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error("DB read error:", e);
-    return null;
-  }
-}
-
-function safeWriteJSON(filePath, obj) {
-  try {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    const tmp = filePath + ".tmp";
-    fs.writeFileSync(tmp, JSON.stringify(obj, null, 2), "utf-8");
-    fs.renameSync(tmp, filePath); // Atomic: kein korruptes JSON bei Absturz
-    return true;
-  } catch (e) {
-    console.error("DB write error:", e);
-    return false;
-  }
-}
-
-function getDayKeyLocal(dateObj) {
-  // Always use Europe/Berlin timezone so midnight works correctly for German users
-  const d = new Date(dateObj);
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Berlin",
-    year: "numeric", month: "2-digit", day: "2-digit"
-  }).formatToParts(d);
-  const get = type => parts.find(p => p.type === type)?.value || "00";
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
-
-function parseDateYYYYMMDD(s) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ""));
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]) - 1;
-  const d = Number(m[3]);
-  const dt = new Date(y, mo, d);
-  if (Number.isNaN(dt.getTime())) return null;
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== d) return null;
-  return dt;
-}
-
-function addDays(dateObj, days) {
-  const d = new Date(dateObj);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function isoWeekStartDate(weekYear, week) {
-  const jan4 = new Date(weekYear, 0, 4);
-  jan4.setHours(0, 0, 0, 0);
-  const week1Start = new Date(jan4);
-  week1Start.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7)); // Monday
-  const start = new Date(week1Start);
-  start.setDate(week1Start.getDate() + (week - 1) * 7);
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
-
-function parseWeekYYYY_Www(s) {
-  const m = /^(\d{4})-W(\d{2})$/.exec(String(s || ""));
-  if (!m) return null;
-  const y = Number(m[1]);
-  const w = Number(m[2]);
-  if (!Number.isFinite(y) || !Number.isFinite(w) || w < 1 || w > 53) return null;
-  return { year: y, week: w };
-}
-
-function startOfWeekMonday(dateObj) {
-  const d = new Date(dateObj);
-  const day = d.getDay(); // 0=Sun ... 1=Mon
-  const diff = (day === 0 ? -6 : 1 - day);
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function isoWeekYearWeek(dateObj){
-  // ISO-8601 week number + week-year
-  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
-  const dayNum = d.getUTCDay() || 7; // 1..7 (Mon..Sun)
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // nearest Thu decides week-year
-  const weekYear = d.getUTCFullYear();
-  const yearStart = new Date(Date.UTC(weekYear, 0, 1));
-  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return { year: weekYear, week };
-}
-
-function parseMonthYYYY_MM(s){
-  const m = /^(\d{4})-(\d{2})$/.exec(String(s||""));
-  if(!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  if(!Number.isFinite(y) || !Number.isFinite(mo) || mo < 1 || mo > 12) return null;
-  return { year: y, month: mo };
-}
-
-function toHM(iso) {
-  try {
-    const d = new Date(iso);
-    const parts = new Intl.DateTimeFormat("de-DE", {
-      timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hour12: false
-    }).formatToParts(d);
-    const get = type => parts.find(p => p.type === type)?.value || "00";
-    return `${get("hour")}:${get("minute")}`;
-  } catch {
-    return "";
-  }
-}
-
-/* =========================
-   AUTH / PASSWORD
-   ========================= */
-function hashPassword(pw, salt = null) {
-  const s = salt || crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(String(pw), s, 120000, 32, "sha256").toString("hex");
-  return { salt: s, hash };
-}
-
-function verifyPassword(pw, pwObj) {
-  if (!pwObj || !pwObj.salt || !pwObj.hash) return false;
-  const { hash } = hashPassword(pw, pwObj.salt);
-  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(pwObj.hash, "hex"));
-}
-
-function makeToken() {
-  return crypto.randomBytes(24).toString("hex");
-}
-
-/* =========================
-   DEFAULT PRODUCTS (VK)
-   ========================= */
+// ── Produkte (Default) ───────────────────────────────────────────────────────
 const DEFAULT_PRODUCTS = [
-  { id:"bleeder", name:"The Bleeder", price:19, cat:"Burger" },
-  { id:"heartstopper", name:"The Heartstopper", price:21, cat:"Burger" },
-  { id:"chicken", name:"The Chicken", price:17, cat:"Burger" },
-  { id:"vegan_burger", name:"Vegan Burger", price:15, cat:"Burger" },
-  { id:"chozzo", name:"The Chozzo", price:17, cat:"Burger" },
-  { id:"german", name:"The German", price:21, cat:"Burger" },
-  { id:"breakfast_deluxe", name:"Breakfast Deluxe", price:0, cat:"Burger", icon:"breakfast_deluxe.png" },
-  { id:"special_burger",   name:"Special Burger",   price:0, cat:"Burger", icon:"special_burger.png" },
+  { id:"bleeder",            name:"The Bleeder",          price:19,  cat:"Burger" },
+  { id:"heartstopper",       name:"The Heartstopper",     price:21,  cat:"Burger" },
+  { id:"chicken",            name:"The Chicken",          price:17,  cat:"Burger" },
+  { id:"vegan_burger",       name:"Vegan Burger",         price:15,  cat:"Burger" },
+  { id:"chozzo",             name:"The Chozzo",           price:17,  cat:"Burger" },
+  { id:"german",             name:"The German",           price:21,  cat:"Burger" },
+  { id:"breakfast_deluxe",   name:"Breakfast Deluxe",     price:0,   cat:"Burger", icon:"breakfast_deluxe.png" },
+  { id:"special_burger",     name:"Special Burger",       price:0,   cat:"Burger", icon:"special_burger.png" },
 
-  { id:"coleslaw", name:"Coleslaw", price:15, cat:"Beilagen" },
-  { id:"fries", name:"Fries", price:11, cat:"Beilagen" },
-  { id:"cheesy_fries", name:"Cheesy Fries", price:13, cat:"Beilagen" },
-  { id:"chicken_nuggets", name:"Chicken Nuggets", price:15, cat:"Beilagen" },
-  { id:"onion_rings", name:"Onion Rings", price:11, cat:"Beilagen" },
+  { id:"coleslaw",           name:"Coleslaw",             price:15,  cat:"Beilagen" },
+  { id:"fries",              name:"Fries",                price:11,  cat:"Beilagen" },
+  { id:"cheesy_fries",       name:"Cheesy Fries",         price:13,  cat:"Beilagen" },
+  { id:"chicken_nuggets",    name:"Chicken Nuggets",      price:15,  cat:"Beilagen" },
+  { id:"onion_rings",        name:"Onion Rings",          price:11,  cat:"Beilagen" },
 
-  { id:"ecola", name:"ECola", price:13, cat:"Getränke" },
-  { id:"ecola_light", name:"ECola Light", price:13, cat:"Getränke" },
-  { id:"sprunk", name:"Sprunk", price:13, cat:"Getränke" },
-  { id:"sprunk_light", name:"Sprunk Light", price:13, cat:"Getränke" },
-  { id:"slush", name:"Slush", price:15, cat:"Getränke" },
-  { id:"milchshake",       name:"Milchshake",        price:15, cat:"Getränke" },
-  { id:"orange_o_tang",    name:"Orange O Tang",     price:9,  cat:"Getränke", icon:"orang_o_tang.png",     ekPrice:2 },
-  { id:"mexi_coke_spicy",  name:"Mexi-Coke Spicy",   price:13, cat:"Getränke", icon:"mexi_coke_spicy.png",  ekPrice:4 },
-  { id:"junk_energy",      name:"Junk Energy",        price:15, cat:"Getränke", icon:"junk_energy.png",      ekPrice:5 },
-  { id:"juice_apple",      name:"Apfelsaft",          price:8, cat:"Getränke", icon:"Juice_Apple.png",      ekPrice:3 },
-  { id:"juice_orange",     name:"Orangensaft",        price:8, cat:"Getränke", icon:"Juice_Orange.png",     ekPrice:3 },
-  { id:"slushy_atom",      name:"Slush Atom",         price:18, cat:"Getränke", icon:"slushy_atom.png",      ekPrice:8 },
-  { id:"electrolyte_drink",name:"Elektrolyte Trink",  price:14, cat:"Getränke", icon:"electrolytet_rink.png",ekPrice:7 },
-  { id:"splashy_drink",     name:"Splashy Drink",        price:0,  cat:"Getränke", icon:"splashy.png" },
+  { id:"ecola",              name:"ECola",                price:13,  cat:"Getränke" },
+  { id:"ecola_light",        name:"ECola Light",          price:13,  cat:"Getränke" },
+  { id:"sprunk",             name:"Sprunk",               price:13,  cat:"Getränke" },
+  { id:"sprunk_light",       name:"Sprunk Light",         price:13,  cat:"Getränke" },
+  { id:"slush",              name:"Slush",                price:15,  cat:"Getränke" },
+  { id:"milchshake",         name:"Milchshake",           price:15,  cat:"Getränke" },
+  { id:"orange_o_tang",      name:"Orange O Tang",        price:9,   cat:"Getränke", icon:"orang_o_tang.png" },
+  { id:"mexi_coke_spicy",    name:"Mexi-Coke Spicy",      price:13,  cat:"Getränke", icon:"mexi_coke_spicy.png" },
+  { id:"junk_energy",        name:"Junk Energy",          price:15,  cat:"Getränke", icon:"junk_energy.png" },
+  { id:"juice_apple",        name:"Apfelsaft",            price:8,   cat:"Getränke", icon:"Juice_Apple.png" },
+  { id:"juice_orange",       name:"Orangensaft",          price:8,   cat:"Getränke", icon:"Juice_Orange.png" },
+  { id:"slushy_atom",        name:"Slush Atom",           price:18,  cat:"Getränke", icon:"slushy_atom.png" },
+  { id:"electrolyte_drink",  name:"Elektrolyte Trink",    price:14,  cat:"Getränke", icon:"electrolytet_rink.png" },
+  { id:"splashy_drink",      name:"Splashy Drink",        price:0,   cat:"Getränke", icon:"splashy.png" },
 
-  { id:"donut", name:"Donut", price:13, cat:"Süßes" },
-  { id:"caramel_sundae", name:"Caramel Sundae", price:13, cat:"Süßes" },
-  { id:"chocolate_sundae", name:"Chocolate Sundae", price:13, cat:"Süßes" },
-  { id:"strawberry_sundae", name:"Strawberry Sundae", price:13, cat:"Süßes" },
+  { id:"donut",              name:"Donut",                price:13,  cat:"Süßes" },
+  { id:"caramel_sundae",     name:"Caramel Sundae",       price:13,  cat:"Süßes" },
+  { id:"chocolate_sundae",   name:"Chocolate Sundae",     price:13,  cat:"Süßes" },
+  { id:"strawberry_sundae",  name:"Strawberry Sundae",    price:13,  cat:"Süßes" },
 
-  // Gruppen-Menüs
-  { id:"menu_small",   name:"Small Menü",       price:48,  cat:"Menü", icon:"small.png",       groupSize:1,  desc:"1× Burger, Beilage & Getränk" },
-  { id:"menu_medium",  name:"Medium Menü",      price:97,  cat:"Menü", icon:"medium.png",      groupSize:2,  desc:"2× Burger, Beilage & Getränk" },
-  { id:"menu_large",   name:"Large Menü",       price:242, cat:"Menü", icon:"large.png",       groupSize:5,  desc:"5× Burger, Beilage & Getränk" },
-  { id:"menu_xlarge",  name:"X-tra Large Menü", price:484, cat:"Menü", icon:"xl.png", groupSize:10, desc:"10× Burger, Beilage & Getränk" },
+  // Menüs
+  { id:"menu_small",    name:"Small Menü",          price:48,  cat:"Menü", icon:"small.png",           groupSize:1,  desc:"1× Burger, Beilage & Getränk" },
+  { id:"menu_medium",   name:"Medium Menü",         price:97,  cat:"Menü", icon:"medium.png",          groupSize:2,  desc:"2× Burger, Beilage & Getränk" },
+  { id:"menu_large",    name:"Large Menü",          price:242, cat:"Menü", icon:"large.png",           groupSize:5,  desc:"5× Burger, Beilage & Getränk" },
+  { id:"menu_xlarge",   name:"X-tra Large Menü",    price:484, cat:"Menü", icon:"xl.png",              groupSize:10, desc:"10× Burger, Beilage & Getränk" },
 
-  // No Sides — Burger + Getränk, keine Beilage
-  { id:"ns_small",  name:"No Sides Small",       price:34,  cat:"Menü", icon:"no_sides_small.png",  groupSize:1,  noSidesBox:true, desc:"1× Burger & 1 Getränk nach Wahl" },
-  { id:"ns_medium", name:"No Sides Medium",      price:68,  cat:"Menü", icon:"no_sides_medium.png", groupSize:2,  noSidesBox:true, desc:"2× Burger & 2 Getränke nach Wahl" },
-  { id:"ns_large",  name:"No Sides Large",       price:171, cat:"Menü", icon:"no_sides_large.png",  groupSize:5,  noSidesBox:true, desc:"5× Burger & 5 Getränke nach Wahl" },
-  { id:"ns_xl",     name:"No Sides X-tra Large", price:342, cat:"Menü", icon:"no_sides_xl.png",     groupSize:10, noSidesBox:true, desc:"10× Burger & 10 Getränke nach Wahl" },
+  { id:"ns_small",      name:"No Sides Small",      price:34,  cat:"Menü", icon:"no_sides_small.png",  groupSize:1,  noSidesBox:true, desc:"1× Burger & 1 Getränk" },
+  { id:"ns_medium",     name:"No Sides Medium",     price:68,  cat:"Menü", icon:"no_sides_medium.png", groupSize:2,  noSidesBox:true, desc:"2× Burger & 2 Getränke" },
+  { id:"ns_large",      name:"No Sides Large",      price:171, cat:"Menü", icon:"no_sides_large.png",  groupSize:5,  noSidesBox:true, desc:"5× Burger & 5 Getränke" },
+  { id:"ns_xl",         name:"No Sides X-tra Large",price:342, cat:"Menü", icon:"no_sides_xl.png",     groupSize:10, noSidesBox:true, desc:"10× Burger & 10 Getränke" },
 
-  // Chicken Boxes — fixer Chicken Burger + Nuggets, nur Getränk wählbar
-
-  // German Special — fixer German + Coleslaw, nur Getränk wählbar
-
-  // Donut Boxes — nur Anzahl, keine Auswahl
-  // Special Burger Menü
   { id:"sbmenu_small",  name:"Special Burger Small",       price:0, cat:"Menü", icon:"special_burger.png", groupSize:1,  specialBurgerBox:true, desc:"1× Special Burger, 1 Side, 1 Dessert & 1 Getränk" },
   { id:"sbmenu_medium", name:"Special Burger Medium",      price:0, cat:"Menü", icon:"special_burger.png", groupSize:2,  specialBurgerBox:true, desc:"2× Special Burger, 2 Sides, 2 Desserts & 2 Getränke" },
   { id:"sbmenu_large",  name:"Special Burger Large",       price:0, cat:"Menü", icon:"special_burger.png", groupSize:5,  specialBurgerBox:true, desc:"5× Special Burger, 5 Sides, 5 Desserts & 5 Getränke" },
   { id:"sbmenu_xl",     name:"Special Burger X-tra Large", price:0, cat:"Menü", icon:"special_burger.png", groupSize:10, specialBurgerBox:true, desc:"10× Special Burger, 10 Sides, 10 Desserts & 10 Getränke" },
 
-  { id:"dbox_small",  name:"Donut Box Small",       price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
-  { id:"dbox_medium", name:"Donut Box Medium",      price:74,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },
-  { id:"dbox_large",  name:"Donut Box Large",       price:148,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:12, desc:"12× Donut" },
-  { id:"dbox_xl",     name:"Donut Box X-tra Large", price:247, cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:20, desc:"20× Donut" }
+  { id:"dbox_small",    name:"Donut Box Small",      price:49,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:4,  desc:"4× Donut" },
+  { id:"dbox_medium",   name:"Donut Box Medium",     price:74,  cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:6,  desc:"6× Donut" },
+  { id:"dbox_large",    name:"Donut Box Large",      price:148, cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:12, desc:"12× Donut" },
+  { id:"dbox_xl",       name:"Donut Box X-tra Large",price:247, cat:"Menü", icon:"donut_box.png", donutBox:true, groupSize:20, desc:"20× Donut" },
 ];
 
-/* =========================
-   DB
-   ========================= */
-function makeFreshDB() {
-  const today = getDayKeyLocal(new Date());
-  const { salt, hash } = hashPassword("admin");
-  const bossUsername = "chris.adams";
+// ── Kisten-Konfiguration (1 Lebensmittelkarton = X Portionen) ────────────────
+const CRATE_CONFIG = {
+  "The Heartstopper":  5,  "Vegan Burger":      8,
+  "The Bleeder":       6,  "The Chicken":       7,
+  "The Chozzo":        7,  "The German":        5,
+  "Special Burger":    3,  "Breakfast Deluxe":  5,
+  "Fries":            13,  "Cheesy Fries":     10,
+  "Onion Rings":      13,  "Chicken Nuggets":   8,
+  "Coleslaw":          8,  "Donut":            10,
+  "Caramel Sundae":   10,  "Chocolate Sundae": 10,
+  "Strawberry Sundae":10,  "Milchshake":        8,
+  "ECola":            10,  "ECola Light":      10,
+  "Sprunk":           10,  "Sprunk Light":     10,
+  "Slush":             8,  "Slush Atom":        8,
+  "Splashy Drink":    10,
+};
 
-  return {
-    meta: { currentDay: today, nextOrderId: 1 },
-    users: [
-      { username: bossUsername, displayName: "Chris Adams", role: "boss", pw: { salt, hash } }
-    ],
-    sessions: {},
+// ── Weekly Special Burger ────────────────────────────────────────────────────
+const SPECIAL_BURGER_CYCLE = [
+  "Crispy Tropical Fish Burger", "Smokey Mountain",
+  "Sweet & Salty Crunch", "Spicy Inferno", "Veggie Volcano"
+];
+const SPECIAL_BURGER_START_WEEK = 9;
 
-    products: DEFAULT_PRODUCTS,
-    saleInventoryLinks: [],
-
-    // Lagerbestand (Chef)
-    inventory: [],
-
-    // Einkäufe (Chef) – Bewegungslog / Historie
-    purchases: [],
-
-    salesByDay: { [today]: [] },
-    expenses: [],
-    zutaten: [],
-    kitchenByDay: { [today]: { pending: [], done: [] } },
-    closedDays: {}
-  };
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const y = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - y) / 86400000) + 1) / 7);
+}
+function isoWeekYearWeek(d) {
+  const week = getISOWeek(d);
+  const year = d.getFullYear();
+  return { year, week };
+}
+function getCurrentSpecialBurgerName() {
+  const week = getISOWeek(new Date());
+  const idx  = ((week - SPECIAL_BURGER_START_WEEK) % SPECIAL_BURGER_CYCLE.length + SPECIAL_BURGER_CYCLE.length) % SPECIAL_BURGER_CYCLE.length;
+  return SPECIAL_BURGER_CYCLE[idx];
 }
 
-function makeInvId(){
-  return crypto.randomBytes(8).toString("hex");
+// ── Date Helpers ─────────────────────────────────────────────────────────────
+function getDayKeyLocal(d) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone:"Europe/Berlin", year:"numeric", month:"2-digit", day:"2-digit"
+  }).formatToParts(d);
+  const g = t => parts.find(p => p.type === t)?.value || "00";
+  return `${g("year")}-${g("month")}-${g("day")}`;
+}
+function parseDateYYYYMMDD(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ""));
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function isoWeekStartDate(year, week) {
+  const jan4 = new Date(year, 0, 4); jan4.setHours(0,0,0,0);
+  const w1 = new Date(jan4); w1.setDate(jan4.getDate() - ((jan4.getDay()+6)%7));
+  const s  = new Date(w1);  s.setDate(w1.getDate() + (week-1)*7); return s;
+}
+function parseWeekYYYY_Www(s) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(String(s||""));
+  if (!m) return null;
+  const y = Number(m[1]), w = Number(m[2]);
+  if (w < 1 || w > 53) return null;
+  return { year:y, week:w };
+}
+function parseMonthYYYY_MM(s) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(s||""));
+  if (!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]);
+  if (mo < 1 || mo > 12) return null;
+  return { year:y, month:mo };
+}
+function toHM(iso) {
+  const d = new Date(iso); if (isNaN(d)) return "—";
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
-function normalizeInventory(list){
-  const arr = Array.isArray(list) ? list : [];
-  const out = [];
-  const seen = new Set();
-  for(const it of arr){
-    if(!it || typeof it !== "object") continue;
-    const id = String(it.id || "").trim() || makeInvId();
-    if(seen.has(id)) continue;
-    seen.add(id);
-    const name = String(it.name || "").trim();
-    if(!name) continue;
-    const unit = String(it.unit || "Stk").trim() || "Stk";
-    let stock = Number(it.stock);
-    let minStock = Number(it.minStock);
-    if(!Number.isFinite(stock)) stock = 0;
-    if(!Number.isFinite(minStock)) minStock = 0;
-    stock = Math.max(0, Math.round(stock * 100) / 100);
-    minStock = Math.max(0, Math.round(minStock * 100) / 100);
-    const updatedAt = String(it.updatedAt || new Date().toISOString());
-    let ekPrice = Number(it.ekPrice);
-    if(!Number.isFinite(ekPrice) || ekPrice < 0) ekPrice = 0;
-    ekPrice = Math.round(ekPrice * 100) / 100;
-    out.push({ id, name, unit, stock, minStock, ekPrice, updatedAt });
-  }
-  // sort stable
-  out.sort((a,b)=>String(a.name).localeCompare(String(b.name), "de"));
-  return out;
+// ── Password ──────────────────────────────────────────────────────────────────
+function hashPassword(pw, salt = null) {
+  const s = salt || crypto.randomBytes(16).toString("hex");
+  const h = crypto.pbkdf2Sync(String(pw), s, 120000, 32, "sha256").toString("hex");
+  return { salt:s, hash:h };
+}
+function verifyPassword(pw, obj) {
+  if (!obj?.salt || !obj?.hash) return false;
+  const { hash } = hashPassword(pw, obj.salt);
+  return crypto.timingSafeEqual(Buffer.from(hash,"hex"), Buffer.from(obj.hash,"hex"));
 }
 
-function normalizeProducts(list, hiddenProducts) {
-  const arr = Array.isArray(list) ? list : [];
-  const out = [];
-  const seen = new Set();
-
-  for (const p of arr) {
-    if (!p || typeof p !== "object") continue;
-    const id = String(p.id || "").trim();
-    const name = String(p.name || "").trim();
-    const cat = String(p.cat || "").trim();
-    const price = Number(p.price);
-    if (!id || !name || !cat) continue;
-    if (!Number.isFinite(price) || price < 0) continue;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    const extra = {};
-    if (p.icon) extra.icon = String(p.icon);
-    if (p.desc) extra.desc = String(p.desc);
-    if (p.groupSize) extra.groupSize = Number(p.groupSize);
-    if (p.chickenBox) extra.chickenBox = true;
-    if (p.donutBox) extra.donutBox = true;
-    if (p.germanBox) extra.germanBox = true;
-    if (p.noSidesBox) extra.noSidesBox = true;
-    if (p.soulCarwashBox) extra.soulCarwashBox = true;
-    if (p.specialBurgerBox) extra.specialBurgerBox = true;
-    out.push({ id, name, cat, price: Math.round(price), ...extra });
-  }
-
-  // Ensure defaults always exist and always have up-to-date extra fields
-  const map = new Map(out.map(p => [p.id, p]));
-  for (const dp of DEFAULT_PRODUCTS) {
-    if (!dp || typeof dp !== "object") continue;
-    const id = String(dp.id || "").trim();
-    if (!id) continue;
-    const extra = {};
-    if (dp.icon) extra.icon = String(dp.icon);
-    if (dp.desc) extra.desc = String(dp.desc);
-    if (dp.groupSize) extra.groupSize = Number(dp.groupSize);
-    if (dp.chickenBox) extra.chickenBox = true;
-    if (dp.donutBox) extra.donutBox = true;
-    if (dp.germanBox) extra.germanBox = true;
-    if (dp.noSidesBox) extra.noSidesBox = true;
-    if (dp.soulCarwashBox) extra.soulCarwashBox = true;
-    if (dp.specialBurgerBox) extra.specialBurgerBox = true;
-    if (!map.has(id)) {
-      map.set(id, { id, name: dp.name, cat: dp.cat, price: Math.round(Number(dp.price) || 0), ...extra });
-    } else {
-      // Always sync name, cat and extra fields from defaults
-      const existing = map.get(id);
-      existing.name = dp.name;
-      existing.cat  = dp.cat;
-      Object.assign(existing, extra);
-    }
-  }
-  // Remove products that no longer exist in DEFAULT_PRODUCTS (e.g. renamed/deleted defaults)
-  const defaultIds = new Set(DEFAULT_PRODUCTS.map(p => String(p.id || "").trim()).filter(Boolean));
-  for (const [id] of map) {
-    if (!defaultIds.has(id)) map.delete(id);
-  }
-  // Remove hidden products
-  const hidden = new Set(Array.isArray(hiddenProducts) ? hiddenProducts : []);
-  for (const id of hidden) map.delete(id);
-  return Array.from(map.values());
+// ── Cookie ────────────────────────────────────────────────────────────────────
+function setCookie(res, name, value, opts={}) {
+  const p = [`${name}=${value}`, "Path=/", "HttpOnly", "SameSite=Lax"];
+  if (opts.maxAge) p.push(`Max-Age=${opts.maxAge}`);
+  res.setHeader("Set-Cookie", p.join("; "));
 }
-
-function normalizeDB(db) {
-  if (!db || typeof db !== "object") return makeFreshDB();
-  if (!db.meta) db.meta = {};
-  if (!db.meta.currentDay) db.meta.currentDay = getDayKeyLocal(new Date());
-  if (!db.board) db.board = [];
-  if (!db.meta.nextOrderId) db.meta.nextOrderId = 1;
-  if (!Array.isArray(db.users)) db.users = [];
-  if (!db.sessions || typeof db.sessions !== "object") db.sessions = {};
-  if (!db.salesByDay || typeof db.salesByDay !== "object") db.salesByDay = {};
-  if (!db.kitchenByDay || typeof db.kitchenByDay !== "object") db.kitchenByDay = {};
-  if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
-
-  if (!Array.isArray(db.inventory)) db.inventory = [];
-  // Ensure Lebensmittelkarton exists
-  if (!db.inventory.find(x => x.id === "lmk")) {
-    db.inventory.push({ id:"lmk", name:"Lebensmittelkarton", unit:"Karton", stock:0, minStock:5, ekPrice:0, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() });
-  }
-  if (!Array.isArray(db.purchases)) db.purchases = [];
-  if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
-  if (!Array.isArray(db.expenses)) db.expenses = [];
-  // Migrate existing zutaten: assign default categories if missing
-  if (Array.isArray(db.zutaten)) {
-    const burgerNames = ['The Bleeder','The Heartstopper','The Chicken','Vegan Burger','The Chozzo','The German','Breakfast Deluxe','Special Burger'];
-    const sideNames   = ['Coleslaw','Fries','Cheesy Fries','Onion Rings','Chicken Nuggets'];
-    const dessertNames= ['Donut','Caramel Sundae','Chocolate Sundae','Strawberry Sundae'];
-    const drinkNames  = ['ECola','ECola Light','Sprunk','Sprunk Light','Slush','Milchshake','Orange O Tang','Mexi-Coke Spicy','Junk Energy','Apfelsaft','Orangensaft','Slush Atom','Elektrolyte Trink'];
-    for (const z of db.zutaten) {
-      if (!z.category) {
-        if (burgerNames.includes(z.name)) z.category = 'Burger';
-        else if (sideNames.includes(z.name)) z.category = 'Sides';
-        else if (dessertNames.includes(z.name)) z.category = 'Desserts';
-        else if (drinkNames.includes(z.name)) z.category = 'Drinks';
-        else z.category = 'Special Burger';
-      }
-    }
-  }
-  if (!Array.isArray(db.zutaten) || db.zutaten.length === 0) {
-    db.zutaten = [
-    { id:"001zut", name:'The Bleeder',      category:'Burger', ingredients:'Brioche-Burgerbrötchen, Rinder-Patty, Cheddar, Rote Zwiebelringe, Rucola, karamellisierte Paprika, Ketchup, BBQ-Sauce, Sriracha' },
-    { id:"002zut", name:'The Heartstopper', category:'Burger', ingredients:'1 großes Brioche Burger Bun, 3 Rindfleisch-Patties, 2 Scheiben Bacon, 3 Scheiben Cheddar, 1 Spiegelei, Röstzwiebeln, 3 Scheiben Gewürzgurken, 2 Scheiben Tomate, Eisbergsalat, Burger-Sauce, BBQ-Sauce, Cheese-Sauce' },
-    { id:"003zut", name:'The Chicken',      category:'Burger', ingredients:'Brioche-Burgerbrötchen, panierte Hähnchenbrust, 1 Scheibe Gouda, Eisbergsalat, Gurkenscheiben, Karottenstreifen, Rote Zwiebelringe, Honig-Senf-Soße, Paprika-Würfel' },
-    { id:"004zut", name:'Vegan Burger',     category:'Burger', ingredients:'Sesam-Burgerbrötchen, Schwarze-Bohnen-Patty, veganer Käse, Spinat, Avocado-Scheiben, Rote Paprika, Rote Zwiebelringe, Gurkenscheiben, Karottenstreifen, Cashew-Aioli Creme, gegrillte Auberginenscheiben' },
-    { id:"005zut", name:'The Chozzo',       category:'Burger', ingredients:'Brioche-Bun, Rinder-Patty, Cheddar, Bacon, karamellisierten Zwiebeln, Gewürzgurken, Röstzwiebeln, Salat, rauchige Chozzo-Sauce, Jalapeño, Chillie Cheese Sauce' },
-    { id:"006zut", name:'The German',       category:'Burger', ingredients:'Längliches Sesam-Burgerbrötchen, Schweinefleisch-Patty, rauchig-süße BBQ-Sauce, frische Zwiebelstückchen und Gewürzgurken' },
-    { id:"007zut", name:'Coleslaw',         category:'Sides',  ingredients:'Weißkohl, Karotten, Rote Zwiebeln, Mayonnaise, Joghurt, Zitronensaft' },
-    ];
-  }
-
-  db.products = normalizeProducts(db.products, db.hiddenProducts);
-  db.inventory = normalizeInventory(db.inventory);
-  // saleInventoryLinks: [{id, productId, inventoryId, qty}]
-  if(!Array.isArray(db.saleInventoryLinks)) db.saleInventoryLinks = [];
-
-  // purchases: keep simple array of objects
-  db.purchases = (Array.isArray(db.purchases) ? db.purchases : []).filter(x => x && typeof x === "object");
-
-  const day = db.meta.currentDay;
-  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
-  if (!db.kitchenByDay[day]) db.kitchenByDay[day] = { pending: [], done: [] };
-  if (!Array.isArray(db.kitchenByDay[day].pending)) db.kitchenByDay[day].pending = [];
-  if (!Array.isArray(db.kitchenByDay[day].done)) db.kitchenByDay[day].done = [];
-
-  const hasBoss = db.users.some(u => u.role === "boss");
-  if (!hasBoss) {
-    const { salt, hash } = hashPassword("admin");
-    db.users.push({ username: "chris.adams", displayName: "Chris Adams", role: "boss", pw: { salt, hash } });
-  }
-
-  return db;
-}
-
-const rawDb = safeReadJSON(DB_PATH);
-console.log("[STARTUP] DB_PATH:", DB_PATH);
-console.log("[STARTUP] DB gefunden:", !!rawDb);
-console.log("[STARTUP] Inventory:", (rawDb?.inventory||[]).length, "Artikel");
-console.log("[STARTUP] Links:", (rawDb?.saleInventoryLinks||[]).length, "Zuordnungen");
-let db = normalizeDB(rawDb || makeFreshDB());
-// Note: do NOT write back here - would overwrite Volume data with empty defaults
-
-function saveDB(next) {
-  db = normalizeDB(next);
-  safeWriteJSON(DB_PATH, db);
-}
-
-// Startup migration: remove deprecated product IDs from DB
-function migrateProducts() {
-  const defaultIds = new Set(DEFAULT_PRODUCTS.map(p => String(p.id || "").trim()).filter(Boolean));
-  const before = (db.products || []).length;
-  db.products = (db.products || []).filter(p => defaultIds.has(String(p.id || "").trim()));
-  if (db.products.length !== before) {
-    console.log(`[Migration] ${before - db.products.length} veraltete Produkte entfernt.`);
-    saveDB(db);
-  }
-}
-migrateProducts();
-
-function rotateDayIfNeeded() {
-  const today = getDayKeyLocal(new Date());
-  if (db.meta.currentDay !== today) {
-    db.meta.currentDay = today;
-    if (!Array.isArray(db.salesByDay[today])) db.salesByDay[today] = [];
-    if (!db.kitchenByDay[today]) db.kitchenByDay[today] = { pending: [], done: [] };
-    saveDB(db);
-  }
-}
-
-function todaysKitchen() {
-  rotateDayIfNeeded();
-  const day = db.meta.currentDay;
-  if (!db.kitchenByDay[day]) db.kitchenByDay[day] = { pending: [], done: [] };
-  if (!Array.isArray(db.kitchenByDay[day].pending)) db.kitchenByDay[day].pending = [];
-  if (!Array.isArray(db.kitchenByDay[day].done)) db.kitchenByDay[day].done = [];
-  return db.kitchenByDay[day];
-}
-
-/* =========================
-   COOKIES
-   ========================= */
-function setCookie(res, name, value, opts = {}) {
-  const parts = [`${name}=${value}`, "Path=/", "HttpOnly", "SameSite=Lax"];
-  if (opts.maxAge) parts.push(`Max-Age=${opts.maxAge}`);
-  if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
-  if (opts.secure) parts.push("Secure");
-  res.setHeader("Set-Cookie", parts.join("; "));
-}
-
 function clearCookie(res, name) {
   res.setHeader("Set-Cookie", `${name}=; Path=/; Max-Age=0; HttpOnly`);
 }
-
-/* =========================
-   MIDDLEWARE
-   ========================= */
-app.use(express.json());
-
-
-// ===== Soft Lock / Presence (SSE) =====
-const presenceClients = new Set();
-// { "1": { users: { "username": { name, at } } } }
-let presenceState = { "1": {users:{}}, "2": {users:{}}, "3": {users:{}}, "4": {users:{}}, "5": {users:{}}, "6": {users:{}} };
-// Global online tracking (no register required)
-let onlineUsers = {}; // { username: { name, at } }
-// Debounced lastSeen save — avoid saveDB on every heartbeat (race conditions)
-let _lastSeenSaveTimer = null;
-function scheduleLastSeenSave(){
-  if(_lastSeenSaveTimer) clearTimeout(_lastSeenSaveTimer);
-  _lastSeenSaveTimer = setTimeout(()=>{ _lastSeenSaveTimer = null; saveDB(db); }, 2000); // save 2s after last heartbeat
+function getToken(req) {
+  const c = String(req.headers.cookie || "");
+  return /(?:^|;\s*)bs_token=([^;]+)/.exec(c)?.[1] || null;
 }
 
-function prunePresence(){
-  const now = Date.now();
-  let changed = false;
-  // Prune global online users (30s timeout)
-  for(const u of Object.keys(onlineUsers)){
-    if(now - (onlineUsers[u].at||0) > 30000){ delete onlineUsers[u]; changed = true; }
+// ── DB I/O ───────────────────────────────────────────────────────────────────
+function safeReadJSON(fp) {
+  try { return fs.existsSync(fp) ? JSON.parse(fs.readFileSync(fp,"utf-8")) : null; }
+  catch(e) { console.error("DB read error:", e); return null; }
+}
+function safeWriteJSON(fp, obj) {
+  try {
+    fs.mkdirSync(path.dirname(fp), { recursive:true });
+    const tmp = fp + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(obj, null, 2), "utf-8");
+    fs.renameSync(tmp, fp);
+    return true;
+  } catch(e) { console.error("DB write error:", e); return false; }
+}
+
+// ── DB Schema ─────────────────────────────────────────────────────────────────
+function makeFreshDB() {
+  const today = getDayKeyLocal(new Date());
+  const { salt, hash } = hashPassword("admin");
+  return {
+    meta: { currentDay: today, nextOrderId: 1 },
+    users: [{ username:"chris.adams", displayName:"Chris Adams", role:"boss", pw:{salt,hash} }],
+    sessions: {},
+    products: [],           // prices/icons overrides only; defaults via DEFAULT_PRODUCTS
+    hiddenProducts: [],
+    // ── Lager: nur lmk + cooked_* ──
+    inventory: [
+      { id:"lmk", name:"Lebensmittelkarton", unit:"Karton", stock:0, minStock:5, ekPrice:0, updatedAt:new Date().toISOString() }
+    ],
+    purchases: [],
+    purchaseOverrides: {},
+    salesByDay: { [today]: [] },
+    kitchenByDay: { [today]: { pending:[], done:[] } },
+    closedDays: {},
+    expenses: [],
+    bankBalance: 0,
+    bankLog: [],
+    board: [],
+    zutaten: [],
+    giftCards: {},
+  };
+}
+
+function normalizeDB(raw) {
+  if (!raw || typeof raw !== "object") return makeFreshDB();
+  const db = raw;
+  if (!db.meta || typeof db.meta !== "object") db.meta = {};
+  if (!db.meta.currentDay) db.meta.currentDay = getDayKeyLocal(new Date());
+  if (!db.meta.nextOrderId) db.meta.nextOrderId = 1;
+  if (!Array.isArray(db.users)) db.users = [];
+  if (!db.sessions || typeof db.sessions !== "object") db.sessions = {};
+  if (!Array.isArray(db.products)) db.products = [];
+  if (!Array.isArray(db.hiddenProducts)) db.hiddenProducts = [];
+  if (!db.salesByDay || typeof db.salesByDay !== "object") db.salesByDay = {};
+  if (!db.kitchenByDay || typeof db.kitchenByDay !== "object") db.kitchenByDay = {};
+  if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
+  if (!Array.isArray(db.expenses)) db.expenses = [];
+  if (!Number.isFinite(db.bankBalance)) db.bankBalance = 0;
+  if (!Array.isArray(db.bankLog)) db.bankLog = [];
+  if (!Array.isArray(db.board)) db.board = [];
+  if (!Array.isArray(db.zutaten)) db.zutaten = [];
+  if (!db.giftCards || typeof db.giftCards !== "object") db.giftCards = {};
+  if (!db.purchaseOverrides || typeof db.purchaseOverrides !== "object") db.purchaseOverrides = {};
+  if (!Array.isArray(db.purchases)) db.purchases = [];
+  // Inventory: ensure lmk exists, keep cooked_* items
+  if (!Array.isArray(db.inventory)) db.inventory = [];
+  // Remove old-style inventory items (random hex IDs) but keep cooked_* and lmk
+  db.inventory = db.inventory.filter(x => x && (x.id === "lmk" || String(x.id||"").startsWith("cooked_")));
+  if (!db.inventory.find(x => x.id === "lmk")) {
+    db.inventory.unshift({ id:"lmk", name:"Lebensmittelkarton", unit:"Karton", stock:0, minStock:5, ekPrice:0, updatedAt:new Date().toISOString() });
   }
-  for(const k of ["1","2","3","4","5","6"]){
-    const users = presenceState[k]?.users || {};
-    for(const u of Object.keys(users)){
-      if(now - (users[u].at||0) > 20000){ // 20s stale
-        delete users[u];
-        changed = true;
+  return db;
+}
+
+// ── Produkt-Normalisierung ────────────────────────────────────────────────────
+function getProducts(db) {
+  const overrides = new Map((db.products||[]).map(p => [p.id, p]));
+  const hidden    = new Set(db.hiddenProducts||[]);
+  return DEFAULT_PRODUCTS
+    .filter(p => !hidden.has(p.id))
+    .map(p => {
+      const ov = overrides.get(p.id) || {};
+      const extra = {};
+      for (const k of ["icon","desc","groupSize","chickenBox","donutBox","germanBox","noSidesBox","specialBurgerBox"]) {
+        const val = ov[k] ?? p[k];
+        if (val !== undefined) extra[k] = val;
       }
-    }
-  }
-  if(changed) broadcastPresence();
+      return { id:p.id, name:p.name, cat:p.cat, price: Number(ov.price ?? p.price)||0, ...extra };
+    });
 }
 
-function broadcastPresence(){
-  const payload = JSON.stringify({ presence: presenceState, online: onlineUsers, ts: Date.now() });
-  for(const res of Array.from(presenceClients)){
-    try{ res.write("data: " + payload + "\n\n"); }
-    catch(e){ try{ presenceClients.delete(res); }catch(_){} }
-  }
+// ── Load DB ───────────────────────────────────────────────────────────────────
+let db;
+{
+  const raw = safeReadJSON(DB_PATH);
+  db = raw ? normalizeDB(raw) : makeFreshDB();
+  if (!raw) safeWriteJSON(DB_PATH, db);
+  console.log("[STARTUP] DB geladen:", !!raw);
+  console.log("[STARTUP] Inventory:", db.inventory.length, "Artikel");
+  console.log("[STARTUP] Mitarbeiter:", db.users.length);
 }
 
-// prune periodically
-setInterval(prunePresence, 5000);
+function saveDB(next) {
+  db = normalizeDB(next || db);
+  safeWriteJSON(DB_PATH, db);
+}
 
-// ===== Live Carts (SSE) =====
-let cartsRev = 0;
-let cartsState = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+// ── Bank ──────────────────────────────────────────────────────────────────────
+function adjustBank(amount, note) {
+  if (!Number.isFinite(amount) || amount === 0) return;
+  if (!Number.isFinite(db.bankBalance)) db.bankBalance = 0;
+  const prev = db.bankBalance;
+  db.bankBalance = Math.round((db.bankBalance + amount) * 100) / 100;
+  db.bankLog = db.bankLog || [];
+  db.bankLog.unshift({ ts: new Date().toISOString(), prev, amount, next: db.bankBalance, note: note||"" });
+  if (db.bankLog.length > 500) db.bankLog.length = 500;
+}
+
+// ── Day Rotation ──────────────────────────────────────────────────────────────
+function rotateDayIfNeeded() {
+  const today = getDayKeyLocal(new Date());
+  if (db.meta.currentDay === today) return;
+  db.meta.currentDay = today;
+  if (!db.salesByDay[today]) db.salesByDay[today] = [];
+  if (!db.kitchenByDay[today]) db.kitchenByDay[today] = { pending:[], done:[] };
+  saveDB(db);
+}
+
+// ── Cost Helpers ──────────────────────────────────────────────────────────────
+function getPurchaseCosts(dayKeys) {
+  const keySet = new Set(dayKeys);
+  let total = 0;
+  for (const p of db.purchases||[]) {
+    const day = (p.date||p.createdAt||"").slice(0,10);
+    if (keySet.has(day)) total += Number(p.price||0) * Number(p.qty||0);
+  }
+  for (const [key, val] of Object.entries(db.purchaseOverrides||{})) {
+    if (keySet.has(key)) total = Number(val);
+  }
+  return Math.round(total * 100) / 100;
+}
+function getExpensesCosts(dayKeys) {
+  const keySet = new Set(dayKeys);
+  let total = 0;
+  for (const e of db.expenses||[]) {
+    const day = (e.date||e.createdAt||"").slice(0,10);
+    if (keySet.has(day)) total += Number(e.amount||0);
+  }
+  return Math.round(total * 100) / 100;
+}
+
+// ── Presence / Carts (SSE) ───────────────────────────────────────────────────
+let presenceState = { "1":{users:{}},"2":{users:{}},"3":{users:{}},"4":{users:{}},"5":{users:{}},"6":{users:{}} };
+let onlineUsers   = {};
+const presenceClients = new Set();
+let cartsState    = { 1:[],2:[],3:[],4:[],5:[],6:[] };
+let cartsRev      = 0;
 const cartsClients = new Set();
 
-function normalizeCarts(obj){
-  const out = { 1:[], 2:[], 3:[], 4:[], 5:[], 6:[] };
-  [1,2,3,4,5,6].forEach(k=>{
+// lastSeen debounce
+let _lastSeenTimer = null;
+function scheduleLastSeenSave() {
+  if (_lastSeenTimer) clearTimeout(_lastSeenTimer);
+  _lastSeenTimer = setTimeout(() => { _lastSeenTimer = null; saveDB(db); }, 2000);
+}
+
+function prunePresence() {
+  const now = Date.now(); let changed = false;
+  for (const u of Object.keys(onlineUsers)) {
+    if (now - (onlineUsers[u].at||0) > 30000) { delete onlineUsers[u]; changed = true; }
+  }
+  for (const k of ["1","2","3","4","5","6"]) {
+    const users = presenceState[k]?.users || {};
+    for (const u of Object.keys(users)) {
+      if (now - (users[u].at||0) > 20000) { delete users[u]; changed = true; }
+    }
+  }
+  if (changed) broadcastPresence();
+}
+setInterval(prunePresence, 5000);
+
+function broadcastPresence() {
+  const payload = JSON.stringify({ presence: presenceState, online: onlineUsers, ts: Date.now() });
+  for (const res of presenceClients) {
+    try { res.write(`data: ${payload}\n\n`); } catch(e) { presenceClients.delete(res); }
+  }
+}
+function broadcastCarts() {
+  cartsRev++;
+  const payload = JSON.stringify({ rev: cartsRev, carts: cartsState });
+  for (const res of cartsClients) {
+    try { res.write(`data: ${payload}\n\n`); } catch(e) { cartsClients.delete(res); }
+  }
+}
+function normalizeCarts(obj) {
+  const out = {1:[],2:[],3:[],4:[],5:[],6:[]};
+  for (const k of [1,2,3,4,5,6]) {
     const arr = obj && (obj[k] || obj[String(k)]);
-    if(Array.isArray(arr)){
-      out[k] = arr.filter(x=>x && typeof x==="object").map(x=>({
-        name: String(x.name||""),
-        price: Number(x.price)||0,
-        qty: Number(x.qty)||1,
-        productId: x.productId || null,
-        components: x.components || null
+    if (Array.isArray(arr)) {
+      out[k] = arr.filter(x => x && typeof x==="object").map(x => ({
+        name: String(x.name||""), price: Number(x.price)||0,
+        qty: Number(x.qty)||1, productId: x.productId||null, components: x.components||null
       }));
     }
-  });
+  }
   return out;
 }
 
-function broadcastCarts(){
-  const payload = JSON.stringify({ rev: cartsRev, carts: cartsState });
-  for(const res of Array.from(cartsClients)){
-    try{ res.write("data: " + payload + "\n\n"); }
-    catch(e){ try{ cartsClients.delete(res); }catch(_){} }
-  }
-}
-
-function loadCartsFromDb(db){
-  try{
-    if(db && db.carts) cartsState = normalizeCarts(db.carts);
-    cartsRev = Number(db && db.cartsRev) || 0;
-  }catch(e){}
-}
-
-function persistCartsToDb(){
-  try{
-    const db = readDB();
-    
-loadCartsFromDb(db);
-loadCartsFromDb(db); // bring existing in
-    db.carts = cartsState;
-    db.cartsRev = cartsRev;
-    writeDB(db);
-  }catch(e){}
-}
-
-app.use(express.static(path.join(__dirname, "public")));
-
+// ── Middleware ────────────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
   rotateDayIfNeeded();
-  const cookie = String(req.headers.cookie || "");
-  const m = /(?:^|;\s*)bs_token=([^;]+)/.exec(cookie);
-  const token = m ? m[1] : null;
-
-  if (!token || !db.sessions[token]) return res.status(401).json({ success: false, message: "Nicht eingeloggt." });
-
+  const token = getToken(req);
+  if (!token || !db.sessions[token]) return res.status(401).json({ success:false, message:"Nicht eingeloggt." });
   const sess = db.sessions[token];
   if (sess.exp && Date.now() > sess.exp) {
-    delete db.sessions[token];
-    saveDB(db);
-    return res.status(401).json({ success: false, message: "Session abgelaufen." });
+    delete db.sessions[token]; saveDB(db);
+    return res.status(401).json({ success:false, message:"Session abgelaufen." });
   }
-
   const user = db.users.find(u => u.username === sess.username);
   if (!user) {
-    delete db.sessions[token];
-    saveDB(db);
-    return res.status(401).json({ success: false, message: "User nicht gefunden." });
+    delete db.sessions[token]; saveDB(db);
+    return res.status(401).json({ success:false, message:"User nicht gefunden." });
   }
-
-  // Auto-logout after 1 hour of inactivity (tracked per session, not lastSeen)
-  const INACTIVITY_MS = 60 * 60 * 1000; // 1 hour
+  if (user.locked) return res.status(403).json({ success:false, message:"Zugang gesperrt.", locked:true });
+  // Auto-logout after 1h inactivity (session-based)
+  const INACTIVITY = 60 * 60 * 1000;
   const now = Date.now();
   if (user.role !== "boss") {
     const lastActive = sess.lastActivity || now;
-    if (now - lastActive > INACTIVITY_MS) {
-      delete db.sessions[token];
-      saveDB(db);
-      return res.status(401).json({ success: false, message: "Automatisch ausgeloggt (Inaktivität)." });
+    if (now - lastActive > INACTIVITY) {
+      delete db.sessions[token]; saveDB(db);
+      return res.status(401).json({ success:false, message:"Automatisch ausgeloggt (Inaktivität)." });
     }
   }
-  // Update activity timestamp on session
   sess.lastActivity = now;
-  // Update lastSeen in memory — heartbeat handles DB persistence
   user.lastSeen = new Date(now).toISOString();
-
-  req.user = { username: user.username, displayName: user.displayName, role: user.role };
-  req.token = token;
+  req.user = user; req.token = token;
   next();
 }
-
 function requireBoss(req, res, next) {
-  if (req.user?.role !== "boss") return res.status(403).json({ success: false, message: "Nur Chef." });
+  if (req.user?.role !== "boss") return res.status(403).json({ success:false, message:"Nur Chef." });
   next();
 }
 function requireBossOrManager(req, res, next) {
-  if (!["boss","manager"].includes(req.user?.role)) return res.status(403).json({ success: false, message: "Kein Zugriff." });
+  if (!["boss","manager"].includes(req.user?.role)) return res.status(403).json({ success:false, message:"Nur Chef / Manager." });
   next();
 }
 
-/* =========================
-   ROUTES
-   ========================= */
-app.get("/health", (req, res) => res.json({ ok: true }));
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Health & Version ──────────────────────────────────────────────────────────
+app.get("/health",  (req, res) => res.json({ ok:true }));
 app.get("/version", (req, res) => res.json({ version: APP_VERSION }));
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
 app.get("/auth/me", (req, res) => {
-  rotateDayIfNeeded();
-  const cookie = String(req.headers.cookie || "");
-  const m = /(?:^|;\s*)bs_token=([^;]+)/.exec(cookie);
-  const token = m ? m[1] : null;
-
-  if (!token || !db.sessions[token]) return res.json({ success: true, loggedIn: false, currentDay: db.meta.currentDay });
-
+  const token = getToken(req);
+  if (!token || !db.sessions[token]) return res.json({ success:true, loggedIn:false });
   const sess = db.sessions[token];
-  if (sess.exp && Date.now() > sess.exp) {
-    delete db.sessions[token];
-    saveDB(db);
-    return res.json({ success: true, loggedIn: false, currentDay: db.meta.currentDay });
-  }
-
   const user = db.users.find(u => u.username === sess.username);
-  if (!user) {
-    delete db.sessions[token];
-    saveDB(db);
-    return res.json({ success: true, loggedIn: false, currentDay: db.meta.currentDay });
-  }
-
-  res.json({ success: true, loggedIn: true, currentDay: db.meta.currentDay, user: { username: user.username, displayName: user.displayName, role: user.role }, appVersion: APP_VERSION });
+  if (!user || user.locked) return res.json({ success:true, loggedIn:false });
+  if (sess.exp && Date.now() > sess.exp) return res.json({ success:true, loggedIn:false });
+  res.json({ success:true, loggedIn:true, currentDay: db.meta.currentDay,
+    user:{ username:user.username, displayName:user.displayName, role:user.role },
+    appVersion: APP_VERSION });
 });
 
 app.post("/auth/login", (req, res) => {
   rotateDayIfNeeded();
-  const username = String(req.body?.username || "").trim().toLowerCase();
-  const password = String(req.body?.password || "");
-
-  const user = db.users.find(u => String(u.username || "").toLowerCase() === username);
-  if (!user) return res.status(401).json({ success: false, message: "Falscher Login." });
-  if (!verifyPassword(password, user.pw)) return res.status(401).json({ success: false, message: "Falscher Login." });
-  if (user.locked) return res.status(403).json({ success: false, message: "Zugang gesperrt, bitte bei der Geschäftsleitung melden.", locked: true });
-
-  const token = makeToken();
-  db.sessions[token] = { username: user.username, exp: Date.now() + 1000 * 60 * 60 * 24 * 30, lastActivity: Date.now() };
-  // Track first login of today
-  const todayKey = getDayKeyLocal(new Date());
-  if(!user.firstLoginByDay) user.firstLoginByDay = {};
-  if(!user.firstLoginByDay[todayKey]) user.firstLoginByDay[todayKey] = new Date().toISOString();
+  const username = String(req.body?.username||"").toLowerCase().trim();
+  const password = String(req.body?.password||"");
+  const user = db.users.find(u => u.username === username);
+  if (!user || !verifyPassword(password, user.pw))
+    return res.status(401).json({ success:false, message:"Falscher Login." });
+  if (user.locked)
+    return res.status(403).json({ success:false, message:"Zugang gesperrt, bitte bei der Geschäftsleitung melden.", locked:true });
+  const token = crypto.randomBytes(32).toString("hex");
+  const today = getDayKeyLocal(new Date());
+  db.sessions[token] = { username: user.username, exp: Date.now() + 1000*60*60*24*30, lastActivity: Date.now() };
+  user.lastSeen = new Date().toISOString();
+  if (!user.firstLoginByDay) user.firstLoginByDay = {};
+  if (!user.firstLoginByDay[today]) user.firstLoginByDay[today] = new Date().toISOString();
   saveDB(db);
-
-  setCookie(res, "bs_token", token, { maxAge: 60 * 60 * 24 * 30 });
-  res.json({ success: true, user: { username: user.username, displayName: user.displayName, role: user.role }, currentDay: db.meta.currentDay, appVersion: APP_VERSION });
+  setCookie(res, "bs_token", token, { maxAge: 60*60*24*30 });
+  res.json({ success:true, user:{ username:user.username, displayName:user.displayName, role:user.role },
+    currentDay: db.meta.currentDay, appVersion: APP_VERSION });
 });
 
-app.post("/auth/logout", requireAuth, (req, res) => {
-  delete db.sessions[req.token];
-  saveDB(db);
+app.post("/auth/logout", (req, res) => {
+  const token = getToken(req);
+  if (token && db.sessions[token]) { delete db.sessions[token]; saveDB(db); }
   clearCookie(res, "bs_token");
-  res.json({ success: true });
+  res.json({ success:true });
 });
 
 app.post("/auth/change-password", requireAuth, (req, res) => {
-  const oldPw = String(req.body?.oldPw || "");
-  const newPw = String(req.body?.newPw || "");
-
-  if (newPw.length < 6) return res.status(400).json({ success: false, message: "Neues Passwort muss mindestens 6 Zeichen haben." });
-
-  const user = db.users.find(u => u.username === req.user.username);
-  if (!user) return res.status(400).json({ success: false, message: "User nicht gefunden." });
-  if (!verifyPassword(oldPw, user.pw)) return res.status(401).json({ success: false, message: "Aktuelles Passwort ist falsch." });
-
-  user.pw = hashPassword(newPw);
-  for (const [tok, sess] of Object.entries(db.sessions)) {
-    if (sess.username === user.username && tok !== req.token) delete db.sessions[tok];
-  }
+  const old = String(req.body?.old||""), nw = String(req.body?.new||"");
+  if (!old || !nw || nw.length < 3)
+    return res.status(400).json({ success:false, message:"Ungültig." });
+  if (!verifyPassword(old, req.user.pw))
+    return res.status(403).json({ success:false, message:"Altes Passwort falsch." });
+  req.user.pw = hashPassword(nw);
   saveDB(db);
-  res.json({ success: true });
+  res.json({ success:true });
 });
 
-/* =========================
-   PRODUCTS (VK Preise)
-   ========================= */
-app.delete("/products/:id", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "").trim();
-  if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
-  if(!Array.isArray(db.hiddenProducts)) db.hiddenProducts = [];
-  if(!db.hiddenProducts.includes(id)) db.hiddenProducts.push(id);
-  db.products = normalizeProducts(db.products, db.hiddenProducts); // rebuild without hidden
-  saveDB(db);
-  res.json({ success:true, products: db.products, hiddenProducts: db.hiddenProducts });
-});
-
-app.post("/products/:id/restore", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "").trim();
-  db.hiddenProducts = (db.hiddenProducts||[]).filter(h => h !== id);
-  db.products = normalizeProducts(db.products, db.hiddenProducts);
-  saveDB(db);
-  res.json({ success:true, products: db.products });
-});
-
+// ── Produkte ──────────────────────────────────────────────────────────────────
 app.get("/products", requireAuth, (req, res) => {
   const weeklyName = getCurrentSpecialBurgerName();
-  const products = (db.products || []).map(p =>
+  const products = getProducts(db).map(p =>
     p.id === "special_burger" ? { ...p, name: weeklyName, weeklyName } : p
   );
-  res.json({ success: true, products, hiddenProducts: db.hiddenProducts || [] });
+  res.json({ success:true, products, hiddenProducts: db.hiddenProducts||[] });
 });
 
 app.put("/products", requireAuth, requireBoss, (req, res) => {
   const incoming = req.body?.products;
-  const normalized = normalizeProducts(incoming, db.hiddenProducts);
-
-  // guard: prevent accidental wipe by requiring at least 5 products
-  if (!Array.isArray(normalized) || normalized.length < 5) {
-    return res.status(400).json({ success: false, message: "Produktliste ungültig." });
+  if (!Array.isArray(incoming)) return res.status(400).json({ success:false, message:"Ungültig." });
+  // Store only price/icon overrides
+  const overrides = [];
+  for (const p of incoming) {
+    const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
+    if (!def) continue;
+    const ov = { id: p.id };
+    if (p.price !== def.price) ov.price = Number(p.price)||0;
+    if (p.icon  !== def.icon)  ov.icon  = String(p.icon||"");
+    overrides.push(ov);
   }
-
-  db.products = normalized;
+  db.products = overrides;
+  db.hiddenProducts = Array.isArray(req.body?.hiddenProducts) ? req.body.hiddenProducts : db.hiddenProducts;
   saveDB(db);
-  res.json({ success: true, products: db.products });
+  res.json({ success:true });
 });
 
-/* =========================
-   INVENTORY / LAGER
-   ========================= */
-app.get("/inventory", requireAuth, (req, res) => {
-  res.json({ success: true, items: db.inventory || [] });
-});
+app.get("/special-burger-name", requireAuth, (req, res) =>
+  res.json({ success:true, name: getCurrentSpecialBurgerName() }));
 
+// ── Inventory ─────────────────────────────────────────────────────────────────
+app.get("/inventory", requireAuth, (req, res) =>
+  res.json({ success:true, items: db.inventory }));
+
+// Add/update inventory item (lmk or cooked_*)
 app.post("/inventory", requireAuth, requireBoss, (req, res) => {
-  const body = req.body || {};
-  const id = String(body.id || "").trim();
-  const name = String(body.name || "").trim();
-  const unit = String(body.unit || "Stk").trim() || "Stk";
-  let minStock = Number(body.minStock);
-  if(!name) return res.status(400).json({ success:false, message:"Name fehlt." });
-  if(!Number.isFinite(minStock)) minStock = 0;
-  minStock = Math.max(0, Math.round(minStock * 100) / 100);
-
-  // For existing items: NEVER overwrite stock with absolute value (race condition prevention)
-  // Stock changes must use /inventory/adjust (delta-based)
-  // For new items: use provided stock value
-  let stock = null; // only used for new items
-
-  if(!Array.isArray(db.inventory)) db.inventory = [];
-
-  let ekPrice = Number(body.ekPrice);
-  if(!Number.isFinite(ekPrice) || ekPrice < 0) ekPrice = 0;
-  ekPrice = Math.round(ekPrice * 100) / 100;
-
-  if(id){
-    const it = db.inventory.find(x => x.id === id);
-    if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
-    it.name = name;
-    it.unit = unit;
-    it.stock = stock;
-    it.minStock = minStock;
-    it.ekPrice = ekPrice;
-    it.updatedAt = new Date().toISOString();
+  const { id, name, unit, minStock, ekPrice } = req.body||{};
+  if (!id || !name) return res.status(400).json({ success:false, message:"ID und Name fehlen." });
+  if (id !== "lmk" && !String(id).startsWith("cooked_"))
+    return res.status(400).json({ success:false, message:"Ungültige ID — nur lmk oder cooked_* erlaubt." });
+  const existing = db.inventory.find(x => x.id === id);
+  const now = new Date().toISOString();
+  if (existing) {
+    existing.name      = String(name).trim();
+    existing.unit      = String(unit||"Stk").trim();
+    existing.minStock  = Math.max(0, Number(minStock)||0);
+    existing.ekPrice   = Math.max(0, Number(ekPrice)||0);
+    existing.updatedAt = now;
   } else {
-    db.inventory.push({ id: makeInvId(), name, unit, stock, minStock, ekPrice, updatedAt: new Date().toISOString() });
+    db.inventory.push({ id, name:String(name).trim(), unit:String(unit||"Stk").trim(),
+      stock:0, minStock:Math.max(0,Number(minStock)||0), ekPrice:Math.max(0,Number(ekPrice)||0),
+      createdAt:now, updatedAt:now });
   }
-
-  db.inventory = normalizeInventory(db.inventory);
   saveDB(db);
   res.json({ success:true, items: db.inventory });
 });
 
+// Delta-based stock adjustment
 app.post("/inventory/adjust", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.body?.id || "").trim();
+  const id    = String(req.body?.id||"").trim();
   const delta = Number(req.body?.delta);
-  if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
-  if(!Number.isFinite(delta) || delta === 0) return res.status(400).json({ success:false, message:"Delta ungültig." });
-
-  const it = (db.inventory || []).find(x => x.id === id);
-  if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
-  const next = Math.max(0, (Number(it.stock) || 0) + delta);
-  it.stock = Math.round(next * 100) / 100;
+  if (!id || !Number.isFinite(delta) || delta === 0)
+    return res.status(400).json({ success:false, message:"Ungültig." });
+  const it = db.inventory.find(x => x.id === id);
+  if (!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
+  it.stock = Math.max(0, Math.round((Number(it.stock)||0)*100 + delta*100) / 100);
   it.updatedAt = new Date().toISOString();
-  db.inventory = normalizeInventory(db.inventory);
   saveDB(db);
   res.json({ success:true, item: it, items: db.inventory });
 });
 
 app.delete("/inventory/:id", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "").trim();
-  if(!id) return res.status(400).json({ success:false, message:"ID fehlt." });
-  const before = (db.inventory || []).length;
-  db.inventory = (db.inventory || []).filter(x => x.id !== id);
-  db.inventory = normalizeInventory(db.inventory);
+  const id = String(req.params.id||"");
+  if (id === "lmk") return res.status(400).json({ success:false, message:"lmk kann nicht gelöscht werden." });
+  db.inventory = db.inventory.filter(x => x.id !== id);
   saveDB(db);
-  if(db.inventory.length === before) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
   res.json({ success:true, items: db.inventory });
 });
 
-/* =========================
-   EINKAUF -> LAGER (Chef)
-   ========================= */
+// ── Kochen ────────────────────────────────────────────────────────────────────
+app.post("/cook", requireAuth, (req, res) => {
+  const items = req.body?.items;
+  if (!Array.isArray(items) || !items.length)
+    return res.status(400).json({ success:false, message:"Keine Items." });
 
-function makePurchaseId(){
-  return crypto.randomBytes(10).toString("hex");
-}
+  let totalKartons = 0;
+  const breakdown = [];
+  for (const item of items) {
+    const qty = Number(item.qty)||0;
+    if (qty <= 0) continue;
+    const perKarton = CRATE_CONFIG[item.name];
+    if (!perKarton) continue;
+    totalKartons += qty / perKarton;
+    breakdown.push({ name: item.name, qty, kartons: Math.round(qty/perKarton*100)/100 });
+  }
+  totalKartons = Math.ceil(totalKartons * 100) / 100;
 
-app.get("/purchases", requireAuth, requireBossOrManager, (req, res) => {
-  const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
-  const date  = String(req.query.date || "").slice(0,10);
-  let list = (db.purchases || []).slice().reverse();
-  if(date) list = list.filter(p => String(p.date||"").slice(0,10) === date);
-  list = list.slice(0, limit);
-  res.json({ success:true, items: list });
+  const lmk = db.inventory.find(x => x.id === "lmk");
+  if (!lmk) return res.status(404).json({ success:false, message:"Lebensmittelkarton nicht im Lager." });
+  if (lmk.stock < totalKartons)
+    return res.status(400).json({ success:false,
+      message:`Nicht genug Kartons. Benötigt: ${totalKartons}, Vorhanden: ${lmk.stock}` });
+
+  lmk.stock = Math.round((lmk.stock - totalKartons) * 100) / 100;
+  lmk.updatedAt = new Date().toISOString();
+
+  const now = new Date().toISOString();
+  for (const item of breakdown) {
+    const invId = "cooked_" + item.name.toLowerCase().replace(/[^a-z0-9]/g,"_");
+    let inv = db.inventory.find(x => x.id === invId);
+    if (!inv) {
+      inv = { id:invId, name:item.name, unit:"Stk", stock:0, minStock:0, ekPrice:0, createdAt:now, updatedAt:now };
+      db.inventory.push(inv);
+    }
+    inv.stock = Math.round((Number(inv.stock)||0)*100 + item.qty*100) / 100;
+    inv.updatedAt = now;
+  }
+  saveDB(db);
+  res.json({ success:true, kartonsUsed: totalKartons, remaining: lmk.stock, breakdown });
 });
 
-// Body:
-//   Single: { inventoryId, qty, price?, note?, date? (YYYY-MM-DD) }
-//   Batch:  { items: [{ inventoryId, qty, price?, note? }...], note?, date? (YYYY-MM-DD) }
+// ── Einkauf (Lebensmittelkartons) ─────────────────────────────────────────────
+app.get("/purchases", requireAuth, (req, res) => res.json({ success:true, purchases: db.purchases||[] }));
+
 app.post("/purchases", requireAuth, requireBossOrManager, (req, res) => {
-  const body = req.body || {};
-
-  const nowIso = new Date().toISOString();
-  const by = req.user?.username || null;
-
-  let date = String(body.date || "").trim();
-  if(date){
-    const dt = parseDateYYYYMMDD(date);
-    if(!dt) return res.status(400).json({ success:false, message:"Ungültiges Datum." });
-    date = getDayKeyLocal(dt);
-  } else {
-    date = getDayKeyLocal(new Date());
-  }
-
-  const globalNote = String(body.note || "").trim();
-  const added = [];
-
-  // Batch mode
-  if(Array.isArray(body.items)){
-    const items = body.items.filter(x => x && typeof x === "object");
-    if(items.length === 0) return res.status(400).json({ success:false, message:"Keine Positionen." });
-
-    for(const row of items){
-      const inventoryId = String(row.inventoryId || row.id || "").trim();
-      let qty = Number(row.qty);
-      if(!inventoryId) continue;
-      if(!Number.isFinite(qty) || qty <= 0) continue;
-      qty = Math.round(qty * 100) / 100;
-
-      const it = (db.inventory || []).find(x => x.id === inventoryId);
-      if(!it) continue;
-
-      let price = Number(row.price);
-      if(!Number.isFinite(price) || price < 0) price = null;
-      else price = Math.round(price * 100) / 100;
-
-      const note = String(row.note || globalNote || "").trim();
-
-      const next = Math.max(0, (Number(it.stock) || 0) + qty);
-      it.stock = Math.round(next * 100) / 100;
-      it.updatedAt = nowIso;
-
-      const p = {
-        id: makePurchaseId(),
-        ts: nowIso,
-        date,
-        inventoryId: it.id,
-        name: it.name,
-        unit: it.unit,
-        qty,
-        price,
-        note,
-        by
-      };
-      added.push(p);
+  const items = req.body?.items;
+  if (!Array.isArray(items)||!items.length)
+    return res.status(400).json({ success:false, message:"Keine Items." });
+  const now = new Date().toISOString();
+  const date = String(req.body?.date||"").slice(0,10) || getDayKeyLocal(new Date());
+  for (const item of items) {
+    const qty = Number(item.qty)||0;
+    if (qty <= 0) continue;
+    const price = Number(item.price)||0;
+    const lmk = db.inventory.find(x => x.id === "lmk");
+    if (lmk) {
+      lmk.stock = Math.round((Number(lmk.stock)||0)*100 + qty*100)/100;
+      lmk.updatedAt = now;
     }
-
-    if(added.length === 0) return res.status(400).json({ success:false, message:"Keine gültigen Positionen." });
-
-    db.inventory = normalizeInventory(db.inventory);
-    if(!Array.isArray(db.purchases)) db.purchases = [];
-    db.purchases.push(...added);
-    if(db.purchases.length > 5000) db.purchases = db.purchases.slice(-5000);
-
-    // Lagereinkauf → vom Kontostand abziehen
-    const batchCost = added.reduce((s,p) => s + (p.price != null ? p.qty * p.price : 0), 0);
-    if(batchCost > 0) adjustBankBalance(-batchCost, `Lagereinkauf (${added.length} Artikel)`);
-
-    saveDB(db);
-    return res.json({ success:true, added: added.length, items: db.inventory });
+    if (price > 0) adjustBank(-(qty * price), `Einkauf: ${qty} Karton(s)`);
+    db.purchases.push({ id: crypto.randomBytes(8).toString("hex"),
+      inventoryId:"lmk", name:"Lebensmittelkarton", qty, price, date, createdAt:now,
+      employee: req.user.displayName||req.user.username });
   }
-
-  // Single mode (legacy)
-  const inventoryId = String(body.inventoryId || body.id || "").trim();
-  let qty = Number(body.qty);
-  if(!inventoryId) return res.status(400).json({ success:false, message:"Artikel fehlt." });
-  if(!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ success:false, message:"Menge muss > 0 sein." });
-  qty = Math.round(qty * 100) / 100;
-
-  const it = (db.inventory || []).find(x => x.id === inventoryId);
-  if(!it) return res.status(404).json({ success:false, message:"Artikel nicht gefunden." });
-
-  let price = Number(body.price);
-  if(!Number.isFinite(price) || price < 0) price = null;
-  else price = Math.round(price * 100) / 100;
-  const note = String(body.note || "").trim();
-
-  const next = Math.max(0, (Number(it.stock) || 0) + qty);
-  it.stock = Math.round(next * 100) / 100;
-  it.updatedAt = nowIso;
-  db.inventory = normalizeInventory(db.inventory);
-
-  const p = {
-    id: makePurchaseId(),
-    ts: nowIso,
-    date,
-    inventoryId: it.id,
-    name: it.name,
-    unit: it.unit,
-    qty,
-    price,
-    note,
-    by
-  };
-  if(!Array.isArray(db.purchases)) db.purchases = [];
-  db.purchases.push(p);
-  if(db.purchases.length > 5000) db.purchases = db.purchases.slice(-5000);
-
-  // Lagereinkauf → vom Kontostand abziehen
-  if(price != null && price > 0) adjustBankBalance(-(qty * price), `Lagereinkauf: ${it.name}`);
-
   saveDB(db);
-  res.json({ success:true, purchase: p, items: db.inventory });
+  res.json({ success:true, items: db.inventory, purchases: db.purchases });
 });
 
 app.put("/purchases/:id", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "");
-  const entry = (db.purchases||[]).find(p => p.id === id);
-  if(!entry) return res.status(404).json({ success:false, message:"Eintrag nicht gefunden." });
-
-  const newPrice = req.body?.price !== undefined ? Number(req.body.price) : entry.price;
-  const newQty   = req.body?.qty   !== undefined ? Number(req.body.qty)   : entry.qty;
-
-  if(!Number.isFinite(newQty) || newQty < 0) return res.status(400).json({ success:false, message:"Ungültige Menge." });
-
-  // Reverse old cost, apply new cost
-  const oldCost = (entry.price != null && entry.qty > 0) ? entry.qty * entry.price : 0;
-  const newCost = (newPrice != null && !isNaN(newPrice) && newPrice >= 0 && newQty > 0) ? newQty * newPrice : 0;
-  const diff = newCost - oldCost;
-  if(diff !== 0) adjustBankBalance(-diff, `Einkauf korrigiert: ${entry.name}`);
-
-  entry.price = (newPrice != null && !isNaN(newPrice) && newPrice >= 0) ? Math.round(newPrice * 100) / 100 : null;
-  entry.qty   = Math.round(newQty * 100) / 100;
-
+  const p = (db.purchases||[]).find(x => x.id === req.params.id);
+  if (!p) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  const oldCost = Number(p.price||0) * Number(p.qty||0);
+  p.price = Math.max(0, Number(req.body?.price)||0);
+  const newCost = p.price * Number(p.qty||0);
+  if (newCost !== oldCost) adjustBank(oldCost - newCost, "Einkauf korrigiert");
   saveDB(db);
-  res.json({ success: true, entry });
+  res.json({ success:true });
 });
 
 app.delete("/purchases/:id", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "");
-  const before = (db.purchases||[]).length;
-  const entry = (db.purchases||[]).find(p => p.id === id);
-  if(!entry) return res.status(404).json({ success:false, message:"Eintrag nicht gefunden." });
-  // Reverse stock and bank balance
-  const it = (db.inventory || []).find(x => x.id === entry.inventoryId);
-  if(it) it.stock = Math.round(Math.max(0, (Number(it.stock)||0) - (Number(entry.qty)||0)) * 100) / 100;
-  if(entry.price != null && entry.qty > 0) adjustBankBalance(entry.qty * entry.price, `Einkauf storniert: ${entry.name}`);
-  db.purchases = db.purchases.filter(p => p.id !== id);
+  const p = (db.purchases||[]).find(x => x.id === req.params.id);
+  if (!p) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  // Reverse stock
+  const lmk = db.inventory.find(x => x.id === "lmk");
+  if (lmk) lmk.stock = Math.max(0, Math.round((Number(lmk.stock)||0)*100 - Number(p.qty||0)*100)/100);
+  // Reverse bank
+  if (Number(p.price||0) > 0) adjustBank(Number(p.qty||0)*Number(p.price||0), `Einkauf storniert`);
+  db.purchases = db.purchases.filter(x => x.id !== req.params.id);
   saveDB(db);
-  res.json({ success: true, items: db.inventory });
+  res.json({ success:true });
 });
 
-/* =========================
-   GUTHABEN KARTEN
-   ========================= */
-
-function normalizeKarten() {
-  if (!Array.isArray(db.guthabenKarten)) db.guthabenKarten = [];
-}
-
-app.get("/guthaben-karten", requireAuth, (req, res) => {
-  normalizeKarten();
-  res.json({ success: true, karten: db.guthabenKarten.map(k => ({
-    id: k.id, name: k.name, balance: k.balance, createdAt: k.createdAt, updatedAt: k.updatedAt
-  }))});
-});
-
-app.get("/guthaben-karten/check", requireAuth, (req, res) => {
-  normalizeKarten();
-  const name = String(req.query.name || "").trim().toLowerCase();
-  if (!name) return res.status(400).json({ success: false, message: "Name fehlt." });
-  const karte = db.guthabenKarten.find(k => k.name.toLowerCase() === name);
-  if (!karte) return res.json({ success: true, found: false, balance: 0 });
-  res.json({ success: true, found: true, id: karte.id, name: karte.name, balance: karte.balance });
-});
-
-app.post("/guthaben-karten", requireAuth, requireBossOrManager, (req, res) => {
-  normalizeKarten();
-  const name = String(req.body?.name || "").trim();
-  const betrag = Math.round(Number(req.body?.betrag) * 100) / 100;
-  if (!name) return res.status(400).json({ success: false, message: "Name fehlt." });
-  if (!Number.isFinite(betrag) || betrag <= 0) return res.status(400).json({ success: false, message: "Betrag muss > 0 sein." });
-
-  let karte = db.guthabenKarten.find(k => k.name.toLowerCase() === name.toLowerCase());
-  const isNew = !karte;
-  const ts = new Date().toISOString();
-
-  if (isNew) {
-    karte = { id: crypto.randomBytes(6).toString("hex"), name, balance: 0, history: [], createdAt: ts, updatedAt: ts };
-    db.guthabenKarten.push(karte);
-  }
-
-  karte.balance = Math.round((karte.balance + betrag) * 100) / 100;
-  karte.updatedAt = ts;
-  if (!Array.isArray(karte.history)) karte.history = [];
-  karte.history.push({ ts, type: "topup", amount: betrag, by: req.user.displayName || req.user.username });
-  if (karte.history.length > 200) karte.history = karte.history.slice(-200);
-
-  // Book topup as revenue entry
-  rotateDayIfNeeded();
-  const day = db.meta.currentDay;
-  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
-  const topupOrderId = db.meta.nextOrderId++;
-  db.salesByDay[day].push({
-    id: topupOrderId,
-    day,
-    time: ts,
-    timeHM: toHM(ts),
-    employee: req.user.displayName || req.user.username,
-    employeeUsername: req.user.username,
-    register: 0,
-    items: [{ name: `Guthaben-Aufladung: ${karte.name}`, price: betrag, qty: 1 }],
-    total: betrag,
-    paidAmount: betrag,
-    tip: 0,
-    paymentMethod: "guthabenTopup",
-    guthabenName: karte.name
-  });
-
+app.put("/reports/purchases-override", requireAuth, requireBoss, (req, res) => {
+  const { date, value } = req.body||{};
+  if (!date || !Number.isFinite(Number(value)))
+    return res.status(400).json({ success:false, message:"Ungültig." });
+  db.purchaseOverrides = db.purchaseOverrides||{};
+  db.purchaseOverrides[String(date).slice(0,10)] = Number(value);
   saveDB(db);
-  res.json({ success: true, isNew, karte: { id: karte.id, name: karte.name, balance: karte.balance } });
+  res.json({ success:true });
 });
 
-app.post("/guthaben-karten/pay", requireAuth, (req, res) => {
-  normalizeKarten();
-  const name = String(req.body?.name || "").trim().toLowerCase();
-  const amount = Math.round(Number(req.body?.amount) * 100) / 100;
-  if (!name || !Number.isFinite(amount) || amount <= 0)
-    return res.status(400).json({ success: false, message: "Ungültige Daten." });
-
-  const karte = db.guthabenKarten.find(k => k.name.toLowerCase() === name);
-  if (!karte) return res.status(404).json({ success: false, message: "Karte nicht gefunden." });
-  if (karte.balance < amount) return res.status(400).json({ success: false, message: `Guthaben reicht nicht aus (${karte.balance.toFixed(2)} $).` });
-
-  const ts = new Date().toISOString();
-  karte.balance = Math.round((karte.balance - amount) * 100) / 100;
-  karte.updatedAt = ts;
-  if (!Array.isArray(karte.history)) karte.history = [];
-  karte.history.push({ ts, type: "pay", amount, by: req.user.displayName || req.user.username });
-
-  saveDB(db);
-  res.json({ success: true, balance: karte.balance, name: karte.name });
-});
-
-/* =========================
-   TIP PAYOUTS
-   ========================= */
-app.get("/tip-payouts", requireAuth, requireBoss, (req, res) => {
-  const limit = Math.min(200, Number(req.query.limit) || 50);
-  const list = (db.tipPayouts || []).slice().reverse().slice(0, limit);
-  res.json({ success: true, payouts: list });
-});
-
-app.post("/tip-payouts", requireAuth, requireBoss, (req, res) => {
-  const body = req.body || {};
-  const week = String(body.week || "").trim();
-  const entries = body.entries; // [{employeeUsername, employee, amount}]
-  if (!week || !Array.isArray(entries) || entries.length === 0)
-    return res.status(400).json({ success: false, message: "Fehlende Daten." });
-
-  const validated = entries
-    .filter(e => e && Number(e.amount) > 0)
-    .map(e => ({
-      employeeUsername: String(e.employeeUsername || ""),
-      employee: String(e.employee || e.employeeUsername || ""),
-      amount: Math.round(Number(e.amount) * 100) / 100
-    }));
-
-  if (!validated.length)
-    return res.status(400).json({ success: false, message: "Keine gültigen Beträge." });
-
-  const total = validated.reduce((s, e) => s + e.amount, 0);
-  const payout = {
-    id: crypto.randomBytes(8).toString("hex"),
-    ts: new Date().toISOString(),
-    week,
-    by: req.user.username,
-    byName: req.user.displayName || req.user.username,
-    entries: validated,
-    total: Math.round(total * 100) / 100
-  };
-
-  if (!Array.isArray(db.tipPayouts)) db.tipPayouts = [];
-  db.tipPayouts.push(payout);
-  if (db.tipPayouts.length > 1000) db.tipPayouts = db.tipPayouts.slice(-1000);
-
-  saveDB(db);
-  res.json({ success: true, payout });
-});
-
-/* =========================
-   SCHWARZES BRETT
-   ========================= */
-app.get("/board", requireAuth, (req, res) => {
-  const user = db.users.find(u => u.username === req.user.username);
-  const lastRead = user?.boardLastRead || null;
-  res.json({ success: true, posts: db.board || [], lastRead });
-});
-
-app.post("/board", requireAuth, (req, res) => {
-  const title = String(req.body?.title || "").trim();
-  const body  = String(req.body?.body  || "").trim();
-  const prio  = ["normal","important","urgent"].includes(req.body?.prio) ? req.body.prio : "normal";
-  if (!title) return res.status(400).json({ success: false, message: "Titel fehlt." });
-  if (!db.board) db.board = [];
-  const post = {
-    id: Date.now().toString(),
-    title, body, prio,
-    author: req.user.displayName || req.user.username,
-    authorUsername: req.user.username,
-    createdAt: new Date().toISOString()
-  };
-  db.board.unshift(post);
-  saveDB(db);
-  res.json({ success: true, post });
-});
-
-app.post("/board/mark-read", requireAuth, (req, res) => {
-  const user = db.users.find(u => u.username === req.user.username);
-  if(user) { user.boardLastRead = new Date().toISOString(); saveDB(db); }
-  res.json({ success: true });
-});
-
-app.delete("/board/:id", requireAuth, (req, res) => {
-  if (!db.board) return res.json({ success: true });
-  const before = db.board.length;
-  // Any role can delete own post; boss/manager can delete all
-  db.board = db.board.filter(p => {
-    if (p.id !== req.params.id) return true;
-    if (["boss","manager"].includes(req.user.role)) return false;
-    return p.authorUsername !== req.user.username;
-  });
-  if (db.board.length < before) saveDB(db);
-  res.json({ success: true });
-});
-
-/* =========================
-   CASH TRANSFER
-   ========================= */
-app.post("/cash-transferred", requireAuth, requireBossOrManager, (req, res) => {
-  const { day, employeeUsername } = req.body || {};
-  if (!day || !employeeUsername) return res.status(400).json({ success: false, message: "day und employeeUsername erforderlich." });
-  // Mark all isCash sales for this employee on this day as transferred
-  const sales = db.salesByDay[day] || [];
-  let count = 0;
-  for (const s of sales) {
-    const empKey = String(s.employeeUsername || s.employee || "—");
-    if (s.isCash && empKey === employeeUsername) {
-      s.cashTransferred = true;
-      count++;
-    }
-  }
-  saveDB(db);
-  res.json({ success: true, count });
-});
-
-/* =========================
-   STATS ENDPOINTS
-   ========================= */
-
-app.get("/reports/employee-totals", requireAuth, requireBossOrManager, (req, res) => {
-  const byEmployee = {};
-  for (const [, sales] of Object.entries(db.salesByDay || {})) {
-    for (const s of sales) {
-      if (s.staffOrder || s.paymentMethod === "guthaben") continue;
-      const name = s.employee || s.employeeUsername || "Unbekannt";
-      if (!byEmployee[name]) byEmployee[name] = { name, revenue: 0, orders: 0 };
-      byEmployee[name].revenue += Number(s.total || 0);
-      byEmployee[name].orders++;
-    }
-  }
-  const result = Object.values(byEmployee)
-    .sort((a, b) => b.revenue - a.revenue)
-    .map(e => ({ ...e, avg: e.orders > 0 ? Math.round(e.revenue / e.orders) : 0 }));
-  res.json({ success: true, employees: result });
-});
-
-app.get("/reports/bestseller", requireAuth, requireBossOrManager, (req, res) => {
-  const byItem = {};
-  for (const [, sales] of Object.entries(db.salesByDay || {})) {
-    for (const s of sales) {
-      if (!Array.isArray(s.items)) continue;
-      for (const it of s.items) {
-        const name = it.name || "Unbekannt";
-        if (!byItem[name]) byItem[name] = { name, qty: 0, revenue: 0 };
-        byItem[name].qty += Number(it.qty || 1);
-        byItem[name].revenue += Number(it.price || 0) * Number(it.qty || 1);
-      }
-    }
-  }
-  const result = Object.values(byItem)
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 50);
-  res.json({ success: true, items: result });
-});
-
-/* =========================
-   BANK BALANCE
-   ========================= */
-app.get("/bank-balance", requireAuth, requireBoss, (req, res) => {
-  res.json({ success: true, balance: db.bankBalance ?? null, updatedAt: db.bankBalanceUpdatedAt ?? null });
-});
-
-app.get("/bank-balance/history", requireAuth, requireBoss, (req, res) => {
-  const limit = Math.min(200, Number(req.query.limit) || 100);
-  const history = (db.bankHistory || []).slice().reverse().slice(0, limit);
-  res.json({ success: true, history });
-});
-
-app.put("/bank-balance", requireAuth, requireBoss, (req, res) => {
-  const balance = Number(req.body?.balance);
-  const note = String(req.body?.note || "").trim();
-  if (!Number.isFinite(balance)) return res.status(400).json({ success: false, message: "Ungültiger Betrag." });
-
-  const prev = db.bankBalance ?? null;
-  db.bankBalance = Math.round(balance * 100) / 100;
-  db.bankBalanceUpdatedAt = new Date().toISOString();
-
-  // Save to history
-  if (!Array.isArray(db.bankHistory)) db.bankHistory = [];
-  db.bankHistory.push({
-    ts: db.bankBalanceUpdatedAt,
-    balance: db.bankBalance,
-    prev,
-    diff: prev !== null ? Math.round((db.bankBalance - prev) * 100) / 100 : null,
-    note: note || null,
-    by: req.user?.username || null,
-    byName: req.user?.displayName || req.user?.username || null
-  });
-  if (db.bankHistory.length > 500) db.bankHistory = db.bankHistory.slice(-500);
-
-  saveDB(db);
-  res.json({ success: true, balance: db.bankBalance, updatedAt: db.bankBalanceUpdatedAt });
-});
-
-/* =========================
-   SALE INVENTORY LINKS (Management)
-   ========================= */
-
-app.get("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
-  res.json({ success: true, links: db.saleInventoryLinks || [] });
-});
-
-app.put("/sale-inventory-links", requireAuth, requireBoss, (req, res) => {
-  const incoming = req.body?.links;
-  if (!Array.isArray(incoming)) return res.status(400).json({ success: false, message: "links muss ein Array sein." });
-  const validated = [];
-  for (const l of incoming) {
-    const productId = String(l.productId || "").trim();
-    const inventoryId = String(l.inventoryId || "").trim();
-    const qty = Number(l.qty);
-    if (!productId || !inventoryId) continue;
-    if (!Number.isFinite(qty) || qty <= 0) continue;
-    validated.push({ productId, inventoryId, qty: Math.round(qty * 100) / 100 });
-  }
-  db.saleInventoryLinks = validated;
-  saveDB(db);
-  res.json({ success: true, links: db.saleInventoryLinks });
-});
-
-/* =========================
-   USERS (Management)
-   ========================= */
-app.get("/users", requireAuth, requireBoss, (req, res) => {
-  const todayKey = getDayKeyLocal(new Date());
-  res.json({ success: true, users: db.users.map(u => ({ username: u.username, displayName: u.displayName, role: u.role, lastSeen: u.lastSeen || null, firstLoginToday: (u.firstLoginByDay && u.firstLoginByDay[todayKey]) || null, locked: u.locked || false })) });
-});
-
-app.post("/users", requireAuth, requireBoss, (req, res) => {
-  const username = String(req.body?.username || "").trim().toLowerCase();
-  const displayName = String(req.body?.displayName || "").trim() || username;
-  let role = String(req.body?.role || "staff").toLowerCase();
-  if (!["boss","manager","staff"].includes(role)) role = "staff";
-  const password = String(req.body?.password || "admin");
-
-  if (!username) return res.status(400).json({ success: false, message: "Username fehlt." });
-  if (db.users.some(u => u.username === username)) return res.status(400).json({ success: false, message: "Username existiert bereits." });
-
-  const pw = hashPassword(password);
-  db.users.push({ username, displayName, role, pw });
-  saveDB(db);
-  res.json({ success: true });
-});
-
-app.post("/users/:username/lock", requireAuth, requireBoss, (req, res) => {
-  const username = String(req.params.username || "").toLowerCase();
-  const user = db.users.find(u => u.username === username);
-  if(!user) return res.status(404).json({ success:false, message:"User nicht gefunden." });
-  if(user.role === "boss") return res.status(400).json({ success:false, message:"Chef kann nicht gesperrt werden." });
-  user.locked = !user.locked;
-  // Invalidate sessions if locking
-  if(user.locked){
-    for(const [tok, sess] of Object.entries(db.sessions||{})){
-      if(sess.username === username) delete db.sessions[tok];
-    }
-  }
-  saveDB(db);
-  res.json({ success:true, locked: user.locked });
-});
-
-app.put("/users/:username", requireAuth, requireBoss, (req, res) => {
-  const username = String(req.params.username || "").toLowerCase();
-  const user = db.users.find(u => u.username === username);
-  if(!user) return res.status(404).json({ success:false, message:"User nicht gefunden." });
-
-  const newRole = String(req.body?.role || "").toLowerCase();
-  const newPassword = String(req.body?.password || "").trim();
-  const newDisplayName = String(req.body?.displayName || "").trim();
-
-  if(newRole && ["boss","manager","staff"].includes(newRole)) user.role = newRole;
-  if(newDisplayName) user.displayName = newDisplayName;
-  if(newPassword){
-    const pw = hashPassword(newPassword);
-    user.pw = pw;
-    // Invalidate all sessions for this user
-    for(const [tok, sess] of Object.entries(db.sessions||{})){
-      if(sess.username === username) delete db.sessions[tok];
-    }
-  }
-  saveDB(db);
-  res.json({ success:true, user: { username: user.username, displayName: user.displayName, role: user.role } });
-});
-
-app.delete("/users/:username", requireAuth, requireBoss, (req, res) => {
-  const u = String(req.params.username || "").trim().toLowerCase();
-  if (!u) return res.status(400).json({ success: false, message: "Username fehlt." });
-  if (u === req.user.username) return res.status(400).json({ success: false, message: "Du kannst dich nicht selbst löschen." });
-
-  const before = db.users.length;
-  db.users = db.users.filter(x => x.username !== u);
-
-  for (const [tok, sess] of Object.entries(db.sessions)) {
-    if (sess.username === u) delete db.sessions[tok];
-  }
-
-  saveDB(db);
-  if (db.users.length === before) return res.status(404).json({ success: false, message: "User nicht gefunden." });
-  res.json({ success: true });
-});
-
-/* =========================
-   SALES (POS -> save + kitchen)
-   ========================= */
+// ── Verkauf ───────────────────────────────────────────────────────────────────
 app.post("/sale", requireAuth, (req, res) => {
   rotateDayIfNeeded();
-  const body = req.body || {};
-  const register = Number(body.register);
-  const items = body.items;
-  const total = Number(body.total);
-  const time = String(body.time || new Date().toISOString());
-  const paidAmount = Number(body.paidAmount);
+  const { register, items, total, paidAmount, discount, isCash, isDelivery,
+    tip=0, staffOrder=false, staffEmployee="", bahamaMamas=false,
+    littleSeoul=false, paymentMethod="card" } = req.body||{};
 
-  if (!Number.isFinite(register) || register < 1) return res.status(400).json({ success: false, message: "Invalid sale payload (register)." });
-  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ success: false, message: "Invalid sale payload (items)." });
-  if (!Number.isFinite(total) || total < 0) return res.status(400).json({ success: false, message: "Invalid sale payload (total)." });
-  const isStaffOrder = body.staffOrder === true;
-  if (!Number.isFinite(paidAmount) || (!isStaffOrder && paidAmount < total)) return res.status(400).json({ success: false, message: "Invalid sale payload (paidAmount)." });
+  if (!Array.isArray(items)||!items.length)
+    return res.status(400).json({ success:false, message:"Keine Artikel." });
+  if (!Number.isFinite(Number(total)))
+    return res.status(400).json({ success:false, message:"Total fehlt." });
 
   const day = db.meta.currentDay;
-  if (db.closedDays && db.closedDays[day]) return res.status(409).json({ success: false, message: "Dieser Tag ist bereits abgeschlossen. Keine neuen Verkäufe möglich." });
-
-  const tip = Math.max(0, paidAmount - total);
+  if (!db.salesByDay[day]) db.salesByDay[day] = [];
+  if (!db.kitchenByDay[day]) db.kitchenByDay[day] = { pending:[], done:[] };
 
   const orderId = db.meta.nextOrderId++;
-  const sale = {
-    id: orderId,
-    day,
-    time,
-    timeHM: toHM(time),
-    employee: req.user.displayName || req.user.username,
-    employeeUsername: req.user.username,
-    register,
-    items,
-    total,
-    paidAmount,
-    tip,
-    staffOrder: isStaffOrder || false,
-    staffEmployee: isStaffOrder ? String(body.staffEmployee||"").trim() : undefined,
-    staffEmployeeName: isStaffOrder ? String(body.staffEmployeeName||"").trim() : undefined,
-    paymentMethod: String(body.paymentMethod || "cash"),
-    guthabenName: body.guthabenName ? String(body.guthabenName).trim() : undefined,
-    isCash: body.isCash === true || false,
-    discount: body.discount ? Number(body.discount) : undefined
+  const time    = new Date().toISOString();
+
+  // Inventory deduction from cooked_* by product name
+  const deductCooked = (name, qty) => {
+    if (!name) return;
+    const invId = "cooked_" + name.toLowerCase().replace(/[^a-z0-9]/g,"_");
+    const inv = db.inventory.find(x => x.id === invId);
+    if (inv && Number(inv.stock) > 0) {
+      inv.stock = Math.max(0, Math.round((Number(inv.stock)||0)*100 - qty*100)/100);
+      inv.updatedAt = time;
+    }
   };
-
-  if (!Array.isArray(db.salesByDay[day])) db.salesByDay[day] = [];
-  db.salesByDay[day].push(sale);
-
-  // Staff orders skip kitchen
-  if (!isStaffOrder) {
-    const kitchen = todaysKitchen();
-    kitchen.pending.push({ id: orderId, day, time, timeHM: sale.timeHM, employee: sale.employee, register, items, total });
+  const allProds = getProducts(db);
+  for (const item of items) {
+    const itemQty = Number(item.qty)||1;
+    if (Array.isArray(item.components) && item.components.length) {
+      for (const c of item.components) {
+        const prod = allProds.find(p => p.id === c.productId);
+        deductCooked(prod?.name||c.productId, (Number(c.qty)||1)*itemQty);
+      }
+    } else {
+      const name = String(item.name||"").replace(/ \(kein Side\)$/,"").trim();
+      deductCooked(name, itemQty);
+    }
   }
 
-  // Lagerbestand reduzieren
-  try {
-    const links = db.saleInventoryLinks || [];
-    for (const saleItem of items) {
-      const productIds = [];
-      // Einzelne Komponenten (Menü hat components-Array)
-      if (Array.isArray(saleItem.components)) {
-        for (const c of saleItem.components) {
-          if (c.productId) productIds.push({ productId: c.productId, qty: (c.qty || 1) * (saleItem.qty || 1) });
-        }
-      } else if (saleItem.productId) {
-        productIds.push({ productId: saleItem.productId, qty: saleItem.qty || 1 });
-      }
-      for (const { productId, qty } of productIds) {
-        const matched = links.filter(l => l.productId === productId);
-        for (const link of matched) {
-          const invItem = (db.inventory || []).find(x => x.id === link.inventoryId);
-          if (invItem) {
-            invItem.stock = Math.max(0, Math.round((Number(invItem.stock) || 0) * 100 - link.qty * qty * 100) / 100);
-            invItem.updatedAt = new Date().toISOString();
-          }
-        }
-      }
-    }
-  } catch(e) { console.error("Lager-Abzug Fehler:", e); }
+  // Bank
+  if (!isCash && paymentMethod !== "guthaben") {
+    adjustBank(Number(total)||0, `Verkauf #${orderId}`);
+    if (Number(tip||0) > 0) adjustBank(Number(tip), `Trinkgeld #${orderId}`);
+  }
+
+  const sale = { id:orderId, day, time, timeHM:toHM(time),
+    employee:req.user.displayName||req.user.username, employeeUsername:req.user.username,
+    register:Number(register)||1, items, total:Number(total)||0,
+    paidAmount:Number(paidAmount)||0, tip:Number(tip)||0,
+    discount:discount||null, isCash:!!isCash, isDelivery:!!isDelivery,
+    staffOrder:!!staffOrder, staffEmployee:staffEmployee||"",
+    bahamaMamas:!!bahamaMamas, littleSeoul:!!littleSeoul, paymentMethod };
+  db.salesByDay[day].push(sale);
+
+  // Kitchen
+  if (!staffOrder) {
+    db.kitchenByDay[day].pending.push({ id:orderId, time, register:sale.register,
+      employee:sale.employee, items });
+  }
 
   saveDB(db);
-  res.json({ success: true, orderId, tip });
+  res.json({ success:true, orderId });
 });
 
-/* =========================
-   SALE EDIT / DELETE
-   ========================= */
 app.put("/sale/:id", requireAuth, requireBoss, (req, res) => {
   const id = Number(req.params.id);
   let found = null;
-  for (const [day, sales] of Object.entries(db.salesByDay || {})) {
-    const s = sales.find(x => Number(x.id) === id);
-    if (s) { found = s; break; }
+  for (const sales of Object.values(db.salesByDay||{})) {
+    found = sales.find(x => Number(x.id)===id);
+    if (found) break;
   }
-  if (!found) return res.status(404).json({ success:false, message:"Bestellung nicht gefunden." });
-
-  // Only allow editing tip
+  if (!found) return res.status(404).json({ success:false, message:"Nicht gefunden." });
   if (req.body?.tip !== undefined) {
-    found.tip = Math.max(0, Number(req.body.tip) || 0);
-    // Adjust bank balance for tip difference
-    const diff = found.tip - (found._prevTip || 0);
-    found._prevTip = found.tip;
-    if (diff !== 0) adjustBankBalance(diff, `Trinkgeld korrigiert #${id}`);
+    const diff = (Number(req.body.tip)||0) - (Number(found.tip)||0);
+    found.tip = Math.max(0, Number(req.body.tip)||0);
+    if (diff !== 0 && !found.isCash) adjustBank(diff, `Trinkgeld korrigiert #${id}`);
   }
   saveDB(db);
-  res.json({ success:true, sale: found });
+  res.json({ success:true, sale:found });
 });
 
 app.delete("/sale/:id", requireAuth, requireBoss, (req, res) => {
   const id = Number(req.params.id);
   let removed = null;
-  for (const [day, sales] of Object.entries(db.salesByDay || {})) {
-    const idx = sales.findIndex(x => Number(x.id) === id);
-    if (idx !== -1) {
-      [removed] = sales.splice(idx, 1);
-      break;
-    }
+  for (const [, sales] of Object.entries(db.salesByDay||{})) {
+    const idx = sales.findIndex(x => Number(x.id)===id);
+    if (idx !== -1) { [removed] = sales.splice(idx,1); break; }
   }
-  if (!removed) return res.status(404).json({ success:false, message:"Bestellung nicht gefunden." });
+  if (!removed) return res.status(404).json({ success:false, message:"Nicht gefunden." });
 
-  // Reverse bank balance (non-cash card payments only)
-  if (!removed.isCash && removed.paymentMethod !== "guthaben") {
-    adjustBankBalance(-(Number(removed.total||0) + Number(removed.tip||0)), `Bestellung storniert #${id}`);
-  }
+  // Restore bank
+  if (!removed.isCash && removed.paymentMethod !== "guthaben")
+    adjustBank(-(Number(removed.total||0)+Number(removed.tip||0)), `Storno #${id}`);
+
   // Restore inventory
-  try {
-    const links = db.saleInventoryLinks || [];
-    for (const item of (removed.items || [])) {
-      const pids = [];
-      if (Array.isArray(item.components)) {
-        for (const c of item.components) if (c.productId) pids.push({ productId: c.productId, qty: (c.qty||1)*(item.qty||1) });
-      } else if (item.productId) {
-        pids.push({ productId: item.productId, qty: item.qty||1 });
+  const allProds = getProducts(db);
+  const restoreCooked = (name, qty) => {
+    if (!name) return;
+    const invId = "cooked_" + name.toLowerCase().replace(/[^a-z0-9]/g,"_");
+    const inv = db.inventory.find(x => x.id === invId);
+    if (inv) inv.stock = Math.round((Number(inv.stock)||0)*100 + qty*100)/100;
+  };
+  for (const item of (removed.items||[])) {
+    const itemQty = Number(item.qty)||1;
+    if (Array.isArray(item.components) && item.components.length) {
+      for (const c of item.components) {
+        const prod = allProds.find(p => p.id === c.productId);
+        restoreCooked(prod?.name||c.productId, (Number(c.qty)||1)*itemQty);
       }
-      for (const { productId, qty } of pids) {
-        for (const link of links.filter(l => l.productId === productId)) {
-          const inv = (db.inventory||[]).find(x => x.id === link.inventoryId);
-          if (inv) inv.stock = Math.round((Number(inv.stock)||0)*100 + link.qty*qty*100) / 100;
-        }
-      }
+    } else {
+      restoreCooked(String(item.name||"").replace(/ \(kein Side\)$/,"").trim(), itemQty);
     }
-  } catch(e) {}
-
+  }
   saveDB(db);
   res.json({ success:true });
 });
 
-/* =========================
-   KITCHEN
-   ========================= */
+// ── Küche ─────────────────────────────────────────────────────────────────────
 app.get("/kitchen/orders", requireAuth, (req, res) => {
-  const kitchen = todaysKitchen();
-  const pending = kitchen.pending.slice().sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
-  res.json({ success: true, currentDay: db.meta.currentDay, pending });
+  rotateDayIfNeeded();
+  const day = db.meta.currentDay;
+  res.json({ success:true, currentDay:day,
+    pending:(db.kitchenByDay[day]?.pending||[]),
+    done:(db.kitchenByDay[day]?.done||[]) });
 });
-
 app.post("/kitchen/done", requireAuth, (req, res) => {
-  const id = Number(req.body?.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ success: false, message: "Invalid id." });
-
-  const kitchen = todaysKitchen();
-  const idx = kitchen.pending.findIndex(o => Number(o.id) === id);
-  if (idx === -1) return res.status(404).json({ success: false, message: "Order nicht gefunden." });
-
-  const [order] = kitchen.pending.splice(idx, 1);
-  kitchen.done.push({ ...order, doneAt: new Date().toISOString() });
-  saveDB(db);
-
-  res.json({ success: true });
+  const { orderId } = req.body||{};
+  const day = db.meta.currentDay;
+  const kitchen = db.kitchenByDay[day];
+  if (!kitchen) return res.status(404).json({ success:false });
+  const idx = kitchen.pending.findIndex(o => Number(o.id)===Number(orderId));
+  if (idx !== -1) kitchen.done.push(...kitchen.pending.splice(idx,1));
+  saveDB(db); res.json({ success:true });
 });
-
 app.post("/kitchen/reset", requireAuth, requireBoss, (req, res) => {
-  rotateDayIfNeeded();
   const day = db.meta.currentDay;
-  db.kitchenByDay[day] = { pending: [], done: [] };
-  saveDB(db);
-  res.json({ success: true });
+  db.kitchenByDay[day] = { pending:[], done:[] };
+  saveDB(db); res.json({ success:true });
 });
 
-/* =========================
-   RESET TODAY
-   ========================= */
-app.post("/reset/today", requireAuth, requireBoss, (req, res) => {
-  rotateDayIfNeeded();
-  const day = db.meta.currentDay;
-  db.salesByDay[day] = [];
-  db.kitchenByDay[day] = { pending: [], done: [] };
-  saveDB(db);
-  res.json({ success: true });
-});
-
-// Reset ALL sales, purchases, tips and closed days (Testphase only)
-app.post("/reset/all-data", requireAuth, requireBoss, (req, res) => {
-  db.salesByDay = {};
-  db.kitchenByDay = {};
-  db.purchases = [];
-  db.closedDays = {};
-  db.meta.nextOrderId = 1;
-  saveDB(db);
-  res.json({ success: true });
-});
-
-/* =========================
-   STAFF CONSUMPTION REPORT
-   ========================= */
-app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
-  const all = Object.values(db.salesByDay || {}).flat().filter(s => s.staffOrder);
-  // Group by staffEmployee, track individual bookings with date
-  const byEmployee = {};
-  for (const s of all) {
-    const key = s.staffEmployee || s.employeeUsername || "—";
-    const name = s.staffEmployeeName || s.employee || key;
-    if (!byEmployee[key]) byEmployee[key] = { username: key, name, bookings: [], total: 0, orders: 0 };
-    byEmployee[key].orders++;
-    byEmployee[key].bookings.push({
-      date: s.day || String(s.time || "").slice(0, 10),
-      time: s.timeHM || String(s.time || "").slice(11, 16),
-      items: (s.items || []).map(it => ({ name: String(it.name||""), qty: Number(it.qty)||1 }))
-    });
-  }
-  // Sort bookings newest first
-  const result = Object.values(byEmployee).map(e => ({
-    ...e,
-    bookings: e.bookings.sort((a,b) => String(b.date+b.time).localeCompare(String(a.date+a.time)))
-  })).sort((a,b) => b.orders - a.orders);
-  res.json({ success: true, entries: result });
-});
-
-/* =========================
-   REPORTS (Day details only; keep existing endpoints if you have more)
-   ========================= */
-// Helper: sum purchase costs for a list of day keys
-/* =========================
-   SPECIAL BURGER WEEKLY CYCLE
-   ========================= */
-const SPECIAL_BURGER_CYCLE = [
-  "Crispy Tropical Fish Burger",
-  "Smokey Mountain",
-  "Sweet & Salty Crunch",
-  "Spicy Inferno",
-  "Veggie Volcano"
-];
-const SPECIAL_BURGER_START_WEEK = 9; // KW13=Veggie Volcano, KW14=Crispy Tropical Fish
-
-function getISOWeek(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-function getCurrentSpecialBurgerName() {
-  const week = getISOWeek(new Date());
-  const idx = ((week - SPECIAL_BURGER_START_WEEK) % SPECIAL_BURGER_CYCLE.length + SPECIAL_BURGER_CYCLE.length) % SPECIAL_BURGER_CYCLE.length;
-  return SPECIAL_BURGER_CYCLE[idx];
-}
-
-/* =========================
-   BANK BALANCE HELPER
-   ========================= */
-function adjustBankBalance(amount, note) {
-  if (!Number.isFinite(amount) || amount === 0) return;
-  if (!Number.isFinite(db.bankBalance)) db.bankBalance = 0;
-  const prev = db.bankBalance;
-  db.bankBalance = Math.round((db.bankBalance + amount) * 100) / 100;
-  db.bankBalanceUpdatedAt = new Date().toISOString();
-  if (!Array.isArray(db.bankHistory)) db.bankHistory = [];
-  db.bankHistory.push({
-    ts: db.bankBalanceUpdatedAt,
-    balance: db.bankBalance,
-    prev,
-    diff: Math.round(amount * 100) / 100,
-    note: note || null,
-    by: "system",
-    byName: "System"
-  });
-  if (db.bankHistory.length > 500) db.bankHistory = db.bankHistory.slice(-500);
-}
-
-function getExpensesCosts(dayKeys) {
-  const keySet = new Set(dayKeys);
-  return (db.expenses || [])
-    .filter(e => keySet.has(String(e.date || "").slice(0, 10)))
-    .reduce((s, e) => s + Number(e.amount || 0), 0);
-}
-
-function getPurchaseCosts(dayKeys) {
-  let total = 0;
-  for (const dayKey of dayKeys) {
-    if (db.purchaseOverrides && db.purchaseOverrides[dayKey] != null) {
-      total += Number(db.purchaseOverrides[dayKey]);
-    } else {
-      total += (db.purchases || [])
-        .filter(p => String(p.date || "").slice(0, 10) === dayKey)
-        .reduce((s, p) => s + (Number(p.price) > 0 ? Number(p.qty || 0) * Number(p.price) : 0), 0);
-    }
-  }
-  return total;
-}
-
+// ── Reports ───────────────────────────────────────────────────────────────────
 app.get("/reports/day-details", requireAuth, requireBossOrManager, (req, res) => {
   rotateDayIfNeeded();
-  const dateStr = String(req.query?.date || db.meta.currentDay);
+  const dateStr = String(req.query?.date||db.meta.currentDay);
   const date = parseDateYYYYMMDD(dateStr);
-  if (!date) return res.status(400).json({ success: false, message: "Ungültiges Datum. Format: YYYY-MM-DD" });
-
-  const dayKey = getDayKeyLocal(date);
-  const sales = Array.isArray(db.salesByDay[dayKey]) ? db.salesByDay[dayKey] : [];
-
+  if (!date) return res.status(400).json({ success:false, message:"Ungültiges Datum." });
+  const key = getDayKeyLocal(date);
+  const sales = db.salesByDay[key]||[];
+  const dayKeys = [key];
   const totals = {
-    revenue: sales.reduce((s, x) => s + Number(x.total || 0), 0),
-    tips: sales.reduce((s, x) => s + Number(x.tip || 0), 0),
-    orders: sales.length
+    revenue:  sales.reduce((s,x)=>s+Number(x.total||0),0),
+    tips:     sales.reduce((s,x)=>s+Number(x.tip||0),0),
+    cash:     sales.filter(x=>x.isCash).reduce((s,x)=>s+Number(x.total||0),0),
+    orders:   sales.length,
+    purchases: getPurchaseCosts(dayKeys),
+    expenses:  getExpensesCosts(dayKeys),
   };
-  totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
-  totals.purchases = getPurchaseCosts([dayKey]);
-  totals.expenses = getExpensesCosts([dayKey]);
-  totals.guthabenRevenue = sales.filter(s => s.paymentMethod === "guthabenTopup").reduce((sum, s) => sum + Number(s.total||0), 0);
-  totals.cashRevenue = sales.filter(s => s.isCash && !s.cashTransferred).reduce((sum, s) => sum + Number(s.total||0) + Number(s.tip||0), 0);
   totals.profit = totals.revenue - totals.purchases - totals.expenses;
-
-  const byEmployeeMap = {};
+  totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
+  const byEmployee = {};
   for (const s of sales) {
-    const empKey = String(s.employeeUsername || s.employee || "—");
-    if (!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue: 0, tips: 0, orders: 0, avg: 0, cashRevenue: 0 };
-    byEmployeeMap[empKey].revenue += Number(s.total || 0);
-    byEmployeeMap[empKey].tips += Number(s.tip || 0);
-    byEmployeeMap[empKey].orders += 1;
-    if (s.isCash && !s.cashTransferred) byEmployeeMap[empKey].cashRevenue += Number(s.total || 0) + Number(s.tip || 0);
-    if (s.isCash && !s.cashTransferred) byEmployeeMap[empKey].hasPendingCash = true;
+    const k = s.employeeUsername||s.employee||"—";
+    if (!byEmployee[k]) byEmployee[k] = { username:k, employee:s.employee||k, revenue:0, tips:0, orders:0 };
+    byEmployee[k].revenue += Number(s.total||0);
+    byEmployee[k].tips    += Number(s.tip||0);
+    byEmployee[k].orders++;
   }
-  const byEmployee = Object.values(byEmployeeMap).map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  sales.sort((a, b) => String(a.time).localeCompare(String(b.time)));
-
-  const dayExpenses = (db.expenses || []).filter(e => String(e.date||"").slice(0,10) === dayKey)
-    .sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
-  res.json({
-    success: true,
-    day: dayKey,
-    closed: db.closedDays ? (db.closedDays[dayKey] || null) : null,
-    totals,
-    byEmployee,
-    sales,
-    expenses: dayExpenses
-  });
+  res.json({ success:true, date:dateStr, key, sales, totals,
+    byEmployee: Object.values(byEmployee).sort((a,b)=>b.revenue-a.revenue),
+    closed: !!db.closedDays?.[key] });
 });
 
-// Current special burger name
-app.get("/special-burger-name", requireAuth, (req, res) => {
-  res.json({ success: true, name: getCurrentSpecialBurgerName() });
-});
-
-// ===== KOCHEN =====
-// CRATE_CONFIG: wie viele Einheiten liefert 1 Lebensmittelkarton pro Produkt
-const CRATE_CONFIG_COOK = {
-  "The Heartstopper":  5,
-  "Vegan Burger":      8,
-  "The Bleeder":       6,
-  "The Chicken":       7,
-  "The Chozzo":        7,
-  "The German":        5,
-  "Special Burger":    3,
-  "Breakfast Deluxe":  5,
-  "Fries":            13,
-  "Cheesy Fries":     10,
-  "Onion Rings":      13,
-  "Chicken Nuggets":   8,
-  "Coleslaw":          8,
-  "Donut":            10,
-  "Caramel Sundae":   10,
-  "Chocolate Sundae": 10,
-  "Strawberry Sundae":10,
-  "Milchshake":        8,
-  "ECola":            10,
-  "ECola Light":      10,
-  "Sprunk":           10,
-  "Sprunk Light":     10,
-  "Slush":             8,
-  "Slush Atom":        8,
-  "Splashy Drink":    10,
-};
-
-app.post("/cook", requireAuth, (req, res) => {
-  const items = req.body?.items; // [{name, qty}]
-  if(!Array.isArray(items) || items.length === 0)
-    return res.status(400).json({ success:false, message:"Keine Items." });
-
-  // Calculate total Kartons needed
-  let totalKartons = 0;
-  const breakdown = [];
-  for(const item of items){
-    const qty = Number(item.qty) || 0;
-    if(qty <= 0) continue;
-    const perKarton = CRATE_CONFIG_COOK[item.name];
-    if(!perKarton) continue;
-    const kartons = qty / perKarton;
-    totalKartons += kartons;
-    breakdown.push({ name: item.name, qty, kartons: Math.round(kartons * 100)/100 });
-  }
-  totalKartons = Math.ceil(totalKartons * 100) / 100;
-
-  // Deduct from Lebensmittelkarton stock
-  const lmk = (db.inventory||[]).find(x => x.id === "lmk");
-  if(!lmk) return res.status(404).json({ success:false, message:"Lebensmittelkarton nicht im Lager." });
-  if(lmk.stock < totalKartons)
-    return res.status(400).json({ success:false, message:`Nicht genug Kartons. Benötigt: ${totalKartons.toFixed(2)}, Vorhanden: ${lmk.stock}` });
-
-  lmk.stock = Math.round((lmk.stock - totalKartons) * 100) / 100;
-  lmk.updatedAt = new Date().toISOString();
-
-  // Add cooked items to inventory
-  const now = new Date().toISOString();
-  for(const item of breakdown){
-    // Find or create inventory entry for this product
-    const invId = "cooked_" + item.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-    let invItem = (db.inventory||[]).find(x => x.id === invId);
-    if(!invItem){
-      invItem = { id: invId, name: item.name, unit:"Stk", stock:0, minStock:0, ekPrice:0, createdAt:now, updatedAt:now };
-      db.inventory.push(invItem);
-    }
-    invItem.stock = Math.round((Number(invItem.stock)||0)*100 + item.qty*100) / 100;
-    invItem.updatedAt = now;
-  }
-
-  saveDB(db);
-  res.json({ success:true, kartonsUsed: totalKartons, remaining: lmk.stock, breakdown });
-});
-
-// ===== ZUTATEN =====
-app.get("/zutaten", requireAuth, (req, res) => {
-  res.json({ success:true, zutaten: db.zutaten || [] });
-});
-
-app.post("/zutaten", requireAuth, requireBoss, (req, res) => {
-  const name        = String(req.body?.name || "").trim();
-  const ingredients = String(req.body?.ingredients || "").trim();
-  const category    = String(req.body?.category || "Sonstiges").trim();
-  if(!name) return res.status(400).json({ success:false, message:"Name fehlt." });
-  if(!Array.isArray(db.zutaten)) db.zutaten = [];
-  // Update existing or add new
-  const existing = db.zutaten.find(z => z.name === name);
-  if(existing){ existing.ingredients = ingredients; existing.category = category; }
-  else { db.zutaten.push({ id: makeToken().slice(0,10), name, category, ingredients }); }
-  saveDB(db);
-  res.json({ success:true, zutaten: db.zutaten });
-});
-
-app.put("/zutaten/:id", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "");
-  const entry = (db.zutaten||[]).find(z => z.id === id);
-  if(!entry) return res.status(404).json({ success:false, message:"Nicht gefunden." });
-  if(req.body?.name)        entry.name        = String(req.body.name).trim();
-  if(req.body?.category)    entry.category    = String(req.body.category).trim();
-  if(req.body?.ingredients) entry.ingredients = String(req.body.ingredients).trim();
-  saveDB(db);
-  res.json({ success:true, zutaten: db.zutaten });
-});
-
-app.delete("/zutaten/:id", requireAuth, requireBoss, (req, res) => {
-  const id = String(req.params.id || "");
-  db.zutaten = (db.zutaten||[]).filter(z => z.id !== id);
-  saveDB(db);
-  res.json({ success:true });
-});
-
-// ===== FIRMENAUSGABEN =====
-app.get("/expenses", requireAuth, requireBossOrManager, (req, res) => {
-  const date = String(req.query?.date || "");
-  let list = db.expenses || [];
-  if(date) list = list.filter(e => String(e.date||"").slice(0,10) === date);
-  list = list.slice().sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  res.json({ success: true, expenses: list });
-});
-
-app.post("/expenses", requireAuth, requireBossOrManager, (req, res) => {
-  const category = String(req.body?.category || "").trim();
-  const note     = String(req.body?.note || "").trim();
-  const amount   = Number(req.body?.amount);
-  const date     = String(req.body?.date || getDayKeyLocal(new Date())).slice(0,10);
-  if(!category || !amount || amount <= 0) return res.status(400).json({ success:false, message:"Kategorie und Betrag erforderlich." });
-  const entry = {
-    id: makeToken().slice(0,12),
-    category, note, amount, date,
-    createdAt: new Date().toISOString(),
-    createdBy: req.user.displayName || req.user.username
-  };
-  if(!Array.isArray(db.expenses)) db.expenses = [];
-  db.expenses.push(entry);
-
-  // Firmenausgabe → vom Kontostand abziehen
-  adjustBankBalance(-amount, `Firmenausgabe: ${category}${note ? ' – ' + note : ''}`);
-
-  saveDB(db);
-  res.json({ success: true, entry });
-});
-
-app.delete("/expenses/:id", requireAuth, requireBossOrManager, (req, res) => {
-  const id = String(req.params.id || "");
-  const entry = (db.expenses||[]).find(e => e.id === id);
-  if(!entry) return res.status(404).json({ success:false, message:"Nicht gefunden." });
-  // Restore bank balance
-  adjustBankBalance(Number(entry.amount||0), `Firmenausgabe storniert: ${entry.category}`);
-  db.expenses = db.expenses.filter(e => e.id !== id);
-  saveDB(db);
-  res.json({ success: true });
-});
-
-app.put("/reports/purchases-override", requireAuth, requireBoss, (req, res) => {
-  const date   = String(req.body?.date || "").slice(0,10);
-  const amount = Number(req.body?.amount);
-  if(!date) return res.status(400).json({ success:false, message:"Datum fehlt." });
-  if(!Number.isFinite(amount) || amount < 0) return res.status(400).json({ success:false, message:"Ungültiger Betrag." });
-  if(!db.purchaseOverrides) db.purchaseOverrides = {};
-  const old = db.purchaseOverrides[date] ?? getPurchaseCosts([date]);
-  const diff = amount - old;
-  db.purchaseOverrides[date] = Math.round(amount * 100) / 100;
-  if(diff !== 0) adjustBankBalance(-diff, `Einkaufskosten korrigiert (${date})`);
-  saveDB(db);
-  res.json({ success:true, amount: db.purchaseOverrides[date] });
-});
-
-// Week report by employee (Calendar Week)
-// GET /reports/week-employee?week=YYYY-Www
 app.get("/reports/week-employee", requireAuth, (req, res) => {
   rotateDayIfNeeded();
-
-  const weekStr = String(req.query?.week || "");
-  const parsed = parseWeekYYYY_Www(weekStr);
-  if (!parsed) return res.status(400).json({ success: false, message: "Ungültige KW. Format: YYYY-Www (z.B. 2026-W08)" });
-
+  const parsed = parseWeekYYYY_Www(req.query?.week);
+  if (!parsed) return res.status(400).json({ success:false, message:"Ungültige KW." });
   const start = isoWeekStartDate(parsed.year, parsed.week);
-  const dayKeys = [];
-  const salesAll = [];
-
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(start, i);
-    const key = getDayKeyLocal(d);
-    dayKeys.push(key);
-    const sales = Array.isArray(db.salesByDay[key]) ? db.salesByDay[key] : [];
-    salesAll.push(...sales);
+  const dayKeys = [], salesAll = [];
+  for (let i=0;i<7;i++) {
+    const d = addDays(start,i), k = getDayKeyLocal(d);
+    dayKeys.push(k);
+    salesAll.push(...(db.salesByDay[k]||[]));
   }
-
   const totals = {
-    revenue: salesAll.reduce((s, x) => s + Number(x.total || 0), 0),
-    tips: salesAll.reduce((s, x) => s + Number(x.tip || 0), 0),
-    orders: salesAll.length
+    revenue:  salesAll.reduce((s,x)=>s+Number(x.total||0),0),
+    tips:     salesAll.reduce((s,x)=>s+Number(x.tip||0),0),
+    orders:   salesAll.length,
+    purchases: getPurchaseCosts(dayKeys),
+    expenses:  getExpensesCosts(dayKeys),
   };
-  totals.avg = totals.orders > 0 ? totals.revenue / totals.orders : 0;
-  totals.purchases = getPurchaseCosts(dayKeys);
-  totals.expenses = getExpensesCosts(dayKeys);
+  totals.avg    = totals.orders>0 ? totals.revenue/totals.orders : 0;
   totals.profit = totals.revenue - totals.purchases - totals.expenses;
 
   const byEmployeeMap = {};
   for (const s of salesAll) {
-    const empKey = String(s.employeeUsername || s.employee || "—");
-    if (!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue: 0, tips: 0, orders: 0, avg: 0 };
-    byEmployeeMap[empKey].revenue += Number(s.total || 0);
-    byEmployeeMap[empKey].tips += Number(s.tip || 0);
-    byEmployeeMap[empKey].orders += 1;
+    const k = s.employeeUsername||s.employee||"—";
+    if (!byEmployeeMap[k]) byEmployeeMap[k] = { employeeUsername:k, employee:s.employee||k, revenue:0, tips:0, orders:0, cashRevenue:0 };
+    byEmployeeMap[k].revenue += Number(s.total||0);
+    byEmployeeMap[k].tips    += Number(s.tip||0);
+    byEmployeeMap[k].orders++;
+    if (s.isCash) byEmployeeMap[k].cashRevenue += Number(s.total||0);
   }
-
   const byEmployee = Object.values(byEmployeeMap)
-    .map(x => ({ ...x, avg: x.orders > 0 ? x.revenue / x.orders : 0 }))
-    .sort((a, b) => b.revenue - a.revenue);
+    .map(x=>({...x, avg:x.orders>0?x.revenue/x.orders:0}))
+    .sort((a,b)=>b.revenue-a.revenue);
 
-  // Kisten-Konfiguration: Artikel pro Kiste
-  const CRATE_CONFIG = {
-    "The Heartstopper":    5,
-    "Vegan Burger":        8,
-    "The Bleeder":         6,
-    "The Chicken":         7,
-    "The Chozzo":          7,
-    "The German":          5,
-    "Special Burger":      3,
-    "Breakfast Deluxe":    5,
-    "Fries":              13,
-    "Cheesy Fries":       10,
-    "Onion Rings":        13,
-    "Chicken Nuggets":     8,
-    "Coleslaw":            8,
-    "Donut":              10,
-    "Caramel Sundae":     10,
-    "Chocolate Sundae":   10,
-    "Strawberry Sundae":  10,
-    "Milchshake":          8,
-    "ECola":              10,
-    "ECola Light":        10,
-    "Sprunk":             10,
-    "Sprunk Light":       10,
-    "Slush":               8,
-    "Slush Atom":          8,
-    "Splashy Drink":      10,
-  };
-
-  // Count individual products sold this week — expand menu components
+  // Products sold — expand menu components
+  const allProds = getProducts(db);
   const byProductMap = {};
-  const addProduct = (name, qty, revenue) => {
-    const key = String(name || "").trim();
-    if (!key) return;
-    if (!byProductMap[key]) byProductMap[key] = { name: key, qty: 0, revenue: 0 };
-    byProductMap[key].qty     += qty;
-    byProductMap[key].revenue += revenue;
+  const addProd = (name, qty, rev) => {
+    const k = String(name||"").trim(); if (!k) return;
+    if (!byProductMap[k]) byProductMap[k] = { name:k, qty:0, revenue:0 };
+    byProductMap[k].qty += qty; byProductMap[k].revenue += rev;
   };
-
   for (const s of salesAll) {
-    for (const item of (s.items || [])) {
-      const itemQty = Number(item.qty || 1);
-
-      if (Array.isArray(item.components) && item.components.length > 0) {
-        // Menu item: use components (individual products) and split price proportionally
-        // Don't count the menu name itself — count the components
-        // Use DEFAULT_PRODUCTS as lookup source (db.products may be empty)
-        const allProds = [...DEFAULT_PRODUCTS, ...(db.products||[])];
-        const findProd = (id) => allProds.find(p => p.id === id);
-        const totalCompPrice = item.components.reduce((sum, c) => {
-          const prod = findProd(c.productId);
-          return sum + ((prod?.price || 0) * (c.qty || 1));
-        }, 0);
-        for (const comp of item.components) {
-          const prod = findProd(comp.productId);
-          const compName = prod?.name || comp.productId;
-          const compQty = (comp.qty || 1) * itemQty;
-          const compRevenue = totalCompPrice > 0
-            ? (item.price || 0) * itemQty * ((prod?.price||0) * (comp.qty||1)) / totalCompPrice
-            : 0;
-          addProduct(compName, compQty, compRevenue);
+    for (const item of (s.items||[])) {
+      const itemQty = Number(item.qty)||1;
+      if (Array.isArray(item.components) && item.components.length) {
+        const totalCP = item.components.reduce((sum,c)=>{
+          const p = allProds.find(x=>x.id===c.productId);
+          return sum + (p?.price||0)*(c.qty||1);
+        },0);
+        for (const c of item.components) {
+          const p = allProds.find(x=>x.id===c.productId);
+          const cName = p?.name||c.productId, cQty=(c.qty||1)*itemQty;
+          const cRev = totalCP>0 ? (item.price||0)*itemQty*(p?.price||0)*(c.qty||1)/totalCP : 0;
+          addProd(cName, cQty, cRev);
         }
       } else {
-        // Regular item — skip delivery fee and meta items
-        const name = String(item.name || "").trim();
-        if (name.includes("Liefergebühr") || name.includes("🛵")) continue;
-        addProduct(name, itemQty, (item.price || 0) * itemQty);
+        const name = String(item.name||"").replace(/ \(kein Side\)$/,"").trim();
+        if (name.includes("Liefergebühr")) continue;
+        addProd(name, itemQty, (item.price||0)*itemQty);
       }
     }
   }
   const byProduct = Object.values(byProductMap)
-    .map(p => ({
-      ...p,
-      perCrate: CRATE_CONFIG[p.name] || null,
-      crates: CRATE_CONFIG[p.name] ? Math.ceil(p.qty / CRATE_CONFIG[p.name]) : null
-    }))
-    .sort((a, b) => b.qty - a.qty);
+    .map(p=>({...p, perCrate:CRATE_CONFIG[p.name]||null, crates:CRATE_CONFIG[p.name]?Math.ceil(p.qty/CRATE_CONFIG[p.name]):null}))
+    .sort((a,b)=>b.qty-a.qty);
 
-  res.json({
-    success: true,
-    week: `${parsed.year}-W${String(parsed.week).padStart(2, "0")}`,
-    range: { start: dayKeys[0], end: dayKeys[6] },
-    totals,
-    byEmployee,
-    byProduct
-  });
+  const weeksSet = new Set();
+  for (const k of dayKeys) {
+    const d = parseDateYYYYMMDD(k);
+    if (d) weeksSet.add(`${d.getFullYear()}-W${String(getISOWeek(d)).padStart(2,"0")}`);
+  }
+  res.json({ success:true,
+    week:`${parsed.year}-W${String(parsed.week).padStart(2,"0")}`,
+    range:{ start:dayKeys[0], end:dayKeys[6] },
+    totals, byEmployee, byProduct, weeks:Array.from(weeksSet) });
 });
 
-// Month report: exact calendar days from 1st to last day of month
-// GET /reports/month-employee?month=YYYY-MM
 app.get("/reports/month-employee", requireAuth, requireBoss, (req, res) => {
   rotateDayIfNeeded();
-
-  const monthStr = String(req.query?.month || "");
-  const parsed = parseMonthYYYY_MM(monthStr);
-  if(!parsed) return res.status(400).json({ success:false, message:"Ungültiger Monat. Format: YYYY-MM (z.B. 2026-02)" });
-
-  const start = new Date(parsed.year, parsed.month - 1, 1);
-  start.setHours(0,0,0,0);
-  const end = new Date(parsed.year, parsed.month, 0); // last day of month
-  end.setHours(0,0,0,0);
-
-  // Collect only days within the exact calendar month
-  const salesAll = [];
-  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
-    const key = getDayKeyLocal(d);
-    const sales = Array.isArray(db.salesByDay[key]) ? db.salesByDay[key] : [];
-    salesAll.push(...sales);
+  const parsed = parseMonthYYYY_MM(req.query?.month);
+  if (!parsed) return res.status(400).json({ success:false, message:"Ungültiger Monat." });
+  const start = new Date(parsed.year, parsed.month-1, 1); start.setHours(0,0,0,0);
+  const end   = new Date(parsed.year, parsed.month, 0);   end.setHours(0,0,0,0);
+  const salesAll = [], dayKeys = [];
+  for (let d=new Date(start); d<=end; d=addDays(d,1)) {
+    const k = getDayKeyLocal(d); dayKeys.push(k);
+    salesAll.push(...(db.salesByDay[k]||[]));
   }
-
   const totals = {
-    revenue: salesAll.reduce((s,x)=> s + Number(x.total||0), 0),
-    tips: salesAll.reduce((s,x)=> s + Number(x.tip||0), 0),
-    orders: salesAll.length
+    revenue:  salesAll.reduce((s,x)=>s+Number(x.total||0),0),
+    tips:     salesAll.reduce((s,x)=>s+Number(x.tip||0),0),
+    orders:   salesAll.length,
+    purchases: getPurchaseCosts(dayKeys),
+    expenses:  getExpensesCosts(dayKeys),
   };
-  totals.avg = totals.orders>0 ? totals.revenue / totals.orders : 0;
-
-  // collect all day keys in this month for purchase cost lookup
-  const monthDayKeys = [];
-  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
-    monthDayKeys.push(getDayKeyLocal(d));
-  }
-  totals.purchases = getPurchaseCosts(monthDayKeys);
-  totals.expenses = getExpensesCosts(monthDayKeys);
+  totals.avg = totals.orders>0 ? totals.revenue/totals.orders : 0;
   totals.profit = totals.revenue - totals.purchases - totals.expenses;
-
   const byEmployeeMap = {};
-  for(const s of salesAll){
-    const empKey = String(s.employeeUsername || s.employee || "—");
-    if(!byEmployeeMap[empKey]) byEmployeeMap[empKey] = { employeeUsername: empKey, employee: s.employee || empKey, revenue:0, tips:0, orders:0, avg:0 };
-    byEmployeeMap[empKey].revenue += Number(s.total||0);
-    byEmployeeMap[empKey].tips += Number(s.tip||0);
-    byEmployeeMap[empKey].orders += 1;
+  for (const s of salesAll) {
+    const k = s.employeeUsername||s.employee||"—";
+    if (!byEmployeeMap[k]) byEmployeeMap[k] = { employeeUsername:k, employee:s.employee||k, revenue:0, tips:0, orders:0 };
+    byEmployeeMap[k].revenue += Number(s.total||0);
+    byEmployeeMap[k].tips    += Number(s.tip||0);
+    byEmployeeMap[k].orders++;
   }
   const byEmployee = Object.values(byEmployeeMap)
-    .map(x => ({ ...x, avg: x.orders>0 ? x.revenue/x.orders : 0 }))
-    .sort((a,b)=> b.revenue - a.revenue);
-
-  // Build list of ISO weeks that appear in this month
+    .map(x=>({...x,avg:x.orders>0?x.revenue/x.orders:0})).sort((a,b)=>b.revenue-a.revenue);
   const weeksSet = new Set();
-  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
-    const {year, week} = isoWeekYearWeek(d);
-    weeksSet.add(`${year}-W${String(week).padStart(2,'0')}`);
+  for (const k of dayKeys) {
+    const d = parseDateYYYYMMDD(k);
+    if (d) weeksSet.add(`${d.getFullYear()}-W${String(getISOWeek(d)).padStart(2,"0")}`);
   }
-  const weeks = Array.from(weeksSet);
-
-  return res.json({
-    success:true,
-    month: monthStr,
-    weeks,
-    totals,
-    byEmployee
-  });
+  res.json({ success:true, month:req.query.month, totals, byEmployee, weeks:Array.from(weeksSet) });
 });
 
+app.get("/reports/staff-consumption", requireAuth, requireBoss, (req, res) => {
+  rotateDayIfNeeded();
+  const dateStr = String(req.query?.date||db.meta.currentDay);
+  const date = parseDateYYYYMMDD(dateStr);
+  if (!date) return res.status(400).json({ success:false });
+  const key = getDayKeyLocal(date);
+  const staffSales = (db.salesByDay[key]||[]).filter(s=>s.staffOrder);
+  res.json({ success:true, date:dateStr, sales:staffSales });
+});
 
-// close day
 app.post("/reports/close-day", requireAuth, requireBoss, (req, res) => {
   rotateDayIfNeeded();
-  const dateStr = String(req.body?.date || db.meta.currentDay);
+  const dateStr = String(req.body?.date||db.meta.currentDay);
   const date = parseDateYYYYMMDD(dateStr);
-  if (!date) return res.status(400).json({ success: false, message: "Ungültiges Datum. Format: YYYY-MM-DD" });
-  const dayKey = getDayKeyLocal(date);
-
-  // Invalidate all non-boss sessions on day close
-  for (const [tok, sess] of Object.entries(db.sessions || {})) {
-    if (tok === req.token) continue; // keep own session
+  if (!date) return res.status(400).json({ success:false, message:"Ungültiges Datum." });
+  const key = getDayKeyLocal(date);
+  if (db.closedDays?.[key]) return res.status(409).json({ success:false, message:"Bereits abgeschlossen." });
+  if (!db.closedDays) db.closedDays = {};
+  db.closedDays[key] = { closedAt: new Date().toISOString(), cashCount:req.body?.cashCount, note:req.body?.note||"" };
+  // Invalidate non-boss sessions
+  for (const [tok, sess] of Object.entries(db.sessions||{})) {
+    if (tok === req.token) continue;
     const u = db.users.find(x => x.username === sess.username);
     if (!u || u.role !== "boss") delete db.sessions[tok];
   }
-
-  if (!db.closedDays || typeof db.closedDays !== "object") db.closedDays = {};
-  if (db.closedDays[dayKey]) return res.status(409).json({ success: false, message: "Tag ist bereits abgeschlossen." });
-
-  const cashCount = req.body?.cashCount;
-  const note = String(req.body?.note || "");
-
-  db.closedDays[dayKey] = {
-    closedAt: new Date().toISOString(),
-    closedBy: req.user.username,
-    closedByName: req.user.displayName,
-    cashCount: cashCount != null && cashCount !== "" ? Number(cashCount) : null,
-    note: note || ""
-  };
-
-  saveDB(db);
-  return res.json({ success: true, closed: db.closedDays[dayKey] });
-});
-
-/* =========================
-   FRONTEND
-   ========================= */
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-
-
-// SSE stream for carts (auth required if middleware exists)
-app.get("/events/carts", (req, res) => {
-  res.status(200);
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  if(res.flushHeaders) res.flushHeaders();
-
-  cartsClients.add(res);
-  try{ res.write("data: " + JSON.stringify({ rev: cartsRev, carts: cartsState }) + "\n\n"); }catch(e){}
-
-  req.on("close", () => {
-    try{ cartsClients.delete(res); }catch(e){}
-  });
-});
-
-app.get("/carts", (req, res) => {
-  res.json({ success: true, rev: cartsRev, carts: cartsState });
-});
-
-app.put("/carts", (req, res) => {
-  try{
-    const incoming = req.body && req.body.carts;
-    cartsState = normalizeCarts(incoming);
-    cartsRev = (Number(cartsRev)||0) + 1;
-    persistCartsToDb();
-    broadcastCarts();
-    res.json({ success: true, rev: cartsRev });
-  }catch(e){
-    res.status(400).json({ success: false, message: "Bad carts payload" });
+  // Cash booking
+  if (req.body?.cashCount !== undefined) {
+    const daySales = db.salesByDay[key]||[];
+    const cashTotal = daySales.filter(s=>s.isCash).reduce((s,x)=>s+Number(x.total||0)+Number(x.tip||0),0);
+    adjustBank(cashTotal, `Tagesabschluss Bar ${key}`);
   }
+  saveDB(db);
+  res.json({ success:true, key });
 });
 
+// ── Bank ──────────────────────────────────────────────────────────────────────
+app.get("/bank-balance", requireAuth, requireBossOrManager, (req, res) =>
+  res.json({ success:true, balance: db.bankBalance||0, updatedAt: db.bankBalanceUpdatedAt||null }));
 
-// Presence stream (SSE)
-app.get("/events/presence", (req, res) => {
-  res.status(200);
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  if(res.flushHeaders) res.flushHeaders();
+app.get("/bank-balance/history", requireAuth, requireBoss, (req, res) =>
+  res.json({ success:true, log: (db.bankLog||[]).slice(0,200) }));
 
-  presenceClients.add(res);
-  try{ res.write("data: " + JSON.stringify({ presence: presenceState, online: onlineUsers, ts: Date.now() }) + "\n\n"); }catch(e){}
-
-  req.on("close", () => {
-    try{ presenceClients.delete(res); }catch(e){}
-  });
+app.put("/bank-balance", requireAuth, requireBoss, (req, res) => {
+  const val = Number(req.body?.balance);
+  if (!Number.isFinite(val)) return res.status(400).json({ success:false });
+  const diff = val - (db.bankBalance||0);
+  adjustBank(diff, "Manuelle Korrektur");
+  saveDB(db);
+  res.json({ success:true, balance: db.bankBalance });
 });
 
-// Boss force-release a register
-app.post("/presence/force-clear", requireAuth, requireBoss, (req, res) => {
-  const register = String(req.body?.register || "");
-  if(!register || !presenceState[register]) return res.status(400).json({ success:false, message:"Ungültige Kasse." });
-  presenceState[register] = { users:{} };
+app.post("/cash-transferred", requireAuth, requireBoss, (req, res) => {
+  const amount = Number(req.body?.amount)||0;
+  adjustBank(-amount, "Bar übertragen");
+  saveDB(db);
+  res.json({ success:true, balance: db.bankBalance });
+});
+
+// ── Ausgaben ──────────────────────────────────────────────────────────────────
+app.get("/expenses", requireAuth, (req, res) =>
+  res.json({ success:true, expenses: db.expenses||[] }));
+
+app.post("/expenses", requireAuth, requireBossOrManager, (req, res) => {
+  const { category, amount, note, date } = req.body||{};
+  const amt = Number(amount)||0;
+  if (!category || amt <= 0) return res.status(400).json({ success:false, message:"Ungültig." });
+  const entry = { id: crypto.randomBytes(8).toString("hex"),
+    category: String(category), amount:amt, note:String(note||""),
+    date: String(date||"").slice(0,10)||getDayKeyLocal(new Date()),
+    createdAt:new Date().toISOString(), employee:req.user.displayName||req.user.username };
+  db.expenses.push(entry);
+  adjustBank(-amt, `Ausgabe: ${category}`);
+  saveDB(db);
+  res.json({ success:true, expense:entry });
+});
+
+app.delete("/expenses/:id", requireAuth, requireBossOrManager, (req, res) => {
+  const entry = (db.expenses||[]).find(e=>e.id===req.params.id);
+  if (!entry) return res.status(404).json({ success:false, message:"Nicht gefunden." });
+  adjustBank(Number(entry.amount||0), `Ausgabe storniert: ${entry.category}`);
+  db.expenses = db.expenses.filter(e=>e.id!==req.params.id);
+  saveDB(db);
+  res.json({ success:true });
+});
+
+// ── Mitarbeiter ───────────────────────────────────────────────────────────────
+app.get("/users", requireAuth, requireBossOrManager, (req, res) => {
+  const today = getDayKeyLocal(new Date());
+  res.json({ success:true, users: db.users.map(u=>({
+    username:u.username, displayName:u.displayName, role:u.role,
+    lastSeen:u.lastSeen||null, locked:u.locked||false,
+    firstLoginToday:(u.firstLoginByDay&&u.firstLoginByDay[today])||null
+  }))});
+});
+
+app.post("/users", requireAuth, requireBoss, (req, res) => {
+  const { username, displayName, role, password } = req.body||{};
+  if (!username||!displayName||!password||password.length<3)
+    return res.status(400).json({ success:false, message:"Fehlende Felder." });
+  const un = String(username).toLowerCase().trim();
+  if (db.users.find(u=>u.username===un))
+    return res.status(409).json({ success:false, message:"Username belegt." });
+  db.users.push({ username:un, displayName:String(displayName).trim(),
+    role:["boss","manager","staff"].includes(role)?role:"staff",
+    pw:hashPassword(password) });
+  saveDB(db);
+  res.json({ success:true });
+});
+
+app.put("/users/:username", requireAuth, requireBoss, (req, res) => {
+  const u = db.users.find(u=>u.username===req.params.username);
+  if (!u) return res.status(404).json({ success:false, message:"User nicht gefunden." });
+  if (req.body?.displayName) u.displayName = String(req.body.displayName).trim();
+  if (req.body?.role && u.role!=="boss") u.role = ["manager","staff"].includes(req.body.role)?req.body.role:"staff";
+  if (req.body?.password) {
+    u.pw = hashPassword(String(req.body.password));
+    // Invalidate sessions
+    for (const [tok,sess] of Object.entries(db.sessions||{}))
+      if (sess.username===u.username) delete db.sessions[tok];
+  }
+  saveDB(db);
+  res.json({ success:true });
+});
+
+app.post("/users/:username/lock", requireAuth, requireBoss, (req, res) => {
+  const u = db.users.find(u=>u.username===req.params.username);
+  if (!u) return res.status(404).json({ success:false });
+  if (u.role==="boss") return res.status(400).json({ success:false, message:"Chef kann nicht gesperrt werden." });
+  u.locked = !u.locked;
+  if (u.locked) for (const [tok,sess] of Object.entries(db.sessions||{}))
+    if (sess.username===u.username) delete db.sessions[tok];
+  saveDB(db);
+  res.json({ success:true, locked:u.locked });
+});
+
+app.delete("/users/:username", requireAuth, requireBoss, (req, res) => {
+  const un = req.params.username;
+  const u = db.users.find(u=>u.username===un);
+  if (!u) return res.status(404).json({ success:false });
+  if (u.role==="boss") return res.status(400).json({ success:false, message:"Chef kann nicht gelöscht werden." });
+  db.users = db.users.filter(u=>u.username!==un);
+  for (const [tok,sess] of Object.entries(db.sessions||{}))
+    if (sess.username===un) delete db.sessions[tok];
+  saveDB(db);
+  res.json({ success:true });
+});
+
+// ── Schwarzes Brett ───────────────────────────────────────────────────────────
+app.get("/board", requireAuth, (req, res) => res.json({ success:true, board:db.board||[] }));
+
+app.post("/board", requireAuth, requireBossOrManager, (req, res) => {
+  const { text, category } = req.body||{};
+  if (!text) return res.status(400).json({ success:false });
+  const entry = { id:crypto.randomBytes(8).toString("hex"), text:String(text).trim(),
+    category:String(category||"info"), author:req.user.displayName||req.user.username,
+    createdAt:new Date().toISOString(), readBy:[] };
+  db.board = db.board||[];
+  db.board.unshift(entry);
+  if (db.board.length > 50) db.board.length = 50;
+  saveDB(db);
+  res.json({ success:true, entry });
+});
+
+app.post("/board/mark-read", requireAuth, (req, res) => {
+  const { id } = req.body||{};
+  const entry = (db.board||[]).find(e=>e.id===id);
+  if (entry && !entry.readBy.includes(req.user.username)) entry.readBy.push(req.user.username);
+  saveDB(db);
+  res.json({ success:true });
+});
+
+app.delete("/board/:id", requireAuth, requireBossOrManager, (req, res) => {
+  db.board = (db.board||[]).filter(e=>e.id!==req.params.id);
+  saveDB(db);
+  res.json({ success:true });
+});
+
+// ── Zutaten ───────────────────────────────────────────────────────────────────
+app.get("/zutaten", requireAuth, (req, res) => res.json({ success:true, zutaten:db.zutaten||[] }));
+
+app.post("/zutaten", requireAuth, requireBossOrManager, (req, res) => {
+  const { name, zutaten } = req.body||{};
+  if (!name) return res.status(400).json({ success:false });
+  const existing = (db.zutaten||[]).find(z=>z.name.toLowerCase()===String(name).toLowerCase().trim());
+  if (existing) { existing.zutaten=String(zutaten||""); saveDB(db); return res.json({ success:true }); }
+  db.zutaten = db.zutaten||[];
+  db.zutaten.push({ id:crypto.randomBytes(6).toString("hex"), name:String(name).trim(), zutaten:String(zutaten||"") });
+  saveDB(db);
+  res.json({ success:true });
+});
+
+app.put("/zutaten/:id", requireAuth, requireBossOrManager, (req, res) => {
+  const z = (db.zutaten||[]).find(x=>x.id===req.params.id);
+  if (!z) return res.status(404).json({ success:false });
+  if (req.body?.name)    z.name    = String(req.body.name).trim();
+  if (req.body?.zutaten !== undefined) z.zutaten = String(req.body.zutaten);
+  saveDB(db); res.json({ success:true });
+});
+
+app.delete("/zutaten/:id", requireAuth, requireBossOrManager, (req, res) => {
+  db.zutaten = (db.zutaten||[]).filter(z=>z.id!==req.params.id);
+  saveDB(db); res.json({ success:true });
+});
+
+// ── Gutscheine ────────────────────────────────────────────────────────────────
+app.get("/guthaben-karten", requireAuth, requireBossOrManager, (req, res) =>
+  res.json({ success:true, cards: Object.values(db.giftCards||{}) }));
+
+app.get("/guthaben-karten/check", requireAuth, (req, res) => {
+  const code = String(req.query?.code||"").trim().toUpperCase();
+  const card = db.giftCards?.[code];
+  if (!card||!card.active) return res.json({ success:false, message:"Karte nicht gefunden." });
+  res.json({ success:true, card });
+});
+
+app.post("/guthaben-karten", requireAuth, requireBoss, (req, res) => {
+  const { code, amount } = req.body||{};
+  const c = String(code||"").trim().toUpperCase();
+  const a = Number(amount)||0;
+  if (!c||a<=0) return res.status(400).json({ success:false });
+  db.giftCards = db.giftCards||{};
+  db.giftCards[c] = { code:c, amount:a, remaining:a, active:true, createdAt:new Date().toISOString() };
+  saveDB(db); res.json({ success:true });
+});
+
+app.post("/guthaben-karten/pay", requireAuth, (req, res) => {
+  const { code, amount } = req.body||{};
+  const c = String(code||"").trim().toUpperCase();
+  const a = Number(amount)||0;
+  const card = db.giftCards?.[c];
+  if (!card||!card.active) return res.status(404).json({ success:false, message:"Karte nicht gefunden." });
+  if (card.remaining < a) return res.status(400).json({ success:false, message:"Nicht genug Guthaben." });
+  card.remaining = Math.round((card.remaining-a)*100)/100;
+  if (card.remaining <= 0) card.active = false;
+  saveDB(db); res.json({ success:true, remaining:card.remaining });
+});
+
+// ── Presence & Carts (SSE) ───────────────────────────────────────────────────
+app.get("/events/presence", requireAuth, (req, res) => {
+  res.setHeader("Content-Type","text/event-stream");
+  res.setHeader("Cache-Control","no-cache"); res.setHeader("Connection","keep-alive");
+  res.flushHeaders(); presenceClients.add(res);
+  try { res.write(`data: ${JSON.stringify({ presence:presenceState, online:onlineUsers, ts:Date.now() })}\n\n`); } catch(e){}
+  req.on("close", ()=>presenceClients.delete(res));
+});
+
+app.get("/events/carts", requireAuth, (req, res) => {
+  res.setHeader("Content-Type","text/event-stream");
+  res.setHeader("Cache-Control","no-cache"); res.setHeader("Connection","keep-alive");
+  res.flushHeaders(); cartsClients.add(res);
+  try { res.write(`data: ${JSON.stringify({ rev:cartsRev, carts:cartsState })}\n\n`); } catch(e){}
+  req.on("close", ()=>cartsClients.delete(res));
+});
+
+app.get("/carts", requireAuth, (req, res) =>
+  res.json({ success:true, rev:cartsRev, carts:cartsState }));
+
+app.put("/carts", requireAuth, (req, res) => {
+  const { carts, rev } = req.body||{};
+  if (rev !== undefined && Number(rev) < cartsRev)
+    return res.json({ success:false, stale:true, rev:cartsRev, carts:cartsState });
+  cartsState = normalizeCarts(carts||{});
+  broadcastCarts();
+  res.json({ success:true, rev:cartsRev });
+});
+
+app.post("/presence", (req, res) => {
+  const register = String(req.body?.register||"");
+  const username = String(req.body?.username||"").trim();
+  const name     = String(req.body?.name||username).trim();
+  if (!["1","2","3","4","5","6"].includes(register)||!username)
+    return res.status(400).json({ success:false });
+  for (const k of ["1","2","3","4","5","6"])
+    if (presenceState[k]?.users?.[username]) delete presenceState[k].users[username];
+  if (!presenceState[register]) presenceState[register] = { users:{} };
+  presenceState[register].users[username] = { name, at:Date.now() };
   broadcastPresence();
   res.json({ success:true });
 });
 
-// Presence ping (soft lock helper)
-app.post("/presence", (req, res) => {
-  try{
-    const register = String((req.body && req.body.register) || "");
-    const username = String((req.body && req.body.username) || "").trim();
-    const name = String((req.body && req.body.name) || username).trim() || username;
-        // Move user: remove from any other register first
-    for(const k of ["1","2","3","4","5","6"]){
-      try{ if(presenceState[k]?.users && presenceState[k].users[username]) delete presenceState[k].users[username]; }catch(e){}
-    }
-if(!["1","2","3","4","5","6"].includes(register) || !username){
-      return res.status(400).json({ success:false, message:"Bad payload" });
-    }
-    if(!presenceState[register]) presenceState[register] = { users:{} };
-    if(!presenceState[register].users) presenceState[register].users = {};
-    presenceState[register].users[username] = { name, at: Date.now() };
-    broadcastPresence();
-    return res.json({ success:true });
-  }catch(e){
-    return res.status(400).json({ success:false });
-  }
-});
-
-
-// Heartbeat — nur online melden, keine Kasse nötig
 app.post("/presence/heartbeat", requireAuth, (req, res) => {
-  try{
-    const username = String(req.user?.username || req.body?.username || "").trim();
-    const name = String(req.body?.name || req.user?.displayName || username).trim() || username;
-    if(!username) return res.status(400).json({ success:false });
-    const now = Date.now();
-    onlineUsers[username] = { name, at: now };
-    // Persist lastSeen in db.users
-    const dbUser = db.users.find(u => u.username === username);
-    if(dbUser){ dbUser.lastSeen = new Date(now).toISOString(); scheduleLastSeenSave(); }
-    broadcastPresence();
-    return res.json({ success:true });
-  }catch(e){ return res.status(400).json({ success:false }); }
+  const now = Date.now();
+  onlineUsers[req.user.username] = { name:req.user.displayName||req.user.username, at:now };
+  const u = db.users.find(x=>x.username===req.user.username);
+  if (u) { u.lastSeen = new Date(now).toISOString(); scheduleLastSeenSave(); }
+  broadcastPresence();
+  res.json({ success:true });
 });
 
-// Presence leave (remove user immediately)
 app.post("/presence/leave", (req, res) => {
-  try{
-    const username = String(((req.query && (req.query.u || req.query.username)) || (req.body && req.body.username) || "")).trim();
-    if(!username) return res.status(400).json({ success:false, message:"Bad payload" });
-    let changed = false;
-    for(const k of ["1","2","3","4","5","6"]){
-      try{
-        if(presenceState[k] && presenceState[k].users && presenceState[k].users[username]){
-          delete presenceState[k].users[username];
-          changed = true;
-        }
-      }catch(e){}
-    }
-    if(changed) broadcastPresence();
-    return res.json({ success:true, changed });
-  }catch(e){
-    return res.status(400).json({ success:false });
-  }
+  const username = String(req.body?.username||"").trim();
+  for (const k of ["1","2","3","4","5","6"])
+    if (presenceState[k]?.users?.[username]) delete presenceState[k].users[username];
+  delete onlineUsers[username];
+  broadcastPresence();
+  res.json({ success:true });
 });
+
+app.post("/presence/force-clear", requireAuth, requireBoss, (req, res) => {
+  const register = String(req.body?.register||"");
+  if (presenceState[register]) presenceState[register] = { users:{} };
+  broadcastPresence();
+  res.json({ success:true });
+});
+
+// ── Schichtplan ───────────────────────────────────────────────────────────────
+app.get("/reports/employee-totals", requireAuth, requireBossOrManager, (req, res) => {
+  const dateStr = String(req.query?.date||db.meta.currentDay).slice(0,10);
+  const sales = db.salesByDay[dateStr]||[];
+  const byEmp = {};
+  for (const s of sales) {
+    const k = s.employeeUsername||"—";
+    if (!byEmp[k]) byEmp[k] = { revenue:0, orders:0 };
+    byEmp[k].revenue += Number(s.total||0); byEmp[k].orders++;
+  }
+  res.json({ success:true, date:dateStr, byEmployee:byEmp });
+});
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+app.post("/reset/today", requireAuth, requireBoss, (req, res) => {
+  const day = db.meta.currentDay;
+  db.salesByDay[day] = [];
+  db.kitchenByDay[day] = { pending:[], done:[] };
+  saveDB(db); res.json({ success:true });
+});
+
+// ── Static / Fallback ─────────────────────────────────────────────────────────
+app.get("/", (req, res) => res.sendFile(path.join(__dirname,"public","index.html")));
+app.get("*", (req, res) => res.sendFile(path.join(__dirname,"public","index.html")));
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`BurgerShot Server läuft auf http://0.0.0.0:${PORT}`);
